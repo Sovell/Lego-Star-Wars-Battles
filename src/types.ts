@@ -30,6 +30,7 @@ export type UnitTemplate = {
   keywords: string[];
   weapons: WeaponProfile[];
   maxHp: number;
+  armorSave?: number;
   movement: number;
   morale: number;
   command: number;
@@ -135,8 +136,10 @@ export type AttackResult = {
     y: number;
   } | null;
   weaponName: string;
-  hitRoll: number;
+  hitRolls: number[];
+  armorRolls: number[];
   hits: number;
+  unsavedHits: number;
   damage: number;
   suppression: number;
   destroyed: boolean;

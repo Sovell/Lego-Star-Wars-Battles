@@ -59,14 +59,15 @@ export function resolveAttack(
     };
   }
 
-  const hitRoll = Math.ceil(Math.random() * 6);
   const cloneBonus =
     attackerTemplate.abilities.includes("clone_training") && attacker.suppression === 0
       ? getNumericAbilityEffect(attackerTemplate, "hit_bonus_without_suppression")
       : 0;
   const coverPenalty = getDefenseBonus(battle, defender);
-  const hitTarget = Math.max(2, 4 + coverPenalty + defender.suppression - cloneBonus);
-  const hits = hitRoll >= hitTarget ? weapon.attacks : 0;
+  const attackerSuppressionPenalty = Math.min(2, attacker.suppression);
+  const hitTarget = Math.min(6, Math.max(2, 4 + coverPenalty + attackerSuppressionPenalty - cloneBonus));
+  const hitRolls = rollD6(weapon.attacks);
+  const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
   const antiVehicleBonus =
     weapon.keywords.includes("AntiVehicle") && defenderTemplate.keywords.includes("Vehicle")
       ? getNumericAbilityEffect(attackerTemplate, "anti_vehicle_damage_bonus")
@@ -76,7 +77,11 @@ export function resolveAttack(
       ? getNumericAbilityEffect(defenderTemplate, "ranged_shield_damage_reduction")
       : 0;
   const forceReduction = getNumericAbilityEffect(defenderTemplate, "damage_reduction");
-  const rawDamage = hits > 0 ? hits * weapon.damage + antiVehicleBonus : 0;
+  const armorSave = defenderTemplate.armorSave ?? 7;
+  const armorRolls = armorSave <= 6 ? rollD6(hits) : [];
+  const savedHits = armorRolls.filter((roll) => roll >= armorSave).length;
+  const unsavedHits = Math.max(0, hits - savedHits);
+  const rawDamage = unsavedHits > 0 ? unsavedHits * weapon.damage + antiVehicleBonus : 0;
   const damage = Math.max(0, rawDamage - shieldReduction - forceReduction);
   const suppression = hits > 0 ? 1 : 0;
   const nextHp = Math.max(0, defender.currentHp - damage);
@@ -101,12 +106,18 @@ export function resolveAttack(
       defenderId: defender.id,
       defenderPosition: defender.position,
       weaponName: weapon.name,
-      hitRoll,
+      hitRolls,
+      armorRolls,
       hits,
+      unsavedHits,
       damage,
       suppression,
       destroyed: nextHp === 0,
     },
-    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, rzut ${hitRoll}, trafienia ${hits}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
+    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
   };
+}
+
+function rollD6(count: number): number[] {
+  return Array.from({ length: count }, () => Math.ceil(Math.random() * 6));
 }

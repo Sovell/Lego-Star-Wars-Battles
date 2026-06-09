@@ -683,7 +683,7 @@ function UnitDetails({
         <span>HP {selectedUnit.currentHp}/{template.maxHp}</span>
         <span>SUP {selectedUnit.suppression}</span>
         <span>MOV {template.movement}</span>
-        <span>MOR {template.morale}</span>
+        <span>SV {template.armorSave ? `${template.armorSave}+` : "-"}</span>
       </div>
       <span>Stan: {selectedUnit.position ? "na mapie" : "rezerwa / posilki"}</span>
       <span>
