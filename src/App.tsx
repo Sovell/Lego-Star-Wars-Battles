@@ -24,7 +24,7 @@ import type {
   UnitTemplate,
 } from "./types";
 
-type AppView = "battle" | "composer" | "map";
+type AppView = "battle" | "composer";
 type DraftCounts = Record<string, number>;
 type PendingAdvance = {
   attackerId: string;
@@ -147,7 +147,7 @@ export function App() {
       <section className="commandStrip">
         <div>
           <p className="eyebrow">LEGO Star Wars Battles</p>
-          <h1>{view === "battle" ? "Panel bitwy" : view === "composer" ? "Army Composer" : "Mapa"}</h1>
+          <h1>{view === "battle" ? "Panel dowodzenia" : "Army Composer"}</h1>
         </div>
         <nav className="viewTabs" aria-label="Widoki aplikacji">
           <button className={view === "battle" ? "active" : ""} onClick={() => setView("battle")}>
@@ -158,9 +158,6 @@ export function App() {
             onClick={() => setView("composer")}
           >
             Composer
-          </button>
-          <button className={view === "map" ? "active" : ""} onClick={() => setView("map")}>
-            Map
           </button>
         </nav>
         <label className="debugToggle">
@@ -200,6 +197,7 @@ export function App() {
           onSelectedUnitChange={setSelectedUnitId}
           onSelectedWeaponChange={setSelectedWeaponId}
           onTargetUnitChange={setTargetUnitId}
+          onTerrainPaint={handleTerrainPaint}
           onUnitPatch={handleUnitPatch}
         />
       ) : null}
@@ -211,20 +209,6 @@ export function App() {
             loadArmies(armies, "Armie z Army Composera zostaly wczytane do bitwy.");
             setView("battle");
           }}
-        />
-      ) : null}
-
-      {view === "map" ? (
-        <MapView
-          battle={battle}
-          debugMode={debugMode}
-          selectedUnitId={selectedUnitId}
-          onActiveArmyChange={setActiveArmyId}
-          onAddLog={addLog}
-          onBattleChange={setBattle}
-          onSelectedUnitChange={setSelectedUnitId}
-          onTerrainPaint={handleTerrainPaint}
-          onUnitPatch={handleUnitPatch}
         />
       ) : null}
     </main>
@@ -252,6 +236,7 @@ function BattleView({
   onSelectedUnitChange,
   onSelectedWeaponChange,
   onTargetUnitChange,
+  onTerrainPaint,
   onUnitPatch,
 }: {
   activeArmyId?: string;
@@ -274,12 +259,20 @@ function BattleView({
   onSelectedUnitChange: (unitId: string) => void;
   onSelectedWeaponChange: (weaponId: string) => void;
   onTargetUnitChange: (unitId: string) => void;
+  onTerrainPaint: (tile: TerrainTile) => void;
   onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
   const [pendingAdvance, setPendingAdvance] = useState<PendingAdvance | null>(null);
+  const [mapMode, setMapMode] = useState<"units" | "terrain">("units");
+  const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
   const allUnits = useMemo(() => battle.armies.flatMap((army) => army.units), [battle.armies]);
   const selectedUnit = allUnits.find((unit) => unit.id === selectedUnitId);
   const selectedTemplate = selectedUnit ? getTemplate(selectedUnit) : undefined;
+  const selectedArmy = selectedUnit
+    ? battle.armies.find((army) => army.id === selectedUnit.armyId)
+    : undefined;
+  const selectedTerrainPreset =
+    terrainPresets.find((terrain) => terrain.terrainType === selectedTerrain) ?? terrainPresets[0];
   const availableWeapons = selectedTemplate?.weapons ?? [];
   const activeWeaponId = availableWeapons.some((weapon) => weapon.id === selectedWeaponId)
     ? selectedWeaponId
@@ -288,6 +281,27 @@ function BattleView({
     (unit) => unit.armyId !== selectedUnit?.armyId && unit.status !== "Destroyed",
   );
   const unusedTokens = battle.activationBag.filter((token) => !token.used).length;
+
+  function handleCellClick(x: number, y: number) {
+    if (mapMode === "terrain") {
+      onTerrainPaint({ ...selectedTerrainPreset, x, y });
+      return;
+    }
+
+    if (!selectedUnit || selectedUnit.status === "Destroyed") {
+      return;
+    }
+
+    if (debugMode) {
+      onUnitPatch(selectedUnit.id, { position: { x, y } });
+      return;
+    }
+
+    const result = moveUnit(battle, selectedUnit.id, { x, y });
+    onBattleChange(result.battle);
+    onActiveArmyChange(result.battle.activeActivation?.armyId);
+    onAddLog(result.log);
+  }
 
   function handleDrawActivation() {
     setPendingAdvance(null);
@@ -379,24 +393,57 @@ function BattleView({
   }
 
   return (
-    <section className="workspace">
-      <aside className="sidePanel">
-        <PanelTitle title="Armie" detail="JSON v0.2" />
-        <ArmyPreview armies={battle.armies} />
-        <details className="jsonDetails">
-          <summary>Import JSON</summary>
-          <textarea
-            className="armyInput jsonInput"
-            value={armyJson}
-            spellCheck={false}
-            wrap="off"
-            onChange={(event) => onArmyJsonChange(event.target.value)}
-          />
-        </details>
-        {importError ? <p className="errorText">{importError}</p> : null}
-        <button className="primaryButton" onClick={handleLoadArmies}>
-          Wczytaj armie
-        </button>
+    <section className="commandLayout">
+      <aside className="sidePanel commandPanel">
+        <PanelTitle title="Mapa" detail={mapMode === "units" ? "oddzialy" : "teren"} />
+        <div className="segmented mapModeSwitch">
+          <button className={mapMode === "units" ? "active" : ""} onClick={() => setMapMode("units")}>
+            Oddzialy
+          </button>
+          <button className={mapMode === "terrain" ? "active" : ""} onClick={() => setMapMode("terrain")}>
+            Teren
+          </button>
+        </div>
+
+        {mapMode === "units" ? (
+          <>
+            <select value={selectedUnitId} onChange={(event) => onSelectedUnitChange(event.target.value)}>
+              <option value="">Wybierz oddzial</option>
+              {allUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {getTemplate(unit).name} -{" "}
+                  {unit.position ? `${unit.position.x},${unit.position.y}` : "rezerwa"}
+                </option>
+              ))}
+            </select>
+            <UnitDetails
+              debugMode={debugMode}
+              selectedArmy={selectedArmy}
+              selectedUnit={selectedUnit}
+              onUnitPatch={onUnitPatch}
+            />
+          </>
+        ) : (
+          <>
+            <select
+              value={selectedTerrain}
+              onChange={(event) => setSelectedTerrain(event.target.value)}
+            >
+              {terrainPresets.map((terrain) => (
+                <option key={terrain.terrainType} value={terrain.terrainType}>
+                  {terrain.terrainType}
+                </option>
+              ))}
+            </select>
+            <div className="mapReadout">
+              <strong>{selectedTerrainPreset.terrainType}</strong>
+              <span>Obrona: +{selectedTerrainPreset.defenseBonus}</span>
+              <span>Atak: +{selectedTerrainPreset.attackBonus}</span>
+              <span>Koszt ruchu: {selectedTerrainPreset.movementCost}</span>
+              <span>Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}</span>
+            </div>
+          </>
+        )}
 
         <PanelTitle title="Aktywacja" detail={`${unusedTokens}/${battle.activationBag.length}`} />
         <button className="primaryButton" onClick={handleDrawActivation}>
@@ -476,26 +523,51 @@ function BattleView({
         <button className="secondaryButton" onClick={handleEndTurn}>
           Koniec tury
         </button>
+
+        <details className="jsonDetails">
+          <summary>Import armii JSON</summary>
+          <textarea
+            className="armyInput jsonInput"
+            value={armyJson}
+            spellCheck={false}
+            wrap="off"
+            onChange={(event) => onArmyJsonChange(event.target.value)}
+          />
+          {importError ? <p className="errorText">{importError}</p> : null}
+          <button className="secondaryButton" onClick={handleLoadArmies}>
+            Wczytaj armie
+          </button>
+        </details>
       </aside>
 
-      <section className="battlefield">
+      <section className="battlefield commandMain">
+        <MapBoard
+          battle={battle}
+          selectedUnitId={selectedUnitId}
+          onCellClick={handleCellClick}
+          onSelectedUnitChange={onSelectedUnitChange}
+        />
+
         {battle.phase === "Finished" ? <BattleSummary battle={battle} /> : null}
 
-        <div className="armiesGrid">
-          {battle.armies.map((army) => (
-            <ArmyColumn
-              key={army.id}
-              army={army}
-              debugMode={debugMode}
-              selectedUnitId={selectedUnitId}
-              onSelect={onSelectedUnitChange}
-              onPatch={onUnitPatch}
-            />
-          ))}
-        </div>
+        <details className="collapsiblePanel" open>
+          <summary>Składy armii</summary>
+          <div className="armiesGrid">
+            {battle.armies.map((army) => (
+              <ArmyColumn
+                key={army.id}
+                army={army}
+                debugMode={debugMode}
+                selectedUnitId={selectedUnitId}
+                onSelect={onSelectedUnitChange}
+                onPatch={onUnitPatch}
+              />
+            ))}
+          </div>
+        </details>
 
-        <section className="logPanel">
-          <PanelTitle title="Dziennik bitwy" detail="ostatnie wpisy" />
+        <details className="logPanel collapsiblePanel" open>
+          <summary>Dziennik bitwy</summary>
           <div className="logs">
             {logs.map((entry) => (
               <div className="logEntry" key={entry.id}>
@@ -504,7 +576,7 @@ function BattleView({
               </div>
             ))}
           </div>
-        </section>
+        </details>
       </section>
     </section>
   );
@@ -560,6 +632,151 @@ function BattleSummary({ battle }: { battle: Battle }) {
           );
         })}
       </div>
+    </section>
+  );
+}
+
+function UnitDetails({
+  debugMode,
+  selectedArmy,
+  selectedUnit,
+  onUnitPatch,
+}: {
+  debugMode: boolean;
+  selectedArmy?: Army;
+  selectedUnit?: UnitInstance;
+  onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
+}) {
+  if (!selectedUnit) {
+    return (
+      <div className="mapReadout">
+        <span>Wybierz oddzial z listy albo kliknij token na mapie.</span>
+      </div>
+    );
+  }
+
+  const template = getTemplate(selectedUnit);
+
+  return (
+    <div className="mapReadout unitDetailPanel">
+      <div className="unitPortrait">
+        {template.imageUrl ? (
+          <img
+            key={template.imageUrl}
+            src={template.imageUrl}
+            alt={template.name}
+            onLoad={(event) => {
+              event.currentTarget.hidden = false;
+            }}
+            onError={(event) => {
+              event.currentTarget.hidden = true;
+            }}
+          />
+        ) : null}
+        <div className="unitPortraitFallback">{getUnitInitials(template)}</div>
+      </div>
+      <div className="unitDetailHeader">
+        <strong>{template.name}</strong>
+        <span>{selectedArmy?.faction ?? "Unknown"} | {template.role}</span>
+      </div>
+      <div className="unitDetailStats">
+        <span>HP {selectedUnit.currentHp}/{template.maxHp}</span>
+        <span>SUP {selectedUnit.suppression}</span>
+        <span>MOV {template.movement}</span>
+        <span>MOR {template.morale}</span>
+      </div>
+      <span>Stan: {selectedUnit.position ? "na mapie" : "rezerwa / posilki"}</span>
+      <span>
+        Pole:{" "}
+        {selectedUnit.position
+          ? `${selectedUnit.position.x}, ${selectedUnit.position.y}`
+          : "poza mapa"}
+      </span>
+      <div className="unitWeaponList">
+        {template.weapons.map((weapon) => (
+          <span key={weapon.id}>
+            {weapon.name} | R{weapon.range} A{weapon.attacks} D{weapon.damage}
+          </span>
+        ))}
+      </div>
+      {debugMode ? (
+        <>
+          <button
+            className="secondaryButton"
+            disabled={!selectedUnit.position}
+            onClick={() => onUnitPatch(selectedUnit.id, { position: null })}
+          >
+            Przenies do rezerw
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function MapBoard({
+  battle,
+  selectedUnitId,
+  onCellClick,
+  onSelectedUnitChange,
+}: {
+  battle: Battle;
+  selectedUnitId: string;
+  onCellClick: (x: number, y: number) => void;
+  onSelectedUnitChange: (unitId: string) => void;
+}) {
+  const units = battle.armies.flatMap((army) => army.units);
+
+  return (
+    <section
+      className="mapBoard commandMapBoard"
+      style={{ gridTemplateColumns: `repeat(${battle.board.width}, minmax(64px, 1fr))` }}
+    >
+      {Array.from({ length: battle.board.width * battle.board.height }, (_, index) => {
+        const x = index % battle.board.width;
+        const y = Math.floor(index / battle.board.width);
+        const tile = battle.board.tiles.find((terrain) => terrain.x === x && terrain.y === y);
+        const tileUnits = units.filter((unit) => unit.position?.x === x && unit.position.y === y);
+
+        return (
+          <button
+            className={`mapCell ${tile?.terrainType ?? "Open"}`}
+            key={`${x}-${y}`}
+            onClick={() => onCellClick(x, y)}
+          >
+            <span className="cellCoords">
+              {x},{y}
+            </span>
+            {tile ? <span className="terrainTag">{tile.terrainType}</span> : null}
+            <div className="mapUnitStack">
+              {tileUnits.map((unit) => {
+                const template = getTemplate(unit);
+                const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
+
+                return (
+                  <span
+                    className={`mapUnit ${getTokenClass(template, army?.faction)} ${
+                      unit.id === selectedUnitId ? "selected" : ""
+                    }`}
+                    key={unit.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelectedUnitChange(unit.id);
+                    }}
+                    title={`${template.name} | ${army?.faction ?? "Unknown"}`}
+                  >
+                    <span className="tokenHead">
+                      <span className="tokenVisor" />
+                      <span className="tokenMouth" />
+                    </span>
+                    <span className="tokenCode">{getUnitInitials(template)}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </button>
+        );
+      })}
     </section>
   );
 }
@@ -876,19 +1093,30 @@ function MapView({
               </span>
               {tile ? <span className="terrainTag">{tile.terrainType}</span> : null}
               <div className="mapUnitStack">
-                {tileUnits.map((unit) => (
-                  <span
-                    className={`mapUnit ${unit.id === selectedUnitId ? "selected" : ""}`}
-                    key={unit.id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onSelectedUnitChange(unit.id);
-                    }}
-                    title={getTemplate(unit).name}
-                  >
-                    {getUnitInitials(getTemplate(unit))}
-                  </span>
-                ))}
+                {tileUnits.map((unit) => {
+                  const template = getTemplate(unit);
+                  const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
+
+                  return (
+                    <span
+                      className={`mapUnit ${getTokenClass(template, army?.faction)} ${
+                        unit.id === selectedUnitId ? "selected" : ""
+                      }`}
+                      key={unit.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectedUnitChange(unit.id);
+                      }}
+                      title={`${template.name} | ${army?.faction ?? "Unknown"}`}
+                    >
+                      <span className="tokenHead">
+                        <span className="tokenVisor" />
+                        <span className="tokenMouth" />
+                      </span>
+                      <span className="tokenCode">{getUnitInitials(template)}</span>
+                    </span>
+                  );
+                })}
               </div>
             </button>
           );
@@ -1128,6 +1356,26 @@ function getUnitInitials(template: UnitTemplate): string {
     .join("")
     .slice(0, 3)
     .toUpperCase();
+}
+
+function getTokenClass(template: UnitTemplate, faction?: FactionId): string {
+  const factionClass =
+    faction === "Republic"
+      ? "tokenRepublic"
+      : faction === "Separatists"
+        ? "tokenSeparatists"
+        : "tokenNeutral";
+  const bodyClass = template.keywords.includes("SuperBattleDroid")
+    ? "tokenSuperBattleDroid"
+    : template.abilities.includes("shield_generators") || template.keywords.includes("Shielded")
+      ? "tokenDroideka"
+    : template.keywords.includes("Droid")
+      ? "tokenDroid"
+      : template.keywords.includes("Vehicle")
+        ? "tokenVehicle"
+        : "tokenHelmet";
+
+  return `${factionClass} ${bodyClass} tokenRole${template.role}`;
 }
 
 function getVictoryLog(battle: Battle): string {

@@ -72,8 +72,8 @@ export function resolveAttack(
       ? getNumericAbilityEffect(attackerTemplate, "anti_vehicle_damage_bonus")
       : 0;
   const shieldReduction =
-    defenderTemplate.abilities.includes("shield_generators") && hitRoll <= 2
-      ? getNumericAbilityEffect(defenderTemplate, "low_roll_damage_reduction")
+    defenderTemplate.abilities.includes("shield_generators") && targetDistance > 1
+      ? getNumericAbilityEffect(defenderTemplate, "ranged_shield_damage_reduction")
       : 0;
   const forceReduction = getNumericAbilityEffect(defenderTemplate, "damage_reduction");
   const rawDamage = hits > 0 ? hits * weapon.damage + antiVehicleBonus : 0;
@@ -107,6 +107,6 @@ export function resolveAttack(
       suppression,
       destroyed: nextHp === 0,
     },
-    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, rzut ${hitRoll}, trafienia ${hits}, obrazenia ${damage}, suppression +${suppression}.`,
+    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, rzut ${hitRoll}, trafienia ${hits}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
   };
 }

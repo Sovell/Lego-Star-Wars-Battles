@@ -161,6 +161,23 @@ h1 {
   max-width: 1440px;
 }
 
+.commandLayout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  margin: 0 auto;
+  max-width: 1440px;
+}
+
+.commandPanel {
+  max-height: calc(100vh - 126px);
+}
+
+.commandMain {
+  display: grid;
+  gap: 14px;
+}
+
 .sidePanel,
 .logPanel,
 .armyColumn,
@@ -513,6 +530,21 @@ select {
   padding: 16px;
 }
 
+.collapsiblePanel {
+  background: rgba(22, 25, 31, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.collapsiblePanel summary {
+  color: #f4f7fa;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 900;
+  padding: 4px 2px 10px;
+}
+
 .logs {
   display: grid;
   gap: 10px;
@@ -821,6 +853,81 @@ select {
   color: #fff;
 }
 
+.unitDetailPanel {
+  gap: 10px;
+}
+
+.unitPortrait {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 42%),
+    #0e1218;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  min-height: 170px;
+  overflow: hidden;
+  position: relative;
+}
+
+.unitPortrait img {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  padding: 8px;
+  position: absolute;
+  width: 100%;
+  z-index: 2;
+}
+
+.unitPortraitFallback {
+  align-items: center;
+  background: rgba(236, 224, 108, 0.12);
+  border: 1px solid rgba(236, 224, 108, 0.24);
+  border-radius: 50%;
+  color: #f4ed9d;
+  display: flex;
+  font-size: 1.4rem;
+  font-weight: 900;
+  height: 86px;
+  justify-content: center;
+  width: 86px;
+}
+
+.unitDetailHeader {
+  display: grid;
+  gap: 3px;
+}
+
+.unitDetailHeader span {
+  color: #9faab8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.unitDetailStats {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.unitDetailStats span,
+.unitWeaponList span {
+  background: #151b23;
+  border-radius: 6px;
+  color: #d8e1ec;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 7px 8px;
+}
+
+.unitWeaponList {
+  display: grid;
+  gap: 6px;
+}
+
 .mapModeSwitch {
   grid-template-columns: 1fr 1fr;
 }
@@ -864,6 +971,10 @@ select {
   gap: 4px;
   overflow: auto;
   padding: 10px;
+}
+
+.commandMapBoard {
+  min-height: 560px;
 }
 
 .mapCell {
@@ -916,27 +1027,339 @@ select {
   align-self: end;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
 .mapUnit {
   align-items: center;
-  background: #2f7dd1;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.16), transparent 36%),
+    #11161d;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.28);
   color: #fff;
-  display: inline-flex;
-  font-size: 0.66rem;
+  display: grid;
+  font-size: 0.52rem;
   font-weight: 900;
-  height: 26px;
+  gap: 0;
+  height: 52px;
   justify-content: center;
-  min-width: 26px;
-  padding: 0 6px;
+  justify-items: center;
+  line-height: 1;
+  padding: 4px 3px 3px;
+  width: 52px;
+}
+
+.tokenHead {
+  background: #d8dbe0;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 13px 13px 8px 8px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  display: block;
+  height: 31px;
+  position: relative;
+  width: 34px;
+}
+
+.tokenHead::before,
+.tokenHead::after {
+  background: #c2c7cf;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+  content: "";
+  height: 8px;
+  position: absolute;
+  top: 12px;
+  width: 4px;
+}
+
+.tokenHead::before {
+  left: -6px;
+}
+
+.tokenHead::after {
+  right: -6px;
+}
+
+.tokenVisor {
+  background: #202632;
+  border-radius: 2px 2px 7px 7px;
+  clip-path: polygon(0 0, 100% 0, 88% 72%, 62% 62%, 52% 100%, 40% 62%, 12% 72%);
+  display: block;
+  height: 10px;
+  left: 5px;
+  position: absolute;
+  top: 10px;
+  width: 20px;
+}
+
+.tokenMouth {
+  background: #3a2226;
+  border-radius: 999px;
+  bottom: 4px;
+  display: block;
+  height: 4px;
+  left: 14px;
+  position: absolute;
+  width: 6px;
+}
+
+.tokenMouth::before,
+.tokenMouth::after {
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 999px;
+  content: "";
+  height: 3px;
+  position: absolute;
+  top: 0;
+  width: 7px;
+}
+
+.tokenMouth::before {
+  left: -10px;
+}
+
+.tokenMouth::after {
+  right: -10px;
+}
+
+.tokenCode {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+  color: #f7f9fc;
+  margin-top: -1px;
+  max-width: 42px;
+  overflow: hidden;
+  padding: 2px 4px;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+
+.tokenRepublic {
+  border-color: #5fa8ff;
+}
+
+.tokenRepublic .tokenHead {
+  background: #f0f3f7;
+}
+
+.tokenRepublic .tokenVisor {
+  background: #2565ad;
+}
+
+.tokenSeparatists {
+  border-color: #d36b6b;
+}
+
+.tokenSeparatists .tokenHead {
+  background: #d6d2c8;
+}
+
+.tokenSeparatists .tokenVisor {
+  background: #7b2f39;
+}
+
+.tokenDroid .tokenHead {
+  background: #c9b67e;
+  border-radius: 15px 15px 8px 8px;
+  height: 32px;
+  width: 22px;
+}
+
+.tokenDroid .tokenHead::before,
+.tokenDroid .tokenHead::after {
+  background: #8f7d4c;
+  height: 5px;
+  top: 14px;
+  width: 5px;
+}
+
+.tokenDroid .tokenHead::before {
+  left: -7px;
+}
+
+.tokenDroid .tokenHead::after {
+  right: -7px;
+}
+
+.tokenDroid .tokenVisor {
+  background: #332719;
+  border-radius: 999px;
+  clip-path: none;
+  height: 4px;
+  left: 5px;
+  top: 10px;
+  width: 8px;
+}
+
+.tokenDroid .tokenMouth {
+  background: #5c4b2c;
+  bottom: 6px;
+  height: 8px;
+  left: 9px;
+  width: 4px;
+}
+
+.tokenDroid .tokenMouth::before,
+.tokenDroid .tokenMouth::after {
+  display: none;
+}
+
+.tokenSuperBattleDroid .tokenHead {
+  background: #686c72;
+  border-color: rgba(255, 255, 255, 0.25);
+  border-radius: 13px 13px 9px 9px;
+  height: 34px;
+  width: 34px;
+}
+
+.tokenSuperBattleDroid .tokenHead::before,
+.tokenSuperBattleDroid .tokenHead::after {
+  background: #4c5056;
+  border-radius: 50%;
+  height: 8px;
+  top: 11px;
+  width: 8px;
+}
+
+.tokenSuperBattleDroid .tokenHead::before {
+  left: -8px;
+}
+
+.tokenSuperBattleDroid .tokenHead::after {
+  right: -8px;
+}
+
+.tokenSuperBattleDroid .tokenVisor {
+  background: #191d22;
+  border-radius: 999px;
+  clip-path: none;
+  height: 5px;
+  left: 8px;
+  top: 8px;
+  width: 14px;
+}
+
+.tokenSuperBattleDroid .tokenMouth {
+  background: #34383f;
+  bottom: 5px;
+  height: 12px;
+  left: 13px;
+  width: 6px;
+}
+
+.tokenSuperBattleDroid .tokenMouth::before,
+.tokenSuperBattleDroid .tokenMouth::after {
+  background: rgba(0, 0, 0, 0.22);
+  height: 10px;
+  top: 0;
+  width: 4px;
+}
+
+.tokenSuperBattleDroid .tokenMouth::before {
+  left: -6px;
+}
+
+.tokenSuperBattleDroid .tokenMouth::after {
+  right: -6px;
+}
+
+.tokenDroideka .tokenHead {
+  background:
+    radial-gradient(circle at 50% 44%, rgba(215, 72, 64, 0.7), transparent 18%),
+    #7a776f;
+  border-color: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  height: 31px;
+  width: 34px;
+}
+
+.tokenDroideka .tokenHead::before,
+.tokenDroideka .tokenHead::after {
+  background: #3f4247;
+  border-radius: 999px;
+  height: 6px;
+  top: 13px;
+  width: 11px;
+}
+
+.tokenDroideka .tokenHead::before {
+  left: -11px;
+}
+
+.tokenDroideka .tokenHead::after {
+  right: -11px;
+}
+
+.tokenDroideka .tokenVisor {
+  background: #a52b2b;
+  border-radius: 999px;
+  clip-path: none;
+  height: 8px;
+  left: 10px;
+  top: 8px;
+  width: 10px;
+}
+
+.tokenDroideka .tokenMouth {
+  background: #3f4247;
+  bottom: 5px;
+  height: 5px;
+  left: 13px;
+  width: 6px;
+}
+
+.tokenDroideka .tokenMouth::before,
+.tokenDroideka .tokenMouth::after {
+  background: rgba(236, 224, 108, 0.45);
+  height: 3px;
+  top: 1px;
+  width: 6px;
+}
+
+.tokenVehicle .tokenHead {
+  border-radius: 6px;
+  height: 28px;
+  width: 36px;
+}
+
+.tokenNeutral {
+  border-color: #9faab8;
+}
+
+.tokenRoleCommander {
+  box-shadow:
+    inset 0 0 0 2px rgba(236, 224, 108, 0.3),
+    0 0 0 1px rgba(236, 224, 108, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.28);
+}
+
+.tokenRoleHeavy .tokenHead {
+  border-radius: 9px;
+  width: 36px;
+}
+
+.tokenRoleSupport .tokenHead {
+  background: #c8d7d1;
 }
 
 .mapUnit.selected {
   background: #ece06c;
+  border-color: #fff6a8;
   color: #171816;
+  transform: translateY(-1px);
+}
+
+.mapUnit.selected .tokenCode {
+  color: #171816;
+  text-shadow: none;
 }
 
 @media (max-width: 1050px) {
