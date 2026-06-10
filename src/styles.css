@@ -980,7 +980,12 @@ select {
 .mapCell {
   align-content: space-between;
   aspect-ratio: 1;
-  background: #242a31;
+  background:
+    linear-gradient(rgba(36, 42, 49, 0.18), rgba(36, 42, 49, 0.62)),
+    url("/terrain-textures/open.png"),
+    #242a31;
+  background-position: center;
+  background-size: cover;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   color: #edf2f6;
@@ -992,16 +997,39 @@ select {
 }
 
 .mapCell.LightCover {
-  background: #25392f;
+  background:
+    linear-gradient(rgba(17, 34, 25, 0.08), rgba(17, 34, 25, 0.38)),
+    url("/terrain-textures/light-cover.png"),
+    #25392f;
+  background-position: center;
+  background-size: cover;
 }
 
-.mapCell.HeavyCover,
+.mapCell.HeavyCover {
+  background:
+    linear-gradient(rgba(28, 28, 35, 0.1), rgba(28, 28, 35, 0.42)),
+    url("/terrain-textures/heavy-cover.png"),
+    #34333a;
+  background-position: center;
+  background-size: cover;
+}
+
 .mapCell.Building {
-  background: #34333a;
+  background:
+    linear-gradient(rgba(32, 37, 40, 0.1), rgba(32, 37, 40, 0.44)),
+    url("/terrain-textures/building.png"),
+    #30363a;
+  background-position: center;
+  background-size: cover;
 }
 
 .mapCell.DifficultTerrain {
-  background: #3a3225;
+  background:
+    linear-gradient(rgba(42, 31, 18, 0.08), rgba(42, 31, 18, 0.42)),
+    url("/terrain-textures/difficult-terrain.png"),
+    #3a3225;
+  background-position: center;
+  background-size: cover;
 }
 
 .cellCoords {

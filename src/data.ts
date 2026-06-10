@@ -5,7 +5,7 @@ export const unitTemplates: UnitTemplate[] = [
     id: "clone_trooper_battalion",
     name: "Clone Trooper Battalion",
     faction: "Republic",
-    imageUrl: "/unit-images/clone-trooper.png",
+    imageUrl: "/unit-images/clone-trooper-scifi.png",
     role: "Line",
     keywords: ["Clone", "Infantry"],
     weapons: [
@@ -30,7 +30,7 @@ export const unitTemplates: UnitTemplate[] = [
     id: "jedi_task_force",
     name: "Jedi Task Force",
     faction: "Republic",
-    imageUrl: "/unit-images/jedi-task-force.png",
+    imageUrl: "/unit-images/jedi-task-force-scifi.png",
     role: "Commander",
     keywords: ["Jedi", "ForceUser", "Infantry"],
     weapons: [
@@ -85,7 +85,7 @@ export const unitTemplates: UnitTemplate[] = [
     id: "b1_droid_regiment",
     name: "B1 Droid Regiment",
     faction: "Separatists",
-    imageUrl: "/unit-images/b1-droid.png",
+    imageUrl: "/unit-images/b1-droid-scifi.png",
     role: "Line",
     keywords: ["Droid", "Infantry"],
     weapons: [
@@ -135,7 +135,7 @@ export const unitTemplates: UnitTemplate[] = [
     id: "super_battle_droid_squad",
     name: "B2 Super Battle Droid Squad",
     faction: "Separatists",
-    imageUrl: "/unit-images/b2-super-battle-droid.png",
+    imageUrl: "/unit-images/b2-super-battle-droid-scifi.png",
     role: "Heavy",
     keywords: ["Droid", "Infantry", "Armor", "SuperBattleDroid"],
     weapons: [
