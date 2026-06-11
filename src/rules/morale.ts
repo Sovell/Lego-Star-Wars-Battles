@@ -23,10 +23,24 @@ export function resetUnitForNextTurn(unit: UnitInstance, template: UnitTemplate)
   }
 
   const nextSuppression = Math.max(0, unit.suppression - 1);
+  const nextCooldowns = Object.entries(unit.abilityCooldowns ?? {}).reduce<Record<string, number>>(
+    (cooldowns, [abilityId, cooldown]) => {
+      const nextCooldown = Math.max(0, cooldown - 1);
+      if (nextCooldown > 0) {
+        cooldowns[abilityId] = nextCooldown;
+      }
+
+      return cooldowns;
+    },
+    {},
+  );
 
   return {
     ...unit,
     status: nextSuppression >= template.morale ? "Pinned" : "Ready",
     suppression: nextSuppression,
+    abilityCooldowns: nextCooldowns,
+    activeEffects: [],
+    movedThisTurn: false,
   };
 }

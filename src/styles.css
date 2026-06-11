@@ -711,6 +711,13 @@ select {
   padding: 12px;
 }
 
+.templateRow.taskForceRow {
+  background:
+    linear-gradient(135deg, rgba(236, 224, 108, 0.08), rgba(95, 168, 255, 0.05)),
+    #1b2028;
+  border-color: rgba(236, 224, 108, 0.28);
+}
+
 .templateRow h3 {
   font-size: 1rem;
 }

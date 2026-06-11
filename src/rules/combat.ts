@@ -1,6 +1,6 @@
 import type { AttackResult, Battle, UnitInstance } from "../types";
 import { validateUnitActivation } from "./activation";
-import { getNumericAbilityEffect } from "./abilities";
+import { getAttackDiceBonus, getDamageBonus, getNumericAbilityEffect } from "./abilities";
 import { distance, lineOfSight } from "./geometry";
 import { getStatusAfterDamage } from "./morale";
 import { getTemplate, findUnit, replaceUnit } from "./state";
@@ -66,12 +66,15 @@ export function resolveAttack(
   const coverPenalty = getDefenseBonus(battle, defender);
   const attackerSuppressionPenalty = Math.min(2, attacker.suppression);
   const hitTarget = Math.min(6, Math.max(2, 4 + coverPenalty + attackerSuppressionPenalty - cloneBonus));
-  const hitRolls = rollD6(weapon.attacks);
+  const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender);
+  const attackDice = Math.max(1, weapon.attacks + attackDiceBonus);
+  const hitRolls = rollD6(attackDice);
   const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
   const antiVehicleBonus =
     weapon.keywords.includes("AntiVehicle") && defenderTemplate.keywords.includes("Vehicle")
       ? getNumericAbilityEffect(attackerTemplate, "anti_vehicle_damage_bonus")
       : 0;
+  const categoryDamageBonus = getDamageBonus(attackerTemplate, defenderTemplate);
   const shieldReduction =
     defenderTemplate.abilities.includes("shield_generators") && targetDistance > 1
       ? getNumericAbilityEffect(defenderTemplate, "ranged_shield_damage_reduction")
@@ -81,7 +84,7 @@ export function resolveAttack(
   const armorRolls = armorSave <= 6 ? rollD6(hits) : [];
   const savedHits = armorRolls.filter((roll) => roll >= armorSave).length;
   const unsavedHits = Math.max(0, hits - savedHits);
-  const rawDamage = unsavedHits > 0 ? unsavedHits * weapon.damage + antiVehicleBonus : 0;
+  const rawDamage = unsavedHits > 0 ? unsavedHits * weapon.damage + antiVehicleBonus + categoryDamageBonus : 0;
   const damage = Math.max(0, rawDamage - shieldReduction - forceReduction);
   const suppression = hits > 0 ? 1 : 0;
   const nextHp = Math.max(0, defender.currentHp - damage);
@@ -114,7 +117,7 @@ export function resolveAttack(
       suppression,
       destroyed: nextHp === 0,
     },
-    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
+    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, ataki ${attackDice}${attackDiceBonus ? ` (+${attackDiceBonus})` : ""}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, bonus obrazen +${categoryDamageBonus}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
   };
 }
 

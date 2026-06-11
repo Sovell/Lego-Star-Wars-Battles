@@ -44,6 +44,7 @@ export function moveUnit(
     ...unit,
     position: targetPosition,
     status: "Activated",
+    movedThisTurn: true,
   };
 
   return {

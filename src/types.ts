@@ -1,6 +1,8 @@
 export type FactionId = string;
 
-export type UnitRole = "Commander" | "Line" | "Support" | "Heavy" | "Specialist";
+export type UnitRole = string;
+
+export type UnitCategory = "infantry" | "hero" | "droid" | "vehicle" | "commander" | string;
 
 export type WeaponKeyword =
   | "AntiVehicle"
@@ -25,6 +27,7 @@ export type UnitTemplate = {
   id: string;
   name: string;
   faction: FactionId;
+  category: UnitCategory;
   imageUrl?: string;
   role: UnitRole;
   keywords: string[];
@@ -44,8 +47,12 @@ export type UnitInstance = {
   id: string;
   templateId: string;
   armyId: string;
+  sourceTaskForceId?: string;
   currentHp: number;
   suppression: number;
+  abilityCooldowns?: Record<string, number>;
+  activeEffects?: string[];
+  movedThisTurn?: boolean;
   position: {
     x: number;
     y: number;
@@ -58,6 +65,7 @@ export type Army = {
   id: string;
   playerName: string;
   faction: FactionId;
+  taskForces?: ArmyTaskForceSelection[];
   units: UnitInstance[];
 };
 
@@ -94,6 +102,8 @@ export type ActivationToken = {
 
 export type AbilityTrigger = "Passive" | "OnActivation" | "OnAttack" | "OnDefense" | "EndTurn";
 
+export type AbilityType = "passive" | "active" | "aura";
+
 export type AbilityEffect = {
   type: string;
   value?: number;
@@ -103,9 +113,27 @@ export type AbilityEffect = {
 export type AbilityDefinition = {
   id: string;
   name: string;
+  type?: AbilityType;
   trigger: AbilityTrigger;
+  range?: number;
+  cooldown?: number;
   effect: AbilityEffect;
   description: string;
+};
+
+export type TaskForceDefinition = {
+  id: string;
+  name: string;
+  faction: FactionId;
+  heroId: string;
+  unitIds: string[];
+  cost: number;
+  bonusAbility: string;
+};
+
+export type ArmyTaskForceSelection = {
+  id: string;
+  taskForceId: string;
 };
 
 export type BattlePhase = "Setup" | "Activation" | "EndTurn" | "Finished";

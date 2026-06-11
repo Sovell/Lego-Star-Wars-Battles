@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { abilities, starterArmies, unitTemplates } from "./data";
+import { abilities, starterArmies, taskForces, unitTemplates } from "./data";
 import {
   applyOrder,
   createBattle,
@@ -865,7 +865,10 @@ function ComposerColumn({
   onPlayerNameChange: (name: string) => void;
 }) {
   const templates = unitTemplates.filter((template) => template.faction === faction);
-  const cost = templates.reduce((total, template) => total + (counts[template.id] ?? 0) * template.cost, 0);
+  const factionTaskForces = taskForces.filter((taskForce) => taskForce.faction === faction);
+  const cost =
+    templates.reduce((total, template) => total + (counts[template.id] ?? 0) * template.cost, 0) +
+    factionTaskForces.reduce((total, taskForce) => total + (counts[taskForce.id] ?? 0) * taskForce.cost, 0);
 
   function setCount(templateId: string, count: number) {
     onCountsChange({
@@ -900,10 +903,40 @@ function ComposerColumn({
         </label>
       </div>
       <div className="templateList">
+        {factionTaskForces.map((taskForce) => {
+          const bonus = abilities.find((ability) => ability.id === taskForce.bonusAbility);
+          const unitNames = taskForce.unitIds
+            .map((templateId) => unitTemplates.find((template) => template.id === templateId)?.name)
+            .filter(Boolean)
+            .join(" + ");
+
+          return (
+            <article className="templateRow taskForceRow" key={taskForce.id}>
+              <div>
+                <p className="category">TASK FORCE</p>
+                <h3>{taskForce.name}</h3>
+                <p className="templateMeta">
+                  {taskForce.cost} pkt | {unitNames}
+                </p>
+                {bonus ? <p className="templateMeta">Bonus: {bonus.name}</p> : null}
+              </div>
+              <div className="stepper">
+                <button onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) - 1)}>-</button>
+                <input
+                  min="0"
+                  type="number"
+                  value={counts[taskForce.id] ?? 0}
+                  onChange={(event) => setCount(taskForce.id, Number(event.target.value))}
+                />
+                <button onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) + 1)}>+</button>
+              </div>
+            </article>
+          );
+        })}
         {templates.map((template) => (
           <article className="templateRow" key={template.id}>
             <div>
-              <p className="category">{template.role}</p>
+              <p className="category">{template.category} | {template.role}</p>
               <h3>{template.name}</h3>
               <p className="templateMeta">
                 {template.cost} pkt | HP {template.maxHp} | MOV {template.movement} | MOR {template.morale}
@@ -1185,7 +1218,7 @@ function UnitCard({
     <article className={`unitCard ${selected ? "selected" : ""}`} onClick={onSelect}>
       <div className="unitTopline">
         <div>
-          <p className="category">{template.role}</p>
+          <p className="category">{template.category} | {template.role}</p>
           <h3>{template.name}</h3>
         </div>
         <span className={`status ${unit.status.toLowerCase()}`}>{unit.status}</span>
@@ -1242,6 +1275,7 @@ function UnitCard({
         {unitAbilities.map((ability) => (
           <span title={ability.description} key={ability.id}>
             {ability.name}
+            {ability.type === "active" && ability.cooldown ? ` CD${ability.cooldown}` : ""}
           </span>
         ))}
       </div>
@@ -1308,10 +1342,20 @@ function countsFromArmy(army?: Army): DraftCounts {
     return {};
   }
 
-  return army.units.reduce<DraftCounts>((counts, unit) => {
-    counts[unit.templateId] = (counts[unit.templateId] ?? 0) + 1;
-    return counts;
+  const taskForceSelectionIds = new Set(army.taskForces?.map((selection) => selection.id) ?? []);
+  const counts = army.units.reduce<DraftCounts>((draftCounts, unit) => {
+    if (!unit.sourceTaskForceId || !taskForceSelectionIds.has(unit.sourceTaskForceId)) {
+      draftCounts[unit.templateId] = (draftCounts[unit.templateId] ?? 0) + 1;
+    }
+
+    return draftCounts;
   }, {});
+
+  for (const selection of army.taskForces ?? []) {
+    counts[selection.taskForceId] = (counts[selection.taskForceId] ?? 0) + 1;
+  }
+
+  return counts;
 }
 
 function buildArmyFromDraft(
@@ -1322,20 +1366,33 @@ function buildArmyFromDraft(
   sideIndex: number,
 ): Army {
   let unitIndex = 1;
-  const units = unitTemplates
+  const taskForceSelections = taskForces
+    .filter((taskForce) => taskForce.faction === faction)
+    .flatMap((taskForce) =>
+      Array.from({ length: counts[taskForce.id] ?? 0 }, (_, taskForceIndex) => ({
+        id: `${armyId}_${taskForce.id}_${taskForceIndex + 1}`,
+        taskForceId: taskForce.id,
+      })),
+    );
+  const taskForceUnits = taskForceSelections.flatMap((selection) => {
+    const taskForce = taskForces.find((candidate) => candidate.id === selection.taskForceId);
+
+    return (taskForce?.unitIds ?? []).map((templateId) => {
+      const template = unitTemplates.find((candidate) => candidate.id === templateId);
+      if (!template) {
+        throw new Error(`Missing task force template: ${templateId}`);
+      }
+
+      const unit = createUnitInstance(armyId, template, unitIndex, selection.id);
+      unitIndex += 1;
+      return unit;
+    });
+  });
+  const standaloneUnits = unitTemplates
     .filter((template) => template.faction === faction)
     .flatMap((template) =>
       Array.from({ length: counts[template.id] ?? 0 }, () => {
-        const unit: UnitInstance = {
-          id: `${armyId}_${template.id}_${unitIndex}`,
-          templateId: template.id,
-          armyId,
-          currentHp: template.maxHp,
-          suppression: 0,
-          position: null,
-          status: "Ready",
-          hidden: false,
-        };
+        const unit = createUnitInstance(armyId, template, unitIndex);
         unitIndex += 1;
         return unit;
       }),
@@ -1345,7 +1402,30 @@ function buildArmyFromDraft(
     id: armyId,
     playerName: playerName.trim() || `Gracz ${sideIndex}`,
     faction,
-    units,
+    taskForces: taskForceSelections,
+    units: [...taskForceUnits, ...standaloneUnits],
+  };
+}
+
+function createUnitInstance(
+  armyId: string,
+  template: UnitTemplate,
+  unitIndex: number,
+  sourceTaskForceId?: string,
+): UnitInstance {
+  return {
+    id: `${armyId}_${template.id}_${unitIndex}`,
+    templateId: template.id,
+    armyId,
+    sourceTaskForceId,
+    currentHp: template.maxHp,
+    suppression: 0,
+    abilityCooldowns: {},
+    activeEffects: [],
+    movedThisTurn: false,
+    position: null,
+    status: "Ready",
+    hidden: false,
   };
 }
 
