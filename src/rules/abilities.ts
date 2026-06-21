@@ -35,11 +35,15 @@ export function getAttackDiceBonus(
     bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_if_moved");
   }
 
-  if (
-    attackerTemplate.abilities.includes("makashi_duelist") &&
-    getTemplate(defender).category === "hero"
-  ) {
+  if (getTemplate(defender).category === "hero") {
     bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_against_category");
+  }
+
+  if (
+    attackerTemplate.abilities.includes("relentless_fury") &&
+    attacker.currentHp < attackerTemplate.maxHp
+  ) {
+    bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_when_damaged");
   }
 
   bonus += getFriendlyAuraAttackBonus(battle, attacker);

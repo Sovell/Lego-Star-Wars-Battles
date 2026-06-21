@@ -182,7 +182,8 @@ h1 {
 .logPanel,
 .armyColumn,
 .composerColumn,
-.composerSummary {
+.composerSummary,
+.rulesPanel {
   background: rgba(22, 25, 31, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 8px;
@@ -834,6 +835,249 @@ select {
   font-size: 0.76rem;
 }
 
+.rulesLayout {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 1440px;
+}
+
+.rulesGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.rulesPanel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.glossaryList,
+.terrainRulesList,
+.abilityRulesList,
+.taskForceRulesGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.glossaryItem {
+  align-items: start;
+  background: #12171e;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.glossaryItem strong {
+  background: rgba(236, 224, 108, 0.14);
+  border: 1px solid rgba(236, 224, 108, 0.25);
+  border-radius: 6px;
+  color: #f4ed9d;
+  display: inline-grid;
+  min-height: 36px;
+  place-items: center;
+}
+
+.glossaryItem h3,
+.terrainRule h3,
+.heroRuleCard h3,
+.abilityRule h4 {
+  color: #fff;
+  font-size: 1rem;
+}
+
+.glossaryItem p,
+.terrainRule p,
+.abilityRule p {
+  color: #aab4c1;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.terrainRule,
+.heroRuleCard,
+.abilityRule {
+  background: #12171e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.terrainRule {
+  background:
+    linear-gradient(rgba(18, 23, 30, 0.2), rgba(18, 23, 30, 0.74)),
+    #12171e;
+}
+
+.terrainRule.LightCover {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.2), rgba(18, 23, 30, 0.78)),
+    url("/terrain-textures/light-cover.png");
+}
+
+.terrainRule.HeavyCover {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.18), rgba(18, 23, 30, 0.8)),
+    url("/terrain-textures/heavy-cover.png");
+}
+
+.terrainRule.Building {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.16), rgba(18, 23, 30, 0.8)),
+    url("/terrain-textures/building.png");
+}
+
+.terrainRule.DifficultTerrain {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.2), rgba(18, 23, 30, 0.78)),
+    url("/terrain-textures/difficult-terrain.png");
+}
+
+.terrainRule.Open {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.22), rgba(18, 23, 30, 0.78)),
+    url("/terrain-textures/open.png");
+}
+
+.terrainRule.Open,
+.terrainRule.LightCover,
+.terrainRule.HeavyCover,
+.terrainRule.Building,
+.terrainRule.DifficultTerrain {
+  background-position: center;
+  background-size: cover;
+}
+
+.ruleMetaGrid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ruleMetaGrid span,
+.abilityRule span {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: #d7dee8;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+
+.heroRulesGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.unitRulesByFaction {
+  display: grid;
+  gap: 16px;
+}
+
+.unitRulesFaction {
+  display: grid;
+  gap: 10px;
+}
+
+.rulesSectionHeader {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.rulesSectionHeader h3 {
+  color: #fff;
+  font-size: 0.96rem;
+}
+
+.unitRulesGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.unitRuleCard {
+  background: #12171e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.heroRuleHeader {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.heroRuleHeader strong {
+  background: rgba(236, 224, 108, 0.14);
+  border: 1px solid rgba(236, 224, 108, 0.2);
+  border-radius: 999px;
+  color: #f4ed9d;
+  font-size: 0.78rem;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.abilityRule div {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.weaponRulesList,
+.unitAbilityChips {
+  display: grid;
+  gap: 6px;
+}
+
+.weaponRule {
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+
+.weaponRule strong {
+  color: #fff;
+  font-size: 0.84rem;
+}
+
+.weaponRule span,
+.weaponRule small {
+  color: #aab4c1;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.unitAbilityChips {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.unitAbilityChips span {
+  background: rgba(95, 168, 255, 0.11);
+  border: 1px solid rgba(95, 168, 255, 0.16);
+  border-radius: 999px;
+  color: #d7e8ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 5px 8px;
+}
+
 .mapLayout {
   display: grid;
   gap: 18px;
@@ -1402,7 +1646,8 @@ select {
   .armiesGrid,
   .summaryGrid,
   .composerLayout,
-  .mapLayout {
+  .mapLayout,
+  .rulesGrid {
     grid-template-columns: 1fr;
   }
 
@@ -1438,7 +1683,14 @@ select {
 
   .composerControls,
   .templateRow,
+  .glossaryItem,
+  .ruleMetaGrid,
   .summaryStats {
     grid-template-columns: 1fr;
+  }
+
+  .abilityRule div,
+  .heroRuleHeader {
+    display: grid;
   }
 }
