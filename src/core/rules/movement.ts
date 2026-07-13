@@ -1,4 +1,4 @@
-import type { Battle, UnitInstance } from "../types";
+import type { Battle, UnitInstance } from "../../types";
 import { validateUnitActivation } from "./activation";
 import { distance, isOnBoard, type GridPosition } from "./geometry";
 import { getTemplate, findUnit, replaceUnit } from "./state";

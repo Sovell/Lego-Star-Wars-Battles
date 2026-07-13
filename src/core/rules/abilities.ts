@@ -1,5 +1,5 @@
-import { abilities } from "../data";
-import type { AbilityDefinition, Battle, UnitInstance, UnitTemplate } from "../types";
+import { abilities } from "../../data";
+import type { AbilityDefinition, Battle, UnitInstance, UnitTemplate } from "../../types";
 import { distance } from "./geometry";
 import { getTemplate } from "./state";
 

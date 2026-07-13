@@ -1,4 +1,4 @@
-import type { UnitInstance, UnitStatus, UnitTemplate } from "../types";
+import type { UnitInstance, UnitStatus, UnitTemplate } from "../../types";
 
 export function getStatusAfterDamage(
   unit: UnitInstance,

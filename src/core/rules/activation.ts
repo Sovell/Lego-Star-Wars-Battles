@@ -1,4 +1,4 @@
-import type { ActivationToken, Army, Battle } from "../types";
+import type { ActivationToken, Army, Battle } from "../../types";
 import { findArmy, findUnit } from "./state";
 
 export function buildActivationBag(armies: Army[]): ActivationToken[] {

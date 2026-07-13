@@ -1,4 +1,4 @@
-import type { Battle, TerrainTile, UnitInstance } from "../types";
+import type { Battle, TerrainTile, UnitInstance } from "../../types";
 import type { GridPosition } from "./geometry";
 
 export function getTerrainAtPosition(

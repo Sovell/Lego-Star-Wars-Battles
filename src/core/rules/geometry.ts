@@ -1,4 +1,4 @@
-import type { Battle } from "../types";
+import type { Battle } from "../../types";
 
 export type GridPosition = {
   x: number;

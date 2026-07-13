@@ -1,13 +1,12 @@
-import { board, starterArmies } from "./data";
+import { board, starterArmies } from "../data";
 import { buildActivationBag, drawActivation } from "./rules/activation";
-import { resolveAttack as resolveCombatAttack } from "./rules/combat";
 import { moveUnit } from "./rules/movement";
-import { resetUnitForNextTurn } from "./rules/morale";
 import { applyOrder } from "./rules/orders";
 import { findUnit, getArmyCost, getTemplate, replaceUnit, templateById } from "./rules/state";
-import { applyVictoryState } from "./rules/victory";
 import { getVictoryState } from "./rules/victory";
-import type { Army, AttackResult, Battle, CombatLogEntry } from "./types";
+import type { Army, AttackResult, Battle, CombatLogEntry } from "../types";
+import { applyBattleAction } from "./battle-actions";
+import type { DiceRoller } from "./random";
 
 export function createBattle(armies: Army[] = starterArmies): Battle {
   const battleArmies = structuredClone(armies);
@@ -24,19 +23,7 @@ export function createBattle(armies: Army[] = starterArmies): Battle {
 }
 
 export function endTurn(battle: Battle): Battle {
-  const armies = battle.armies.map((army) => ({
-    ...army,
-    units: army.units.map((unit) => resetUnitForNextTurn(unit, getTemplate(unit))),
-  }));
-
-  return applyVictoryState({
-    ...battle,
-    turn: battle.turn + 1,
-    armies,
-    activationBag: buildActivationBag(armies),
-    activeActivation: undefined,
-    phase: "Activation",
-  });
+  return applyBattleAction(battle, { type: "EndTurn" }).battle;
 }
 
 export function createLog(turn: number, message: string): CombatLogEntry {
@@ -52,17 +39,20 @@ export function resolveAttack(
   attackerId: string,
   defenderId: string,
   weaponId: string,
+  rollD6?: DiceRoller,
 ): { battle: Battle; result?: AttackResult; log: string } {
-  const result = resolveCombatAttack(battle, attackerId, defenderId, weaponId);
+  const result = applyBattleAction(
+    battle,
+    { type: "Attack", attackerId, defenderId, weaponId },
+    { rollD6 },
+  );
 
-  return {
-    ...result,
-    battle: applyVictoryState(result.battle),
-  };
+  return { battle: result.battle, result: result.attackResult, log: result.log };
 }
 
 export {
   applyOrder,
+  applyBattleAction,
   drawActivation,
   findUnit,
   getArmyCost,

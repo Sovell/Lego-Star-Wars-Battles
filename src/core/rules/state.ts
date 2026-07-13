@@ -1,5 +1,5 @@
-import { taskForces, unitTemplates } from "../data";
-import type { Army, Battle, UnitInstance, UnitTemplate } from "../types";
+import { taskForces, unitTemplates } from "../../data";
+import type { Army, Battle, UnitInstance, UnitTemplate } from "../../types";
 
 export const templateById = new Map(unitTemplates.map((template) => [template.id, template]));
 

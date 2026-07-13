@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import { abilities, starterArmies, taskForces, unitTemplates } from "./data";
+import { BattleSavePanel } from "./app/components/BattleSavePanel";
+import { PanelTitle } from "./app/components/PanelTitle";
+import { RulesView } from "./app/screens/RulesView";
 import {
   applyOrder,
   createBattle,
@@ -11,7 +14,8 @@ import {
   getVictoryState,
   moveUnit,
   resolveAttack,
-} from "./game";
+} from "./core/battle-state";
+import { terrainPresets } from "./core/terrain-presets";
 import type {
   Army,
   Battle,
@@ -44,63 +48,6 @@ const appTitles: AppTitle = {
   composer: "Army Composer",
   rules: "Rules",
 };
-const statGlossary = [
-  { label: "HP", value: "Hit Points", description: "Wytrzymalosc jednostki. Po spadku do 0 jednostka zostaje zniszczona." },
-  { label: "MOV", value: "Movement", description: "Bazowy zasieg ruchu po planszy przed uwzglednieniem kosztu terenu." },
-  { label: "MOR", value: "Morale", description: "Prog odpornosci na suppression i przypiecie jednostki." },
-  { label: "CMD", value: "Command", description: "Potencjal dowodzenia jednostki; pole przygotowane pod szersze rozkazy." },
-  { label: "WPN", value: "Weapons", description: "Liczba profili broni dostepnych dla jednostki." },
-  { label: "SUP", value: "Suppression", description: "Presja bojowa. Utrudnia trafianie i bedzie podstawa testow morale." },
-  { label: "CD", value: "Cooldown", description: "Liczba tur oczekiwania przed ponownym uzyciem aktywnej zdolnosci." },
-  { label: "LOS", value: "Line of Sight", description: "Linia widzenia wymagana do ataku dystansowego." },
-];
-const terrainPresets: TerrainTile[] = [
-  {
-    x: 0,
-    y: 0,
-    terrainType: "Open",
-    defenseBonus: 0,
-    attackBonus: 0,
-    movementCost: 1,
-    blocksLineOfSight: false,
-  },
-  {
-    x: 0,
-    y: 0,
-    terrainType: "LightCover",
-    defenseBonus: 1,
-    attackBonus: 0,
-    movementCost: 1,
-    blocksLineOfSight: false,
-  },
-  {
-    x: 0,
-    y: 0,
-    terrainType: "HeavyCover",
-    defenseBonus: 2,
-    attackBonus: 0,
-    movementCost: 2,
-    blocksLineOfSight: false,
-  },
-  {
-    x: 0,
-    y: 0,
-    terrainType: "Building",
-    defenseBonus: 2,
-    attackBonus: 0,
-    movementCost: 2,
-    blocksLineOfSight: true,
-  },
-  {
-    x: 0,
-    y: 0,
-    terrainType: "DifficultTerrain",
-    defenseBonus: 0,
-    attackBonus: 0,
-    movementCost: 2,
-    blocksLineOfSight: false,
-  },
-];
 
 export function App() {
   const [view, setView] = useState<AppView>("battle");
@@ -212,6 +159,7 @@ export function App() {
           onBattleChange={setBattle}
           onImportError={setImportError}
           onLoadArmies={loadArmies}
+          onLogsChange={setLogs}
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
           onSelectedWeaponChange={setSelectedWeaponId}
@@ -236,175 +184,6 @@ export function App() {
   );
 }
 
-function RulesView() {
-  const heroTemplates = unitTemplates.filter((template) => template.category === "hero");
-  const unitFactions = Array.from(new Set(unitTemplates.map((template) => template.faction)));
-  const taskForceBonuses = taskForces
-    .map((taskForce) => ({
-      taskForce,
-      bonus: abilities.find((ability) => ability.id === taskForce.bonusAbility),
-    }))
-    .filter((entry) => entry.bonus);
-
-  return (
-    <section className="rulesLayout">
-      <div className="rulesGrid">
-        <section className="rulesPanel">
-          <PanelTitle title="Skroty" detail="statystyki" />
-          <div className="glossaryList">
-            {statGlossary.map((item) => (
-              <article className="glossaryItem" key={item.label}>
-                <strong>{item.label}</strong>
-                <div>
-                  <h3>{item.value}</h3>
-                  <p>{item.description}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="rulesPanel">
-          <PanelTitle title="Teren" detail={`${terrainPresets.length} typow`} />
-          <div className="terrainRulesList">
-            {terrainPresets.map((terrain) => (
-              <article className={`terrainRule ${terrain.terrainType}`} key={terrain.terrainType}>
-                <div>
-                  <p className="category">{terrain.terrainType}</p>
-                  <h3>{getTerrainRuleName(terrain.terrainType)}</h3>
-                </div>
-                <div className="ruleMetaGrid">
-                  <span>Obrona +{terrain.defenseBonus}</span>
-                  <span>Atak +{terrain.attackBonus}</span>
-                  <span>Ruch x{terrain.movementCost}</span>
-                  <span>LOS {terrain.blocksLineOfSight ? "blokuje" : "nie blokuje"}</span>
-                </div>
-                <p>{getTerrainRuleDescription(terrain)}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <section className="rulesPanel">
-        <PanelTitle title="Bohaterowie" detail={`${heroTemplates.length} kart`} />
-        <div className="heroRulesGrid">
-          {heroTemplates.map((template) => {
-            const templateAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
-
-            return (
-              <article className="heroRuleCard" key={template.id}>
-                <div className="heroRuleHeader">
-                  <div>
-                    <p className="category">{template.faction} | {template.role}</p>
-                    <h3>{template.name}</h3>
-                  </div>
-                  <strong>{template.cost} pkt</strong>
-                </div>
-                <div className="ruleMetaGrid">
-                  <span>HP {template.maxHp}</span>
-                  <span>MOV {template.movement}</span>
-                  <span>MOR {template.morale}</span>
-                  <span>CMD {template.command}</span>
-                </div>
-                <div className="abilityRulesList">
-                  {templateAbilities.map((ability) => (
-                    <article className="abilityRule" key={ability.id}>
-                      <div>
-                        <h4>{ability.name}</h4>
-                        <span>{formatAbilityMeta(ability)}</span>
-                      </div>
-                      <p>{ability.description}</p>
-                    </article>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rulesPanel">
-        <PanelTitle title="Karty jednostek" detail={`${unitTemplates.length} kart`} />
-        <div className="unitRulesByFaction">
-          {unitFactions.map((faction) => (
-            <section className="unitRulesFaction" key={faction}>
-              <div className="rulesSectionHeader">
-                <p className="eyebrow">{faction}</p>
-                <h3>{unitTemplates.filter((template) => template.faction === faction).length} jednostek</h3>
-              </div>
-              <div className="unitRulesGrid">
-                {unitTemplates
-                  .filter((template) => template.faction === faction)
-                  .map((template) => (
-                    <UnitRulesCard key={template.id} template={template} />
-                  ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </section>
-
-      <section className="rulesPanel">
-        <PanelTitle title="Task Force" detail={`${taskForceBonuses.length} bonusow`} />
-        <div className="taskForceRulesGrid">
-          {taskForceBonuses.map(({ taskForce, bonus }) => (
-            <article className="abilityRule" key={taskForce.id}>
-              <div>
-                <h4>{taskForce.name}</h4>
-                <span>{bonus ? formatAbilityMeta(bonus) : "bonus"}</span>
-              </div>
-              <p>{bonus?.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </section>
-  );
-}
-
-function UnitRulesCard({ template }: { template: UnitTemplate }) {
-  const templateAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
-
-  return (
-    <article className="unitRuleCard">
-      <div className="heroRuleHeader">
-        <div>
-          <p className="category">{template.category} | {template.role}</p>
-          <h3>{template.name}</h3>
-        </div>
-        <strong>{template.cost} pkt</strong>
-      </div>
-      <div className="ruleMetaGrid">
-        <span>HP {template.maxHp}</span>
-        <span>MOV {template.movement}</span>
-        <span>MOR {template.morale}</span>
-        <span>CMD {template.command}</span>
-      </div>
-      <div className="weaponRulesList">
-        {template.weapons.map((weapon) => (
-          <article className="weaponRule" key={weapon.id}>
-            <strong>{weapon.name}</strong>
-            <span>RNG {weapon.range} | ATK {weapon.attacks} | DMG {weapon.damage}</span>
-            {weapon.keywords.length ? <small>{weapon.keywords.join(", ")}</small> : null}
-          </article>
-        ))}
-      </div>
-      <div className="unitAbilityChips">
-        {templateAbilities.length ? (
-          templateAbilities.map((ability) => (
-            <span title={ability.description} key={ability.id}>
-              {ability.name}
-            </span>
-          ))
-        ) : (
-          <span>Brak zdolnosci</span>
-        )}
-      </div>
-    </article>
-  );
-}
-
 function BattleView({
   activeArmyId,
   armyJson,
@@ -422,6 +201,7 @@ function BattleView({
   onBattleChange,
   onImportError,
   onLoadArmies,
+  onLogsChange,
   onOrderChange,
   onSelectedUnitChange,
   onSelectedWeaponChange,
@@ -445,6 +225,7 @@ function BattleView({
   onBattleChange: (battle: Battle) => void;
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
+  onLogsChange: (logs: CombatLogEntry[]) => void;
   onOrderChange: (order: OrderType) => void;
   onSelectedUnitChange: (unitId: string) => void;
   onSelectedWeaponChange: (weaponId: string) => void;
@@ -582,6 +363,16 @@ function BattleView({
     setPendingAdvance(null);
   }
 
+  function handleBattleLoad(loadedBattle: Battle, loadedLogs: CombatLogEntry[]) {
+    setPendingAdvance(null);
+    onBattleChange(loadedBattle);
+    onLogsChange(loadedLogs);
+    onActiveArmyChange(loadedBattle.activeActivation?.armyId);
+    onSelectedUnitChange("");
+    onTargetUnitChange("");
+    onSelectedWeaponChange("");
+  }
+
   return (
     <section className="commandLayout">
       <aside className="sidePanel commandPanel">
@@ -713,6 +504,8 @@ function BattleView({
         <button className="secondaryButton" onClick={handleEndTurn}>
           Koniec tury
         </button>
+
+        <BattleSavePanel battle={battle} logs={logs} onBattleLoad={handleBattleLoad} />
 
         <details className="jsonDetails">
           <summary>Import armii JSON</summary>
@@ -1482,15 +1275,6 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PanelTitle({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="panelTitle">
-      <h2>{title}</h2>
-      <span>{detail}</span>
-    </div>
-  );
-}
-
 function ArmyPreview({ armies }: { armies: Army[] }) {
   return (
     <div className="armyPreviewList">
@@ -1646,50 +1430,6 @@ function getTokenClass(template: UnitTemplate, faction?: FactionId): string {
         : "tokenHelmet";
 
   return `${factionClass} ${bodyClass} tokenRole${template.role}`;
-}
-
-function formatAbilityMeta(ability: (typeof abilities)[number]): string {
-  const parts = [
-    ability.type ?? "passive",
-    ability.range ? `range ${ability.range}` : "",
-    ability.cooldown ? `CD ${ability.cooldown}` : "",
-  ].filter(Boolean);
-
-  return parts.join(" | ");
-}
-
-function getTerrainRuleName(terrainType: TerrainType): string {
-  switch (terrainType) {
-    case "Open":
-      return "Otwarty teren";
-    case "LightCover":
-      return "Lekka oslona";
-    case "HeavyCover":
-      return "Ciezka oslona";
-    case "Building":
-      return "Zabudowania";
-    case "DifficultTerrain":
-      return "Trudny teren";
-    default:
-      return terrainType;
-  }
-}
-
-function getTerrainRuleDescription(terrain: TerrainTile): string {
-  switch (terrain.terrainType) {
-    case "Open":
-      return "Standardowe pole bez modyfikatorow. Najlepsze do szybkiego przemieszczania.";
-    case "LightCover":
-      return "Daje niewielka ochrone przed ostrzalem bez spowalniania ruchu.";
-    case "HeavyCover":
-      return "Mocna oslona, ale wejscie na pole jest wolniejsze.";
-    case "Building":
-      return "Mocna oslona i przeszkoda blokujaca linie widzenia.";
-    case "DifficultTerrain":
-      return "Nie daje oslony, ale spowalnia ruch przez gruzy, przeszkody albo nierowny teren.";
-    default:
-      return `Pole terenowe: obrona +${terrain.defenseBonus}, koszt ruchu ${terrain.movementCost}.`;
-  }
 }
 
 function getVictoryLog(battle: Battle): string {

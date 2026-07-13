@@ -1,16 +1,18 @@
-import type { AttackResult, Battle, UnitInstance } from "../types";
+import type { AttackResult, Battle, UnitInstance } from "../../types";
 import { validateUnitActivation } from "./activation";
 import { getAttackDiceBonus, getDamageBonus, getNumericAbilityEffect } from "./abilities";
 import { distance, lineOfSight } from "./geometry";
 import { getStatusAfterDamage } from "./morale";
 import { getTemplate, findUnit, replaceUnit } from "./state";
 import { getDefenseBonus } from "./terrain";
+import { randomD6, type DiceRoller } from "../random";
 
 export function resolveAttack(
   battle: Battle,
   attackerId: string,
   defenderId: string,
   weaponId: string,
+  rollD6: DiceRoller = randomD6,
 ): { battle: Battle; result?: AttackResult; log: string } {
   const validationError = validateUnitActivation(battle, attackerId);
   if (validationError) {
@@ -68,7 +70,7 @@ export function resolveAttack(
   const hitTarget = Math.min(6, Math.max(2, 4 + coverPenalty + attackerSuppressionPenalty - cloneBonus));
   const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender);
   const attackDice = Math.max(1, weapon.attacks + attackDiceBonus);
-  const hitRolls = rollD6(attackDice);
+  const hitRolls = rollD6Pool(attackDice, rollD6);
   const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
   const antiVehicleBonus =
     weapon.keywords.includes("AntiVehicle") && defenderTemplate.keywords.includes("Vehicle")
@@ -81,7 +83,7 @@ export function resolveAttack(
       : 0;
   const forceReduction = getNumericAbilityEffect(defenderTemplate, "damage_reduction");
   const armorSave = defenderTemplate.armorSave ?? 7;
-  const armorRolls = armorSave <= 6 ? rollD6(hits) : [];
+  const armorRolls = armorSave <= 6 ? rollD6Pool(hits, rollD6) : [];
   const savedHits = armorRolls.filter((roll) => roll >= armorSave).length;
   const unsavedHits = Math.max(0, hits - savedHits);
   const rawDamage = unsavedHits > 0 ? unsavedHits * weapon.damage + antiVehicleBonus + categoryDamageBonus : 0;
@@ -121,6 +123,6 @@ export function resolveAttack(
   };
 }
 
-function rollD6(count: number): number[] {
-  return Array.from({ length: count }, () => Math.ceil(Math.random() * 6));
+function rollD6Pool(count: number, rollD6: DiceRoller): number[] {
+  return Array.from({ length: count }, rollD6);
 }

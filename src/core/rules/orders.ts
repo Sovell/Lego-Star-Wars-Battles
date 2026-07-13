@@ -1,4 +1,4 @@
-import type { Battle, OrderType, UnitInstance } from "../types";
+import type { Battle, OrderType, UnitInstance } from "../../types";
 import { validateUnitActivation } from "./activation";
 import { getTemplate, findUnit, replaceUnit } from "./state";
 

@@ -527,6 +527,37 @@ select {
   padding: 5px 8px;
 }
 
+.savePanel {
+  background: #151a21;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.savePanel input {
+  background: #101319;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #fff;
+  min-height: 38px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.saveActions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.saveStatus {
+  color: #aab4c1;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .logPanel {
   padding: 16px;
 }
