@@ -1,10 +1,56 @@
 import { describe, expect, it } from "vitest";
 import { applyBattleAction } from "./battle-actions";
 import { createBattle } from "./battle-state";
-import { createSequenceDiceRoller } from "./random";
+import { createSeededRandomSource, createSequenceDiceRoller } from "./random";
 import type { Battle, UnitInstance } from "../types";
 
 describe("applyBattleAction", () => {
+  it("draws activations deterministically through the action context", () => {
+    const firstResult = applyBattleAction(
+      createBattle(),
+      { type: "DrawActivation" },
+      { randomSource: createSeededRandomSource(42) },
+    );
+    const repeatedResult = applyBattleAction(
+      createBattle(),
+      { type: "DrawActivation" },
+      { randomSource: createSeededRandomSource(42) },
+    );
+
+    expect(firstResult.battle.activeActivation?.id).toBe(repeatedResult.battle.activeActivation?.id);
+    expect(firstResult.events).toEqual([
+      { type: "ActivationDrawn", armyId: firstResult.battle.activeActivation?.armyId },
+    ]);
+    expect(
+      firstResult.battle.activationBag.find(
+        (token) => token.id === firstResult.battle.activeActivation?.id,
+      )?.used,
+    ).toBe(true);
+  });
+
+  it("moves an activated unit and emits a movement event", () => {
+    const battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
+      defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
+    });
+
+    const result = applyBattleAction(battle, {
+      type: "MoveUnit",
+      unitId: "rep_unit_1",
+      targetPosition: { x: 2, y: 1 },
+    });
+
+    expect(findUnit(result.battle, "rep_unit_1")).toMatchObject({
+      position: { x: 2, y: 1 },
+      status: "Activated",
+      movedThisTurn: true,
+    });
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(result.events).toEqual([
+      { type: "UnitMoved", unitId: "rep_unit_1", position: { x: 2, y: 1 } },
+    ]);
+  });
+
   it("resolves combat with deterministic hit and armor rolls", () => {
     const battle = readyBattle({
       attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
@@ -69,6 +115,60 @@ describe("applyBattleAction", () => {
       status: "Destroyed",
     });
     expect(result.events.map((event) => event.type)).toEqual(["AttackResolved", "UnitDestroyed"]);
+  });
+
+  it("resets surviving units and rebuilds the activation bag at the end of a turn", () => {
+    const battle = patchUnit(createBattle(), "rep_unit_1", {
+      status: "Activated",
+      suppression: 2,
+      movedThisTurn: true,
+    });
+
+    const result = applyBattleAction(battle, { type: "EndTurn" });
+
+    expect(result.battle.turn).toBe(2);
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(findUnit(result.battle, "rep_unit_1")).toMatchObject({
+      status: "Ready",
+      suppression: 1,
+      movedThisTurn: false,
+    });
+    expect(result.battle.activationBag).toHaveLength(6);
+    expect(result.battle.activationBag.every((token) => !token.used)).toBe(true);
+    expect(result.events).toEqual([{ type: "TurnEnded", turn: 2 }]);
+  });
+
+  it("emits battle completion when the last enemy unit is destroyed", () => {
+    let battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
+      defender: { id: "sep_unit_1", position: { x: 2, y: 2 } },
+    });
+    battle = patchUnit(battle, "sep_unit_1", { currentHp: 1 });
+    battle = patchUnit(battle, "sep_unit_2", { currentHp: 0, position: null, status: "Destroyed" });
+    battle = patchUnit(battle, "sep_unit_3", { currentHp: 0, position: null, status: "Destroyed" });
+
+    const result = applyBattleAction(
+      battle,
+      {
+        type: "Attack",
+        attackerId: "rep_unit_1",
+        defenderId: "sep_unit_1",
+        weaponId: "dc_15_blaster_rifles",
+      },
+      { rollD6: createSequenceDiceRoller([6, 1, 1, 1]) },
+    );
+
+    expect(result.battle.phase).toBe("Finished");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "AttackResolved",
+      "UnitDestroyed",
+      "ArmyEliminated",
+      "BattleFinished",
+    ]);
+    expect(result.events.at(-1)).toEqual({
+      type: "BattleFinished",
+      winnerArmyId: "army_republic",
+    });
   });
 });
 

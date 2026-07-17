@@ -6,7 +6,7 @@ import { resetUnitForNextTurn } from "./rules/morale";
 import { applyOrder } from "./rules/orders";
 import { getTemplate } from "./rules/state";
 import { applyVictoryState } from "./rules/victory";
-import type { DiceRoller } from "./random";
+import { createD6Roller, type DiceRoller, type RandomSource } from "./random";
 
 export type BattleAction =
   | { type: "DrawActivation" }
@@ -21,11 +21,14 @@ export type BattleEvent =
   | { type: "OrderApplied"; unitId: string; order: OrderType }
   | { type: "AttackResolved"; result: AttackResult }
   | { type: "UnitDestroyed"; unitId: string }
+  | { type: "ArmyEliminated"; armyId: string }
   | { type: "TurnEnded"; turn: number }
   | { type: "BattleFinished"; winnerArmyId?: string };
 
 export type BattleActionContext = {
+  randomSource?: RandomSource;
   rollD6?: DiceRoller;
+  victoryMode?: "Elimination" | "Scenario";
 };
 
 export type BattleActionResult = {
@@ -42,7 +45,7 @@ export function applyBattleAction(
 ): BattleActionResult {
   switch (action.type) {
     case "DrawActivation": {
-      const result = drawActivation(battle);
+      const result = drawActivation(battle, context.randomSource);
 
       return {
         battle: result.battle,
@@ -72,18 +75,30 @@ export function applyBattleAction(
     }
 
     case "Attack": {
+      const defenderArmyId = battle.armies
+        .flatMap((army) => army.units)
+        .find((unit) => unit.id === action.defenderId)?.armyId;
+      const rollD6 = context.rollD6 ??
+        (context.randomSource ? createD6Roller(context.randomSource) : undefined);
       const result = resolveAttack(
         battle,
         action.attackerId,
         action.defenderId,
         action.weaponId,
-        context.rollD6,
+        rollD6,
       );
-      const nextBattle = applyVictoryState(result.battle);
+      const nextBattle = context.victoryMode === "Scenario"
+        ? result.battle
+        : applyVictoryState(result.battle);
       const events: BattleEvent[] = result.result ? [{ type: "AttackResolved", result: result.result }] : [];
 
       if (result.result?.destroyed) {
         events.push({ type: "UnitDestroyed", unitId: action.defenderId });
+
+        const defenderArmy = nextBattle.armies.find((army) => army.id === defenderArmyId);
+        if (defenderArmy && defenderArmy.units.every((unit) => unit.status === "Destroyed")) {
+          events.push({ type: "ArmyEliminated", armyId: defenderArmy.id });
+        }
       }
 
       if (nextBattle.phase === "Finished" && battle.phase !== "Finished") {
@@ -108,14 +123,17 @@ export function applyBattleAction(
         ...army,
         units: army.units.map((unit) => resetUnitForNextTurn(unit, getTemplate(unit))),
       }));
-      const nextBattle = applyVictoryState({
+      const advancedBattle: Battle = {
         ...battle,
         turn: battle.turn + 1,
         armies,
         activationBag: buildActivationBag(armies),
         activeActivation: undefined,
         phase: "Activation",
-      });
+      };
+      const nextBattle = context.victoryMode === "Scenario"
+        ? advancedBattle
+        : applyVictoryState(advancedBattle);
 
       return {
         battle: nextBattle,

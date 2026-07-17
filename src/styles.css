@@ -1259,6 +1259,11 @@ select {
   min-height: 560px;
 }
 
+.commandMapBoard.missionLocked .mapCell {
+  cursor: not-allowed;
+  filter: saturate(0.7);
+}
+
 .mapCell {
   align-content: space-between;
   aspect-ratio: 1;

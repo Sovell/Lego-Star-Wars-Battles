@@ -1,4 +1,5 @@
 import type { Army, Battle, CombatLogEntry, FactionId } from "../../types";
+import type { MissionState } from "../scenario/scenario-types";
 
 export const SAVE_SCHEMA_VERSION = 1;
 
@@ -34,6 +35,7 @@ export type SavedBattleSummary = {
 export type SavedBattle = SavedBattleSummary & {
   battle: Battle;
   logs: CombatLogEntry[];
+  mission?: MissionState;
 };
 
 export type SavedCampaign = {
@@ -84,6 +86,7 @@ export function createSavedBattle(input: {
   name: string;
   battle: Battle;
   logs: CombatLogEntry[];
+  mission?: MissionState;
   campaignId?: string;
   scenarioId?: string;
   now?: string;
@@ -100,6 +103,7 @@ export function createSavedBattle(input: {
     phase: input.battle.phase,
     battle: input.battle,
     logs: input.logs,
+    ...(input.mission ? { mission: input.mission } : {}),
     createdAt: input.createdAt ?? timestamp,
     updatedAt: timestamp,
   };

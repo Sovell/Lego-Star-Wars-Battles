@@ -1,0 +1,54 @@
+.missionPanel {
+  background: rgba(47, 125, 209, 0.1);
+  border: 1px solid rgba(82, 151, 224, 0.28);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.missionPanel.victory {
+  background: rgba(47, 135, 79, 0.14);
+  border-color: rgba(84, 190, 120, 0.38);
+}
+
+.missionPanel.defeat {
+  background: rgba(151, 48, 48, 0.14);
+  border-color: rgba(224, 89, 89, 0.4);
+}
+
+.missionPanel > p {
+  color: #bfc9d5;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.missionProgressHeader {
+  align-items: center;
+  display: flex;
+  font-size: 0.8rem;
+  justify-content: space-between;
+}
+
+.missionPanel progress {
+  accent-color: #ece06c;
+  height: 10px;
+  width: 100%;
+}
+
+.missionPanel.victory progress {
+  accent-color: #54be78;
+}
+
+.missionPanel.defeat progress {
+  accent-color: #df6262;
+}
+
+.missionPanel .missionOutcome {
+  color: #8ee0a9;
+  font-weight: 800;
+}
+
+.missionPanel.defeat .missionOutcome {
+  color: #f19a9a;
+}

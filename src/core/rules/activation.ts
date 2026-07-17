@@ -1,4 +1,5 @@
 import type { ActivationToken, Army, Battle } from "../../types";
+import { randomIndex, systemRandom, type RandomSource } from "../random";
 import { findArmy, findUnit } from "./state";
 
 export function buildActivationBag(armies: Army[]): ActivationToken[] {
@@ -14,7 +15,7 @@ export function buildActivationBag(armies: Army[]): ActivationToken[] {
   );
 }
 
-export function drawActivation(battle: Battle): {
+export function drawActivation(battle: Battle, randomSource: RandomSource = systemRandom): {
   battle: Battle;
   token?: ActivationToken;
   log: string;
@@ -24,7 +25,7 @@ export function drawActivation(battle: Battle): {
     return { battle: { ...battle, activeActivation: undefined }, log: "Worek aktywacji jest pusty." };
   }
 
-  const pickedToken = unusedTokens[Math.floor(Math.random() * unusedTokens.length)];
+  const pickedToken = unusedTokens[randomIndex(unusedTokens.length, randomSource)];
   const nextBattle = {
     ...battle,
     activeActivation: pickedToken,

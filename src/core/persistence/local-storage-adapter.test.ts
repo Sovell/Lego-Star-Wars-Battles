@@ -13,6 +13,11 @@ describe("createLocalStoragePersistence", () => {
       name: "Opening Clash",
       battle,
       logs: [{ id: "log-1", turn: 1, message: "Battle ready." }],
+      mission: {
+        scenarioId: "survival-test",
+        status: "Active",
+        roundsCompleted: 2,
+      },
       now: "2026-06-21T10:00:00.000Z",
     });
 

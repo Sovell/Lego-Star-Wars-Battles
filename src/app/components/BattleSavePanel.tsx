@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPersistenceAdapter } from "../../core/persistence/create-persistence-adapter";
 import { createSavedBattle, type SavedBattleSummary } from "../../core/persistence/save-types";
+import type { MissionState } from "../../core/scenario/scenario-types";
 import type { Battle, CombatLogEntry } from "../../types";
 import { PanelTitle } from "./PanelTitle";
 
 export function BattleSavePanel({
   battle,
   logs,
+  mission,
   onBattleLoad,
 }: {
   battle: Battle;
   logs: CombatLogEntry[];
-  onBattleLoad: (battle: Battle, logs: CombatLogEntry[]) => void;
+  mission: MissionState;
+  onBattleLoad: (battle: Battle, logs: CombatLogEntry[], mission?: MissionState) => void;
 }) {
   const [saveName, setSaveName] = useState<string>("Bitwa treningowa");
   const [saveStatus, setSaveStatus] = useState<string>("");
@@ -45,6 +48,7 @@ export function BattleSavePanel({
       name: trimmedName,
       battle,
       logs,
+      mission,
     });
 
     try {
@@ -71,7 +75,7 @@ export function BattleSavePanel({
         return;
       }
 
-      onBattleLoad(savedBattle.battle, savedBattle.logs);
+      onBattleLoad(savedBattle.battle, savedBattle.logs, savedBattle.mission);
       setSaveName(savedBattle.name);
       setSaveStatus(`Wczytano: ${savedBattle.name}.`);
     } catch (error) {
