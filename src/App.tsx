@@ -1007,6 +1007,7 @@ function MapBoard({
               {tileUnits.map((unit) => {
                 const template = getTemplate(unit);
                 const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
+                const tokenImageUrl = getTokenImageUrl(template);
 
                 return (
                   <span
@@ -1020,6 +1021,17 @@ function MapBoard({
                     }}
                     title={`${template.name} | ${army?.faction ?? "Unknown"}`}
                   >
+                    {tokenImageUrl ? (
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="tokenPortrait"
+                        src={tokenImageUrl}
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                        }}
+                      />
+                    ) : null}
                     <span className="tokenHead">
                       <span className="tokenVisor" />
                       <span className="tokenMouth" />
@@ -1388,6 +1400,7 @@ function MapView({
                 {tileUnits.map((unit) => {
                   const template = getTemplate(unit);
                   const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
+                  const tokenImageUrl = getTokenImageUrl(template);
 
                   return (
                     <span
@@ -1401,6 +1414,17 @@ function MapView({
                       }}
                       title={`${template.name} | ${army?.faction ?? "Unknown"}`}
                     >
+                      {tokenImageUrl ? (
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="tokenPortrait"
+                          src={tokenImageUrl}
+                          onError={(event) => {
+                            event.currentTarget.hidden = true;
+                          }}
+                        />
+                      ) : null}
                       <span className="tokenHead">
                         <span className="tokenVisor" />
                         <span className="tokenMouth" />
@@ -1686,6 +1710,14 @@ function getUnitInitials(template: UnitTemplate): string {
     .join("")
     .slice(0, 3)
     .toUpperCase();
+}
+
+function getTokenImageUrl(template: UnitTemplate): string | undefined {
+  const photoPrefix = "/unit-images/photos/";
+
+  return template.imageUrl?.startsWith(photoPrefix)
+    ? template.imageUrl.replace(photoPrefix, "/unit-images/tokens/")
+    : undefined;
 }
 
 function getObjectCode(type: BattlefieldObjectType): string {

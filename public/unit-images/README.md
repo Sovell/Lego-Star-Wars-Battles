@@ -49,3 +49,11 @@ Source mapping:
 - `IMG_0995.jpeg` -> `photos/stap-patrol.jpg`
 - `IMG_0996.jpeg` -> `photos/at-rt-scout-walker.jpg`
 - `IMG_0997.jpeg` -> `photos/droideka.jpg`
+
+## Token crops
+
+The `tokens/` directory contains 512x512 close crops derived from the corresponding
+files in `photos/`. Infantry tokens focus on the complete head, helmet, or headpiece,
+while vehicle tokens retain the recognizable vehicle silhouette. The map applies
+faction-colored circular borders and falls back to the generated CSS token when a
+photo crop is unavailable.
