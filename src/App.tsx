@@ -64,7 +64,7 @@ export function App() {
   const [view, setView] = useState<AppView>("battle");
   const [battle, setBattle] = useState<Battle>(() => createBattle());
   const [mission, setMission] = useState<MissionState>(() =>
-    createMissionState(survivalTestScenario),
+    createMissionState(survivalTestScenario, starterArmies),
   );
   const [missionArmies, setMissionArmies] = useState<Army[]>(() => structuredClone(starterArmies));
   const [logs, setLogs] = useState<CombatLogEntry[]>([
@@ -89,10 +89,11 @@ export function App() {
     armies: Army[],
     logMessage: string,
     scenario: ScenarioDefinition = activeScenario,
+    defenderArmyId?: string,
   ) {
     const nextBattle = createBattle(armies);
     setBattle(nextBattle);
-    setMission(createMissionState(scenario));
+    setMission(createMissionState(scenario, nextBattle.armies, defenderArmyId));
     setMissionArmies(structuredClone(armies));
     setActiveArmyId(undefined);
     setSelectedUnitId("");
@@ -108,7 +109,35 @@ export function App() {
       return;
     }
 
-    loadArmies(missionArmies, `Uruchomiono scenariusz: ${nextScenario.name}.`, nextScenario);
+    loadArmies(
+      missionArmies,
+      `Uruchomiono scenariusz: ${nextScenario.name}.`,
+      nextScenario,
+      mission.defenderArmyId,
+    );
+  }
+
+  function handleDefenderArmyChange(defenderArmyId: string) {
+    const defender = battle.armies.find((army) => army.id === defenderArmyId);
+    const attacker = battle.armies.find((army) => army.id !== defenderArmyId);
+    if (!defender || !attacker) {
+      return;
+    }
+
+    setMission((current) => ({
+      ...current,
+      status: "Active",
+      roundsCompleted: 0,
+      defenderArmyId: defender.id,
+      attackerArmyId: attacker.id,
+    }));
+    setLogs((current) => [
+      createLog(
+        battle.turn,
+        `Role scenariusza: ${defender.faction} broni, ${attacker.faction} atakuje.`,
+      ),
+      ...current,
+    ].slice(0, 12));
   }
 
   function handleUnitPatch(unitId: string, patch: Partial<UnitInstance>) {
@@ -225,9 +254,15 @@ export function App() {
           onLogsChange={setLogs}
           onMissionChange={setMission}
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
+          onDefenderArmyChange={handleDefenderArmyChange}
           onScenarioChange={handleScenarioChange}
           onMissionRestart={() =>
-            loadArmies(missionArmies, "Misja zostala uruchomiona ponownie.")
+            loadArmies(
+              missionArmies,
+              "Misja zostala uruchomiona ponownie.",
+              activeScenario,
+              mission.defenderArmyId,
+            )
           }
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
@@ -275,6 +310,7 @@ function BattleView({
   onLoadArmies,
   onLogsChange,
   onBattlefieldObjectPlace,
+  onDefenderArmyChange,
   onMissionChange,
   onMissionRestart,
   onScenarioChange,
@@ -309,6 +345,7 @@ function BattleView({
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
   ) => void;
+  onDefenderArmyChange: (armyId: string) => void;
   onMissionChange: (mission: MissionState) => void;
   onMissionRestart: () => void;
   onScenarioChange: (scenarioId: string) => void;
@@ -515,8 +552,12 @@ function BattleView({
     loadedMission?: MissionState,
   ) {
     setPendingAdvance(null);
+    const missionWithRoles = {
+      ...createMissionState(scenario, loadedBattle.armies, loadedMission?.defenderArmyId),
+      ...loadedMission,
+    };
     onBattleChange(loadedBattle);
-    onMissionChange(loadedMission ?? createMissionState(scenario));
+    onMissionChange(missionWithRoles);
     onLogsChange(loadedLogs);
     onActiveArmyChange(loadedBattle.activeActivation?.armyId);
     onSelectedUnitChange("");
@@ -528,14 +569,16 @@ function BattleView({
     <section className="commandLayout">
       <aside className="sidePanel commandPanel">
         <MissionPanel
+          armies={battle.armies}
           mission={mission}
           scenario={scenario}
           scenarios={scenarioOptions}
           onScenarioChange={onScenarioChange}
+          onDefenderArmyChange={onDefenderArmyChange}
           onRoundTargetChange={(rounds) =>
             onMissionChange({
               ...mission,
-              roundTarget: Math.min(10, Math.max(1, rounds || 1)),
+              roundTarget: Math.max(1, Math.floor(rounds || 1)),
               roundsCompleted: 0,
             })
           }

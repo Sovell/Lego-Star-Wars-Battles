@@ -27,6 +27,8 @@ export type MissionState = {
   status: MissionStatus;
   roundsCompleted: number;
   roundTarget?: number;
+  defenderArmyId?: string;
+  attackerArmyId?: string;
 };
 
 export type MissionEvent =

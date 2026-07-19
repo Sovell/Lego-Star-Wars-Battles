@@ -86,6 +86,25 @@ describe("scenario engine", () => {
     ]);
   });
 
+  it("uses the selected army as the defender for elimination defeat", () => {
+    const battle = createBattle();
+    const mission = createMissionState(
+      survivalTestScenario,
+      battle.armies,
+      "army_separatists",
+    );
+    const result = applyScenarioEvents(
+      mission,
+      survivalTestScenario,
+      [{ type: "ArmyEliminated", armyId: "army_separatists" }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Defeat");
+    expect(result.mission.defenderArmyId).toBe("army_separatists");
+    expect(result.mission.attackerArmyId).toBe("army_republic");
+  });
+
   it("counts a round when the defenders control the designated point", () => {
     const battle = createBattle();
     battle.board.objects = [createBattlefieldObject("DefensePoint", { x: 1, y: 2 })];
@@ -121,6 +140,26 @@ describe("scenario engine", () => {
     expect(result.events).toEqual([expect.objectContaining({ type: "MissionProgress" })]);
   });
 
+  it("counts point defense for the army selected as defender", () => {
+    const battle = createBattle();
+    battle.board.objects = [createBattlefieldObject("DefensePoint", { x: 6, y: 2 })];
+    const mission = createMissionState(
+      defendPointScenario,
+      battle.armies,
+      "army_separatists",
+    );
+
+    const result = applyScenarioEvents(
+      mission,
+      defendPointScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+
+    expect(result.mission.roundsCompleted).toBe(1);
+    expect(result.mission.status).toBe("Active");
+  });
+
   it("defeats the generator scenario when the generator is destroyed", () => {
     const result = applyScenarioEvents(
       createMissionState(protectGeneratorScenario),
@@ -152,7 +191,8 @@ describe("scenario engine", () => {
     battle.board.objects = [createBattlefieldObject("Generator", { x: 3, y: 2 })];
     const mission = {
       ...createMissionState(protectGeneratorScenario),
-      roundTarget: 1,
+      roundsCompleted: 11,
+      roundTarget: 12,
     };
 
     const result = applyScenarioEvents(
@@ -163,5 +203,6 @@ describe("scenario engine", () => {
     );
 
     expect(result.mission.status).toBe("Victory");
+    expect(result.mission.roundsCompleted).toBe(12);
   });
 });

@@ -1,5 +1,5 @@
 import type { BattleEvent } from "../battle-actions";
-import type { Battle } from "../../types";
+import type { Army, Battle } from "../../types";
 import type { MissionEvent, MissionState, ScenarioDefinition } from "./scenario-types";
 
 export type ScenarioEngineResult = {
@@ -7,11 +7,22 @@ export type ScenarioEngineResult = {
   events: MissionEvent[];
 };
 
-export function createMissionState(scenario: ScenarioDefinition): MissionState {
+export function createMissionState(
+  scenario: ScenarioDefinition,
+  armies: Army[] = [],
+  requestedDefenderArmyId?: string,
+): MissionState {
+  const defenderArmyId = armies.some((army) => army.id === requestedDefenderArmyId)
+    ? requestedDefenderArmyId
+    : armies[0]?.id;
+  const attackerArmyId = armies.find((army) => army.id !== defenderArmyId)?.id;
+
   return {
     scenarioId: scenario.id,
     status: "Active",
     roundsCompleted: 0,
+    ...(defenderArmyId ? { defenderArmyId } : {}),
+    ...(attackerArmyId ? { attackerArmyId } : {}),
   };
 }
 
@@ -31,8 +42,15 @@ export function applyScenarioEvents(
     return { mission, events: [] };
   }
 
+  const defenderArmyId = mission.defenderArmyId ?? (
+    scenario.defeatCondition?.type === "ArmyEliminated"
+      ? battle?.armies[scenario.defeatCondition.armySlot]?.id
+      : scenario.victoryCondition.type === "DefendPoint"
+        ? battle?.armies[scenario.victoryCondition.defenderArmySlot]?.id
+        : battle?.armies[0]?.id
+  );
   const defeatedArmyId = scenario.defeatCondition?.type === "ArmyEliminated"
-    ? battle?.armies[scenario.defeatCondition.armySlot]?.id
+    ? defenderArmyId
     : undefined;
   const defeatTriggered = defeatedArmyId !== undefined && battleEvents.some(
     (event) => event.type === "ArmyEliminated" && event.armyId === defeatedArmyId,
@@ -119,10 +137,10 @@ export function applyScenarioEvents(
         unit.position.y === defensePoint.position.y,
       );
     const defenderPresent = unitsOnPoint.some(
-      (unit) => unit.armyId === battle?.armies[condition.defenderArmySlot]?.id,
+      (unit) => unit.armyId === defenderArmyId,
     );
     const enemyPresent = unitsOnPoint.some(
-      (unit) => unit.armyId !== battle?.armies[condition.defenderArmySlot]?.id,
+      (unit) => unit.armyId !== defenderArmyId,
     );
 
     if (!defenderPresent || enemyPresent) {
