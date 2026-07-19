@@ -28,8 +28,15 @@ export function lineOfSight(battle: Battle, from: GridPosition, to: GridPosition
     const x = Math.round(from.x + ((to.x - from.x) * step) / steps);
     const y = Math.round(from.y + ((to.y - from.y) * step) / steps);
     const tile = battle.board.tiles.find((terrain) => terrain.x === x && terrain.y === y);
+    const blockingObject = (battle.board.objects ?? []).find(
+      (object) =>
+        object.status === "Active" &&
+        object.blocksLineOfSight &&
+        object.position.x === x &&
+        object.position.y === y,
+    );
 
-    if (tile?.blocksLineOfSight) {
+    if (tile?.blocksLineOfSight || blockingObject) {
       return false;
     }
   }

@@ -23,6 +23,15 @@
   line-height: 1.4;
 }
 
+.missionSelector {
+  color: #9eabba;
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 800;
+  gap: 5px;
+  text-transform: uppercase;
+}
+
 .missionProgressHeader {
   align-items: center;
   display: flex;

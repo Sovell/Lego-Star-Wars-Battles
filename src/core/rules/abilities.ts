@@ -28,16 +28,11 @@ export function getAttackDiceBonus(
   const attackerTemplate = getTemplate(attacker);
   let bonus = 0;
 
-  if (
-    attackerTemplate.abilities.includes("assault_training") &&
-    attacker.movedThisTurn
-  ) {
+  if (attacker.movedThisTurn) {
     bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_if_moved");
   }
 
-  if (getTemplate(defender).category === "hero") {
-    bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_against_category");
-  }
+  bonus += getAttackBonusAgainstTarget(attackerTemplate, getTemplate(defender));
 
   if (
     attackerTemplate.abilities.includes("relentless_fury") &&
@@ -48,6 +43,23 @@ export function getAttackDiceBonus(
 
   bonus += getFriendlyAuraAttackBonus(battle, attacker);
   return bonus;
+}
+
+function getAttackBonusAgainstTarget(
+  attackerTemplate: UnitTemplate,
+  defenderTemplate: UnitTemplate,
+): number {
+  return getAbilities(attackerTemplate).reduce((total, ability) => {
+    if (
+      ability.effect.type !== "attack_bonus_against_category" ||
+      typeof ability.effect.value !== "number" ||
+      !matchesAbilityTarget(ability.effect.target, defenderTemplate)
+    ) {
+      return total;
+    }
+
+    return total + ability.effect.value;
+  }, 0);
 }
 
 export function getDamageBonus(

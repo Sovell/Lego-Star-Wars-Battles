@@ -1,6 +1,18 @@
-import type { AttackResult, Battle, OrderType } from "../types";
-import { buildActivationBag, drawActivation } from "./rules/activation";
+import type {
+  AttackResult,
+  Battle,
+  BattlefieldObjectType,
+  ObjectAttackResult,
+  OrderType,
+} from "../types";
+import {
+  buildActivationBag,
+  canEndTurn,
+  drawActivation,
+  getRemainingActivationCount,
+} from "./rules/activation";
 import { resolveAttack } from "./rules/combat";
+import { resolveObjectAttack } from "./rules/object-combat";
 import { moveUnit } from "./rules/movement";
 import { resetUnitForNextTurn } from "./rules/morale";
 import { applyOrder } from "./rules/orders";
@@ -13,6 +25,7 @@ export type BattleAction =
   | { type: "MoveUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "ApplyOrder"; unitId: string; order: OrderType }
   | { type: "Attack"; attackerId: string; defenderId: string; weaponId: string }
+  | { type: "AttackObject"; attackerId: string; objectId: string; weaponId: string }
   | { type: "EndTurn" };
 
 export type BattleEvent =
@@ -22,6 +35,12 @@ export type BattleEvent =
   | { type: "AttackResolved"; result: AttackResult }
   | { type: "UnitDestroyed"; unitId: string }
   | { type: "ArmyEliminated"; armyId: string }
+  | { type: "BattlefieldObjectDamaged"; objectId: string; damage: number }
+  | {
+      type: "BattlefieldObjectDestroyed";
+      objectId: string;
+      objectType: BattlefieldObjectType;
+    }
   | { type: "TurnEnded"; turn: number }
   | { type: "BattleFinished"; winnerArmyId?: string };
 
@@ -36,6 +55,7 @@ export type BattleActionResult = {
   events: BattleEvent[];
   log: string;
   attackResult?: AttackResult;
+  objectAttackResult?: ObjectAttackResult;
 };
 
 export function applyBattleAction(
@@ -118,7 +138,50 @@ export function applyBattleAction(
       };
     }
 
+    case "AttackObject": {
+      const rollD6 = context.rollD6 ??
+        (context.randomSource ? createD6Roller(context.randomSource) : undefined);
+      const result = resolveObjectAttack(
+        battle,
+        action.attackerId,
+        action.objectId,
+        action.weaponId,
+        rollD6,
+      );
+      const events: BattleEvent[] = [];
+
+      if (result.result) {
+        events.push({
+          type: "BattlefieldObjectDamaged",
+          objectId: result.result.objectId,
+          damage: result.result.damage,
+        });
+        if (result.result.destroyed) {
+          events.push({
+            type: "BattlefieldObjectDestroyed",
+            objectId: result.result.objectId,
+            objectType: result.result.objectType,
+          });
+        }
+      }
+
+      return {
+        battle: result.battle,
+        events,
+        log: result.log,
+        objectAttackResult: result.result,
+      };
+    }
+
     case "EndTurn": {
+      if (!canEndTurn(battle)) {
+        const log = battle.activeActivation
+          ? "Nie mozna zakonczyc tury: najpierw wykorzystaj aktywny token."
+          : `Nie mozna zakonczyc tury: ${getRemainingActivationCount(battle)} jednostek nadal czeka na rozkaz.`;
+
+        return { battle, events: [], log };
+      }
+
       const armies = battle.armies.map((army) => ({
         ...army,
         units: army.units.map((unit) => resetUnitForNextTurn(unit, getTemplate(unit))),

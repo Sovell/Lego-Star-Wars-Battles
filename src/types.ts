@@ -87,10 +87,31 @@ export type TerrainTile = {
   blocksLineOfSight: boolean;
 };
 
+export type BattlefieldObjectType =
+  | "DefensePoint"
+  | "Generator"
+  | "LightFortification"
+  | "HeavyFortification";
+
+export type BattlefieldObject = {
+  id: string;
+  type: BattlefieldObjectType;
+  name: string;
+  position: { x: number; y: number };
+  maxHp: number;
+  currentHp: number;
+  armorSave?: number;
+  defenseBonus: number;
+  destructible: boolean;
+  blocksLineOfSight: boolean;
+  status: "Active" | "Destroyed";
+};
+
 export type Board = {
   width: number;
   height: number;
   tiles: TerrainTile[];
+  objects?: BattlefieldObject[];
 };
 
 export type ActivationToken = {
@@ -170,5 +191,19 @@ export type AttackResult = {
   unsavedHits: number;
   damage: number;
   suppression: number;
+  destroyed: boolean;
+};
+
+export type ObjectAttackResult = {
+  attackerId: string;
+  objectId: string;
+  objectType: BattlefieldObjectType;
+  objectPosition: { x: number; y: number };
+  weaponName: string;
+  hitRolls: number[];
+  armorRolls: number[];
+  hits: number;
+  unsavedHits: number;
+  damage: number;
   destroyed: boolean;
 };

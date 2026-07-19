@@ -44,6 +44,7 @@ export function applyMissionAction(
     session.mission,
     scenario,
     battleResult.events,
+    battleResult.battle,
   );
   const battle = scenarioResult.mission.status === "Active"
     ? battleResult.battle

@@ -31,12 +31,12 @@ export function moveUnit(
   const terrain = getTerrainAtPosition(battle, targetPosition);
   const movementCost = terrain?.movementCost ?? 1;
   const movementDistance = unit.position ? distance(unit.position, targetPosition) : 1;
-  const totalCost = movementDistance * movementCost;
+  const maxDistance = unit.position ? getMoveDistance(template.movement, movementCost) : 1;
 
-  if (totalCost > template.movement) {
+  if (movementDistance > maxDistance) {
     return {
       battle,
-      log: `${template.name} nie moze ruszyc sie na to pole: koszt ${totalCost}/${template.movement}.`,
+      log: `${template.name} nie moze ruszyc sie na to pole: dystans ${movementDistance}/${maxDistance}.`,
     };
   }
 
@@ -49,6 +49,6 @@ export function moveUnit(
 
   return {
     battle: { ...replaceUnit(battle, updatedUnit), activeActivation: undefined },
-    log: `${template.name} wykonuje ruch na pole ${targetPosition.x}, ${targetPosition.y} (koszt ${totalCost}/${template.movement}).`,
+    log: `${template.name} wykonuje ruch na pole ${targetPosition.x}, ${targetPosition.y} (dystans ${movementDistance}/${maxDistance}).`,
   };
 }

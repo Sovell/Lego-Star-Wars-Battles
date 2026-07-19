@@ -7,8 +7,28 @@ import { applyMissionAction } from "./mission-session";
 import { survivalTestScenario } from "./scenarios";
 
 describe("mission session", () => {
-  it("finishes the session only when the scenario reaches a terminal state", () => {
+  it("does not count an incomplete activation pool as a completed round", () => {
     const battle = createBattle();
+    const mission = {
+      ...createMissionState(survivalTestScenario),
+      roundsCompleted: 2,
+    };
+
+    const result = applyMissionAction(
+      { battle, mission },
+      survivalTestScenario,
+      { type: "EndTurn" },
+    );
+
+    expect(result.battle).toBe(battle);
+    expect(result.mission).toBe(mission);
+    expect(result.mission.status).toBe("Active");
+    expect(result.events).toEqual([]);
+    expect(result.missionEvents).toEqual([]);
+  });
+
+  it("finishes the session only when the scenario reaches a terminal state", () => {
+    const battle = activateAllLivingUnits(createBattle());
     const mission = {
       ...createMissionState(survivalTestScenario),
       roundsCompleted: 2,
@@ -138,6 +158,19 @@ function patchUnit(battle: Battle, unitId: string, patch: Partial<UnitInstance>)
     armies: battle.armies.map((army) => ({
       ...army,
       units: army.units.map((unit) => (unit.id === unitId ? { ...unit, ...patch } : unit)),
+    })),
+  };
+}
+
+function activateAllLivingUnits(battle: Battle): Battle {
+  return {
+    ...battle,
+    activeActivation: undefined,
+    armies: battle.armies.map((army) => ({
+      ...army,
+      units: army.units.map((unit) =>
+        unit.status === "Destroyed" ? unit : { ...unit, status: "Activated" },
+      ),
     })),
   };
 }

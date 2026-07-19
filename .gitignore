@@ -1,4 +1,8 @@
 node_modules/
+.venv/
+.codex-preview/
+tmp/imagegen/
+output/imagegen/
 dist/
 .vite/
 src-tauri/target/

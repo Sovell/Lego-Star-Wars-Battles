@@ -1338,6 +1338,39 @@ select {
   white-space: nowrap;
 }
 
+.battlefieldObject {
+  align-items: center;
+  background: rgba(19, 25, 33, 0.92);
+  border: 2px solid #d8c95d;
+  border-radius: 8px;
+  color: #fff4a3;
+  display: inline-flex;
+  gap: 5px;
+  padding: 4px 6px;
+}
+
+.battlefieldObject small {
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.battlefieldObject.Generator {
+  border-color: #5bbbea;
+  color: #a9e5ff;
+}
+
+.battlefieldObject.LightFortification,
+.battlefieldObject.HeavyFortification {
+  border-color: #a8b0ba;
+  color: #e2e7ed;
+}
+
+.battlefieldObject.destroyed {
+  filter: grayscale(1);
+  opacity: 0.48;
+  text-decoration: line-through;
+}
+
 .mapUnitStack {
   align-self: end;
   display: flex;

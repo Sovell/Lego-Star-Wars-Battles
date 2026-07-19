@@ -13,14 +13,23 @@ import {
   getVictoryState,
 } from "./core/battle-state";
 import type { BattleAction } from "./core/battle-actions";
+import {
+  canEndTurn,
+  getRemainingActivationCount,
+} from "./core/rules/activation";
+import {
+  battlefieldObjectPresets,
+  createBattlefieldObject,
+} from "./core/battlefield-objects";
 import { terrainPresets } from "./core/terrain-presets";
 import { createMissionState } from "./core/scenario/scenario-engine";
 import { applyMissionAction } from "./core/scenario/mission-session";
-import { survivalTestScenario } from "./core/scenario/scenarios";
-import type { MissionState } from "./core/scenario/scenario-types";
+import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
+import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import type {
   Army,
   Battle,
+  BattlefieldObjectType,
   CombatLogEntry,
   FactionId,
   OrderType,
@@ -57,6 +66,7 @@ export function App() {
   const [mission, setMission] = useState<MissionState>(() =>
     createMissionState(survivalTestScenario),
   );
+  const [missionArmies, setMissionArmies] = useState<Army[]>(() => structuredClone(starterArmies));
   const [logs, setLogs] = useState<CombatLogEntry[]>([
     createLog(1, "Bitwa gotowa. W worku aktywacji sa tokeny obu armii."),
   ]);
@@ -68,21 +78,37 @@ export function App() {
   const [armyJson, setArmyJson] = useState<string>(() => JSON.stringify(starterArmies, null, 2));
   const [importError, setImportError] = useState<string>("");
   const [debugMode, setDebugMode] = useState<boolean>(false);
+  const activeScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
+    ?? survivalTestScenario;
 
   function addLog(message: string) {
     setLogs((current) => [createLog(battle.turn, message), ...current].slice(0, 12));
   }
 
-  function loadArmies(armies: Army[], logMessage: string) {
+  function loadArmies(
+    armies: Army[],
+    logMessage: string,
+    scenario: ScenarioDefinition = activeScenario,
+  ) {
     const nextBattle = createBattle(armies);
     setBattle(nextBattle);
-    setMission(createMissionState(survivalTestScenario));
+    setMission(createMissionState(scenario));
+    setMissionArmies(structuredClone(armies));
     setActiveArmyId(undefined);
     setSelectedUnitId("");
     setTargetUnitId("");
     setArmyJson(JSON.stringify(armies, null, 2));
     setImportError("");
     setLogs([createLog(1, logMessage)]);
+  }
+
+  function handleScenarioChange(scenarioId: string) {
+    const nextScenario = scenarios.find((scenario) => scenario.id === scenarioId);
+    if (!nextScenario) {
+      return;
+    }
+
+    loadArmies(missionArmies, `Uruchomiono scenariusz: ${nextScenario.name}.`, nextScenario);
   }
 
   function handleUnitPatch(unitId: string, patch: Partial<UnitInstance>) {
@@ -106,6 +132,32 @@ export function App() {
         board: {
           ...current.board,
           tiles: tile.terrainType === "Open" ? otherTiles : [...otherTiles, tile],
+        },
+      };
+    });
+  }
+
+  function handleBattlefieldObjectPlace(
+    type: BattlefieldObjectType | undefined,
+    position: { x: number; y: number },
+  ) {
+    setBattle((current) => {
+      const objects = current.board.objects ?? [];
+      const remaining = objects.filter((object) => {
+        const occupiesPosition =
+          object.position.x === position.x && object.position.y === position.y;
+        const isUniqueReplacement =
+          type !== undefined &&
+          (type === "DefensePoint" || type === "Generator") &&
+          object.type === type;
+        return !occupiesPosition && !isUniqueReplacement;
+      });
+
+      return {
+        ...current,
+        board: {
+          ...current.board,
+          objects: type ? [...remaining, createBattlefieldObject(type, position)] : remaining,
         },
       };
     });
@@ -158,6 +210,8 @@ export function App() {
           importError={importError}
           logs={logs}
           mission={mission}
+          scenario={activeScenario}
+          scenarioOptions={scenarios}
           selectedOrder={selectedOrder}
           selectedUnitId={selectedUnitId}
           selectedWeaponId={selectedWeaponId}
@@ -170,8 +224,10 @@ export function App() {
           onLoadArmies={loadArmies}
           onLogsChange={setLogs}
           onMissionChange={setMission}
+          onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
+          onScenarioChange={handleScenarioChange}
           onMissionRestart={() =>
-            loadArmies(starterArmies, "Misja testowa zostala uruchomiona ponownie.")
+            loadArmies(missionArmies, "Misja zostala uruchomiona ponownie.")
           }
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
@@ -205,6 +261,8 @@ function BattleView({
   importError,
   logs,
   mission,
+  scenario,
+  scenarioOptions,
   selectedOrder,
   selectedUnitId,
   selectedWeaponId,
@@ -216,8 +274,10 @@ function BattleView({
   onImportError,
   onLoadArmies,
   onLogsChange,
+  onBattlefieldObjectPlace,
   onMissionChange,
   onMissionRestart,
+  onScenarioChange,
   onOrderChange,
   onSelectedUnitChange,
   onSelectedWeaponChange,
@@ -232,6 +292,8 @@ function BattleView({
   importError: string;
   logs: CombatLogEntry[];
   mission: MissionState;
+  scenario: ScenarioDefinition;
+  scenarioOptions: ScenarioDefinition[];
   selectedOrder: OrderType;
   selectedUnitId: string;
   selectedWeaponId: string;
@@ -243,8 +305,13 @@ function BattleView({
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
   onLogsChange: (logs: CombatLogEntry[]) => void;
+  onBattlefieldObjectPlace: (
+    type: BattlefieldObjectType | undefined,
+    position: { x: number; y: number },
+  ) => void;
   onMissionChange: (mission: MissionState) => void;
   onMissionRestart: () => void;
+  onScenarioChange: (scenarioId: string) => void;
   onOrderChange: (order: OrderType) => void;
   onSelectedUnitChange: (unitId: string) => void;
   onSelectedWeaponChange: (weaponId: string) => void;
@@ -253,8 +320,11 @@ function BattleView({
   onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
   const [pendingAdvance, setPendingAdvance] = useState<PendingAdvance | null>(null);
-  const [mapMode, setMapMode] = useState<"units" | "terrain">("units");
+  const [mapMode, setMapMode] = useState<"units" | "terrain" | "objects">("units");
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
+  const [selectedObjectType, setSelectedObjectType] = useState<
+    BattlefieldObjectType | "Remove"
+  >("DefensePoint");
   const allUnits = useMemo(() => battle.armies.flatMap((army) => army.units), [battle.armies]);
   const selectedUnit = allUnits.find((unit) => unit.id === selectedUnitId);
   const selectedTemplate = selectedUnit ? getTemplate(selectedUnit) : undefined;
@@ -270,13 +340,18 @@ function BattleView({
   const availableTargets = allUnits.filter(
     (unit) => unit.armyId !== selectedUnit?.armyId && unit.status !== "Destroyed",
   );
-  const unusedTokens = battle.activationBag.filter((token) => !token.used).length;
+  const availableObjectTargets = (battle.board.objects ?? []).filter(
+    (object) => object.destructible && object.status === "Active",
+  );
+  const remainingActivations = getRemainingActivationCount(battle);
+  const livingUnits = allUnits.filter((unit) => unit.status !== "Destroyed").length;
+  const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active";
 
   function executeMissionAction(action: BattleAction) {
     const result = applyMissionAction(
       { battle, mission },
-      survivalTestScenario,
+      scenario,
       action,
     );
 
@@ -293,6 +368,14 @@ function BattleView({
 
     if (mapMode === "terrain") {
       onTerrainPaint({ ...selectedTerrainPreset, x, y });
+      return;
+    }
+
+    if (mapMode === "objects") {
+      onBattlefieldObjectPlace(
+        selectedObjectType === "Remove" ? undefined : selectedObjectType,
+        { x, y },
+      );
       return;
     }
 
@@ -337,12 +420,22 @@ function BattleView({
   }
 
   function handleAttack() {
-    const result = executeMissionAction({
-      type: "Attack",
-      attackerId: selectedUnitId,
-      defenderId: targetUnitId,
-      weaponId: activeWeaponId,
-    });
+    const objectId = targetUnitId.startsWith("object:")
+      ? targetUnitId.slice("object:".length)
+      : undefined;
+    const result = executeMissionAction(objectId
+      ? {
+          type: "AttackObject",
+          attackerId: selectedUnitId,
+          objectId,
+          weaponId: activeWeaponId,
+        }
+      : {
+          type: "Attack",
+          attackerId: selectedUnitId,
+          defenderId: targetUnitId,
+          weaponId: activeWeaponId,
+        });
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
 
@@ -374,8 +467,8 @@ function BattleView({
   function handleEndTurn() {
     setPendingAdvance(null);
     const result = executeMissionAction({ type: "EndTurn" });
-    onActiveArmyChange(undefined);
-    onAddLog(`Tura ${battle.turn} zakonczona. Jednostki gotowe, suppression spada o 1.`);
+    onActiveArmyChange(result.battle.activeActivation?.armyId);
+    onAddLog(result.log);
     if (result.battle.phase === "Finished") {
       onAddLog(getVictoryLog(result.battle));
     }
@@ -423,7 +516,7 @@ function BattleView({
   ) {
     setPendingAdvance(null);
     onBattleChange(loadedBattle);
-    onMissionChange(loadedMission ?? createMissionState(survivalTestScenario));
+    onMissionChange(loadedMission ?? createMissionState(scenario));
     onLogsChange(loadedLogs);
     onActiveArmyChange(loadedBattle.activeActivation?.armyId);
     onSelectedUnitChange("");
@@ -436,17 +529,29 @@ function BattleView({
       <aside className="sidePanel commandPanel">
         <MissionPanel
           mission={mission}
-          scenario={survivalTestScenario}
+          scenario={scenario}
+          scenarios={scenarioOptions}
+          onScenarioChange={onScenarioChange}
+          onRoundTargetChange={(rounds) =>
+            onMissionChange({
+              ...mission,
+              roundTarget: Math.min(10, Math.max(1, rounds || 1)),
+              roundsCompleted: 0,
+            })
+          }
           onRestart={onMissionRestart}
         />
 
-        <PanelTitle title="Mapa" detail={mapMode === "units" ? "oddzialy" : "teren"} />
+        <PanelTitle title="Mapa" detail={mapMode} />
         <div className="segmented mapModeSwitch">
           <button className={mapMode === "units" ? "active" : ""} onClick={() => setMapMode("units")}>
             Oddzialy
           </button>
           <button className={mapMode === "terrain" ? "active" : ""} onClick={() => setMapMode("terrain")}>
             Teren
+          </button>
+          <button className={mapMode === "objects" ? "active" : ""} onClick={() => setMapMode("objects")}>
+            Obiekty
           </button>
         </div>
 
@@ -468,7 +573,7 @@ function BattleView({
               onUnitPatch={onUnitPatch}
             />
           </>
-        ) : (
+        ) : mapMode === "terrain" ? (
           <>
             <select
               value={selectedTerrain}
@@ -488,10 +593,35 @@ function BattleView({
               <span>Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}</span>
             </div>
           </>
+        ) : (
+          <>
+            <select
+              value={selectedObjectType}
+              onChange={(event) =>
+                setSelectedObjectType(event.target.value as BattlefieldObjectType | "Remove")
+              }
+            >
+              {battlefieldObjectPresets.map((object) => (
+                <option key={object.type} value={object.type}>
+                  {object.name}{object.destructible ? ` | HP ${object.maxHp}` : ""}
+                </option>
+              ))}
+              <option value="Remove">Usun obiekt z pola</option>
+            </select>
+            <div className="mapReadout">
+              <strong>Obiekty pola bitwy</strong>
+              <span>Kliknij pole, aby postawic lub usunac wybrany obiekt.</span>
+              <span>Oslony dodaja obrone jednostkom na tym samym polu.</span>
+            </div>
+          </>
         )}
 
-        <PanelTitle title="Aktywacja" detail={`${unusedTokens}/${battle.activationBag.length}`} />
-        <button className="primaryButton" disabled={!missionActive} onClick={handleDrawActivation}>
+        <PanelTitle title="Aktywacja" detail={`${remainingActivations}/${livingUnits}`} />
+        <button
+          className="primaryButton"
+          disabled={!missionActive || Boolean(battle.activeActivation) || remainingActivations === 0}
+          onClick={handleDrawActivation}
+        >
           Losuj aktywacje
         </button>
         <div className="tokenReadout">
@@ -545,6 +675,11 @@ function BattleView({
               {getTemplate(unit).name}
             </option>
           ))}
+          {availableObjectTargets.map((object) => (
+            <option key={object.id} value={`object:${object.id}`}>
+              {object.name} | HP {object.currentHp}/{object.maxHp}
+            </option>
+          ))}
         </select>
         <button
           className="dangerButton"
@@ -574,10 +709,16 @@ function BattleView({
         ) : null}
         <button
           className="secondaryButton"
-          disabled={mission.status !== "Active"}
+          disabled={!missionActive || !turnCanEnd}
           onClick={handleEndTurn}
         >
-          {mission.status === "Active" ? "Koniec tury" : "Misja zakonczona"}
+          {!missionActive
+            ? "Misja zakonczona"
+            : battle.activeActivation
+              ? "Dokończ aktywację"
+              : remainingActivations > 0
+                ? `Pozostało rozkazów: ${remainingActivations}`
+                : "Koniec tury"}
         </button>
 
         <BattleSavePanel
@@ -613,7 +754,7 @@ function BattleView({
         />
 
         {mission.status !== "Active" ? (
-          <MissionSummary mission={mission} />
+          <MissionSummary mission={mission} scenario={scenario} />
         ) : battle.phase === "Finished" ? (
           <BattleSummary battle={battle} />
         ) : null}
@@ -650,10 +791,16 @@ function BattleView({
   );
 }
 
-function MissionSummary({ mission }: { mission: MissionState }) {
+function MissionSummary({
+  mission,
+  scenario,
+}: {
+  mission: MissionState;
+  scenario: ScenarioDefinition;
+}) {
   const outcomeMessage = mission.status === "Victory"
-    ? "Pozycja zostala utrzymana przez wymagane trzy rundy."
-    : "Armia Republiki zostala wyeliminowana przed wykonaniem celu.";
+    ? "Cel scenariusza zostal wykonany."
+    : "Warunek porazki scenariusza zostal spelniony.";
 
   return (
     <section className="battleSummary">
@@ -663,7 +810,7 @@ function MissionSummary({ mission }: { mission: MissionState }) {
       />
       <p className="tokenReadout">
         {outcomeMessage} Ukonczono {mission.roundsCompleted} z{" "}
-        {survivalTestScenario.victoryCondition.rounds} rund.
+        {mission.roundTarget ?? scenario.victoryCondition.rounds} rund.
       </p>
     </section>
   );
@@ -826,6 +973,9 @@ function MapBoard({
         const x = index % battle.board.width;
         const y = Math.floor(index / battle.board.width);
         const tile = battle.board.tiles.find((terrain) => terrain.x === x && terrain.y === y);
+        const battlefieldObject = (battle.board.objects ?? []).find(
+          (object) => object.position.x === x && object.position.y === y,
+        );
         const tileUnits = units.filter((unit) => unit.position?.x === x && unit.position.y === y);
 
         return (
@@ -838,6 +988,21 @@ function MapBoard({
               {x},{y}
             </span>
             {tile ? <span className="terrainTag">{tile.terrainType}</span> : null}
+            {battlefieldObject ? (
+              <span
+                className={`battlefieldObject ${battlefieldObject.type} ${
+                  battlefieldObject.status.toLowerCase()
+                }`}
+                title={battlefieldObject.name}
+              >
+                <strong>{getObjectCode(battlefieldObject.type)}</strong>
+                <small>
+                  {battlefieldObject.destructible
+                    ? `${battlefieldObject.currentHp}/${battlefieldObject.maxHp} HP`
+                    : "CEL"}
+                </small>
+              </span>
+            ) : null}
             <div className="mapUnitStack">
               {tileUnits.map((unit) => {
                 const template = getTemplate(unit);
@@ -1521,6 +1686,15 @@ function getUnitInitials(template: UnitTemplate): string {
     .join("")
     .slice(0, 3)
     .toUpperCase();
+}
+
+function getObjectCode(type: BattlefieldObjectType): string {
+  switch (type) {
+    case "DefensePoint": return "P";
+    case "Generator": return "G";
+    case "LightFortification": return "L";
+    case "HeavyFortification": return "H";
+  }
 }
 
 function getTokenClass(template: UnitTemplate, faction?: FactionId): string {

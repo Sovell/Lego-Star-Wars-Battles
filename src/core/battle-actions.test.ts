@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { applyBattleAction } from "./battle-actions";
 import { createBattle } from "./battle-state";
+import { createBattlefieldObject } from "./battlefield-objects";
 import { createSeededRandomSource, createSequenceDiceRoller } from "./random";
+import { getDefenseBonus } from "./rules/terrain";
 import type { Battle, UnitInstance } from "../types";
 
 describe("applyBattleAction", () => {
@@ -26,6 +28,24 @@ describe("applyBattleAction", () => {
         (token) => token.id === firstResult.battle.activeActivation?.id,
       )?.used,
     ).toBe(true);
+  });
+
+  it("does not draw another token before the current activation is resolved", () => {
+    const battle = applyBattleAction(
+      createBattle(),
+      { type: "DrawActivation" },
+      { randomSource: createSeededRandomSource(42) },
+    ).battle;
+
+    const result = applyBattleAction(
+      battle,
+      { type: "DrawActivation" },
+      { randomSource: createSeededRandomSource(7) },
+    );
+
+    expect(result.battle).toBe(battle);
+    expect(result.events).toEqual([]);
+    expect(result.log).toContain("aktualnie wylosowany token");
   });
 
   it("moves an activated unit and emits a movement event", () => {
@@ -118,8 +138,7 @@ describe("applyBattleAction", () => {
   });
 
   it("resets surviving units and rebuilds the activation bag at the end of a turn", () => {
-    const battle = patchUnit(createBattle(), "rep_unit_1", {
-      status: "Activated",
+    const battle = patchUnit(activateAllLivingUnits(createBattle()), "rep_unit_1", {
       suppression: 2,
       movedThisTurn: true,
     });
@@ -136,6 +155,31 @@ describe("applyBattleAction", () => {
     expect(result.battle.activationBag).toHaveLength(6);
     expect(result.battle.activationBag.every((token) => !token.used)).toBe(true);
     expect(result.events).toEqual([{ type: "TurnEnded", turn: 2 }]);
+  });
+
+  it("rejects ending a turn while any living unit still awaits its order", () => {
+    const battle = patchUnit(createBattle(), "rep_unit_1", { status: "Activated" });
+
+    const result = applyBattleAction(battle, { type: "EndTurn" });
+
+    expect(result.battle).toBe(battle);
+    expect(result.events).toEqual([]);
+    expect(result.log).toContain("5 jednostek nadal czeka na rozkaz");
+  });
+
+  it("allows a turn to end when every surviving unit activated", () => {
+    let battle = activateAllLivingUnits(createBattle());
+    battle = patchUnit(battle, "sep_unit_3", {
+      currentHp: 0,
+      position: null,
+      status: "Destroyed",
+    });
+
+    const result = applyBattleAction(battle, { type: "EndTurn" });
+
+    expect(result.battle.turn).toBe(2);
+    expect(result.events).toEqual([{ type: "TurnEnded", turn: 2 }]);
+    expect(result.battle.activationBag).toHaveLength(5);
   });
 
   it("emits battle completion when the last enemy unit is destroyed", () => {
@@ -170,6 +214,59 @@ describe("applyBattleAction", () => {
       winnerArmyId: "army_republic",
     });
   });
+
+  it("damages and destroys a battlefield object instead of a unit", () => {
+    let battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
+      defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
+    });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [
+          {
+            ...createBattlefieldObject("LightFortification", { x: 2, y: 2 }),
+            currentHp: 1,
+          },
+        ],
+      },
+    };
+    const target = battle.board.objects![0];
+
+    const result = applyBattleAction(
+      battle,
+      {
+        type: "AttackObject",
+        attackerId: "rep_unit_1",
+        objectId: target.id,
+        weaponId: "dc_15_blaster_rifles",
+      },
+      { rollD6: createSequenceDiceRoller([6, 6, 6, 1, 1, 1]) },
+    );
+
+    expect(result.objectAttackResult).toMatchObject({ damage: 3, destroyed: true });
+    expect(result.battle.board.objects?.[0]).toMatchObject({
+      currentHp: 0,
+      status: "Destroyed",
+    });
+    expect(result.events.map((event) => event.type)).toEqual([
+      "BattlefieldObjectDamaged",
+      "BattlefieldObjectDestroyed",
+    ]);
+  });
+
+  it("grants cover only while a fortification remains active", () => {
+    const battle = createBattle();
+    const defender = findUnit(battle, "rep_unit_1")!;
+    const fortification = createBattlefieldObject("HeavyFortification", defender.position!);
+    battle.board.objects = [fortification];
+
+    expect(getDefenseBonus(battle, defender)).toBe(2);
+    fortification.status = "Destroyed";
+    fortification.currentHp = 0;
+    expect(getDefenseBonus(battle, defender)).toBe(0);
+  });
 });
 
 function readyBattle(options: {
@@ -199,6 +296,19 @@ function patchUnit(battle: Battle, unitId: string, patch: Partial<UnitInstance>)
     armies: battle.armies.map((army) => ({
       ...army,
       units: army.units.map((unit) => (unit.id === unitId ? { ...unit, ...patch } : unit)),
+    })),
+  };
+}
+
+function activateAllLivingUnits(battle: Battle): Battle {
+  return {
+    ...battle,
+    activeActivation: undefined,
+    armies: battle.armies.map((army) => ({
+      ...army,
+      units: army.units.map((unit) =>
+        unit.status === "Destroyed" ? unit : { ...unit, status: "Activated" },
+      ),
     })),
   };
 }

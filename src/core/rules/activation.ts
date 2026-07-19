@@ -20,9 +20,19 @@ export function drawActivation(battle: Battle, randomSource: RandomSource = syst
   token?: ActivationToken;
   log: string;
 } {
-  const unusedTokens = battle.activationBag.filter((token) => !token.used);
+  if (battle.activeActivation) {
+    return {
+      battle,
+      log: "Najpierw wykorzystaj aktualnie wylosowany token aktywacji.",
+    };
+  }
+
+  const unusedTokens = getAvailableActivationTokens(battle);
   if (unusedTokens.length === 0) {
-    return { battle: { ...battle, activeActivation: undefined }, log: "Worek aktywacji jest pusty." };
+    return {
+      battle: { ...battle, activeActivation: undefined },
+      log: "Wszystkie zywe jednostki wykonaly juz rozkaz. Mozesz zakonczyc ture.",
+    };
   }
 
   const pickedToken = unusedTokens[randomIndex(unusedTokens.length, randomSource)];
@@ -39,6 +49,33 @@ export function drawActivation(battle: Battle, randomSource: RandomSource = syst
     token: pickedToken,
     log: `Wylosowano aktywacje: ${pickedToken.faction}.`,
   };
+}
+
+export function getRemainingActivationCount(battle: Battle): number {
+  return battle.armies.reduce(
+    (total, army) => total + army.units.filter(isAwaitingActivation).length,
+    0,
+  );
+}
+
+export function canEndTurn(battle: Battle): boolean {
+  return !battle.activeActivation && getRemainingActivationCount(battle) === 0;
+}
+
+function getAvailableActivationTokens(battle: Battle): ActivationToken[] {
+  const armiesWithPendingUnits = new Set(
+    battle.armies
+      .filter((army) => army.units.some(isAwaitingActivation))
+      .map((army) => army.id),
+  );
+
+  return battle.activationBag.filter(
+    (token) => !token.used && armiesWithPendingUnits.has(token.armyId),
+  );
+}
+
+function isAwaitingActivation(unit: Army["units"][number]): boolean {
+  return unit.status !== "Activated" && unit.status !== "Destroyed";
 }
 
 export function validateUnitActivation(battle: Battle, unitId: string): string | undefined {
