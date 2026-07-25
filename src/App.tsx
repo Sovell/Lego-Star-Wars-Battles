@@ -4,6 +4,7 @@ import { BattleSavePanel } from "./app/components/BattleSavePanel";
 import { MissionPanel } from "./app/components/MissionPanel";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
+import { MainMenu } from "./app/screens/MainMenu";
 import { chooseAttackerBotAction } from "./core/ai/attacker-bot";
 import {
   applyBattleAction,
@@ -30,6 +31,7 @@ import { createMissionState } from "./core/scenario/scenario-engine";
 import { applyMissionAction } from "./core/scenario/mission-session";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
+import type { SavedBattle } from "./core/persistence/save-types";
 import type {
   Army,
   Battle,
@@ -43,7 +45,7 @@ import type {
   UnitTemplate,
 } from "./types";
 
-type AppView = "battle" | "composer" | "rules";
+type AppView = "home" | "setup" | "battle" | "composer" | "rules";
 type GamePhase = "Preparation" | "Playing";
 type AppTitle = Record<AppView, string>;
 type DraftCounts = Record<string, number>;
@@ -60,13 +62,15 @@ type PendingAdvance = {
 const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
 const composerFactions: FactionId[] = ["Republic", "Separatists"];
 const appTitles: AppTitle = {
+  home: "Menu główne",
+  setup: "Kreator scenariusza",
   battle: "Panel dowodzenia",
   composer: "Army Composer",
   rules: "Rules",
 };
 
 export function App() {
-  const [view, setView] = useState<AppView>("battle");
+  const [view, setView] = useState<AppView>("home");
   const [battle, setBattle] = useState<Battle>(() => createBattle());
   const [mission, setMission] = useState<MissionState>(() =>
     createMissionState(survivalTestScenario, starterArmies),
@@ -249,51 +253,90 @@ export function App() {
     setSelectedWeaponId("");
     setLogs([createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`)]);
     setGamePhase("Playing");
+    setView("battle");
+  }
+
+  function handleLoadSavedBattle(savedBattle: SavedBattle) {
+    const loadedMission = {
+      ...createMissionState(
+        scenarios.find((scenario) => scenario.id === savedBattle.mission?.scenarioId)
+          ?? survivalTestScenario,
+        savedBattle.battle.armies,
+        savedBattle.mission?.defenderArmyId,
+      ),
+      ...savedBattle.mission,
+    };
+    setBattle(savedBattle.battle);
+    setMission(loadedMission);
+    setMissionArmies(structuredClone(savedBattle.battle.armies));
+    setLogs(savedBattle.logs);
+    setActiveArmyId(savedBattle.battle.activeActivation?.armyId);
+    setSelectedUnitId("");
+    setTargetUnitId("");
+    setSelectedWeaponId("");
+    setGamePhase("Playing");
+    setView("battle");
   }
 
   return (
     <main className="app">
+      {view === "home" ? (
+        <MainMenu
+          onNewScenario={() => {
+            loadArmies(
+              starterArmies,
+              "Rozpoczęto przygotowanie nowego scenariusza.",
+              survivalTestScenario,
+            );
+            setView("setup");
+          }}
+          onOpenComposer={() => setView("composer")}
+          onOpenRules={() => setView("rules")}
+          onResumeBattle={
+            gamePhase === "Playing" ? () => setView("battle") : undefined
+          }
+          onLoadBattle={handleLoadSavedBattle}
+        />
+      ) : (
+        <>
       <section className="commandStrip">
         <div>
           <p className="eyebrow">LEGO Star Wars Battles</p>
           <h1>{appTitles[view]}</h1>
         </div>
         <nav className="viewTabs" aria-label="Widoki aplikacji">
-          <button className={view === "battle" ? "active" : ""} onClick={() => setView("battle")}>
-            Battle
+          <button onClick={() => setView("home")}>
+            Menu
           </button>
-          <button
-            className={view === "composer" ? "active" : ""}
-            onClick={() => setView("composer")}
-          >
-            Composer
-          </button>
-          <button className={view === "rules" ? "active" : ""} onClick={() => setView("rules")}>
-            Rules
-          </button>
+          {view === "setup" ? (
+            <button onClick={() => setView("composer")}>Army Composer</button>
+          ) : null}
+          {view === "composer" ? (
+            <button onClick={() => setView("setup")}>Kreator scenariusza</button>
+          ) : null}
         </nav>
-        <label className="debugToggle">
+        {view === "setup" ? <label className="debugToggle">
           <input
             checked={debugMode}
             type="checkbox"
             onChange={(event) => setDebugMode(event.target.checked)}
           />
           Debug
-        </label>
-        <div className="turnCounter">
+        </label> : null}
+        {view === "setup" || view === "battle" ? <div className="turnCounter">
           <span>Tura</span>
           <strong>{battle.turn}</strong>
-        </div>
-        <div className="phasePill">
+        </div> : null}
+        {view === "setup" || view === "battle" ? <div className="phasePill">
           {gamePhase === "Preparation"
             ? "Preparation"
             : mission.status === "Active"
               ? battle.phase
               : `Mission ${mission.status}`}
-        </div>
+        </div> : null}
       </section>
 
-      {view === "battle" ? (
+      {view === "setup" || view === "battle" ? (
         <BattleView
           activeArmyId={activeArmyId}
           armyJson={armyJson}
@@ -323,14 +366,15 @@ export function App() {
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
           onDefenderArmyChange={handleDefenderArmyChange}
           onScenarioChange={handleScenarioChange}
-          onMissionRestart={() =>
+          onMissionRestart={() => {
             loadArmies(
               missionArmies,
               "Misja zostala uruchomiona ponownie.",
               activeScenario,
               mission.defenderArmyId,
-            )
-          }
+            );
+            setView("setup");
+          }}
           onStartScenario={handleStartScenario}
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
@@ -345,13 +389,15 @@ export function App() {
         <ArmyComposerView
           currentArmies={battle.armies}
           onLoadArmies={(armies) => {
-            loadArmies(armies, "Armie z Army Composera zostaly wczytane do bitwy.");
-            setView("battle");
+            loadArmies(armies, "Armie z Army Composera zostały wczytane do kreatora.");
+            setView("setup");
           }}
         />
       ) : null}
 
       {view === "rules" ? <RulesView /> : null}
+        </>
+      )}
     </main>
   );
 }
@@ -851,12 +897,12 @@ function BattleView({
           </div>
         )}
 
-        <BattleSavePanel
+        {gamePhase === "Playing" ? <BattleSavePanel
           battle={battle}
           logs={logs}
           mission={mission}
           onBattleLoad={handleBattleLoad}
-        />
+        /> : null}
 
         {preparationActive ? <details className="jsonDetails">
           <summary>Import armii JSON</summary>
@@ -1437,7 +1483,7 @@ function ArmyComposerView({
           />
         </details>
         <button className="primaryButton" onClick={() => onLoadArmies(armies)}>
-          Wczytaj do bitwy
+          Użyj armii w scenariuszu
         </button>
       </aside>
     </section>

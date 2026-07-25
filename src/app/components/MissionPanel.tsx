@@ -42,6 +42,49 @@ export function MissionPanel({
       ? "zwyciestwo"
       : "porazka";
 
+  if (gamePhase === "Playing") {
+    return (
+      <section className={`missionPanel missionInPlay ${mission.status.toLowerCase()}`}>
+        <PanelTitle title={scenario.name} detail={statusLabel} />
+        <p>{scenario.description}</p>
+        <div className="missionProgressHeader">
+          <span>Rundy</span>
+          <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
+        </div>
+        <progress max={requiredRounds} value={mission.roundsCompleted} />
+        {scenario.victoryCondition.type === "ControlTerritory" ? (
+          <div className="territoryScoreboard">
+            {armies.map((army) => (
+              <span key={army.id}>
+                {army.faction}
+                <strong>{mission.territoryScores?.[army.id] ?? 0} pkt</strong>
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <div className="missionCombatants">
+          <span>Obrońca: <strong>{defender?.faction ?? "Brak"}</strong></span>
+          <span>Atakujący: <strong>{attacker?.faction ?? "Brak"}</strong></span>
+        </div>
+        <label className="missionBotToggle">
+          <input
+            checked={attackerBotEnabled}
+            disabled={!attacker || mission.status !== "Active"}
+            type="checkbox"
+            onChange={(event) => onAttackerBotEnabledChange(event.target.checked)}
+          />
+          <span>
+            <strong>Bot armii atakującej</strong>
+            <small>{attackerBotEnabled ? "Aktywny" : "Wyłączony"}</small>
+          </span>
+        </label>
+        <button className="secondaryButton" onClick={onRestart}>
+          Zakończ i przejdź do kreatora
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className={`missionPanel ${mission.status.toLowerCase()}`}>
       <PanelTitle title="Misja" detail={statusLabel} />

@@ -43,6 +43,108 @@ button:disabled {
   padding: 18px;
 }
 
+.mainMenu {
+  display: grid;
+  gap: 28px;
+  margin: 0 auto;
+  max-width: 1180px;
+  min-height: calc(100vh - 36px);
+  padding: clamp(28px, 6vh, 72px) 0;
+}
+
+.mainMenuHero {
+  display: grid;
+  gap: 14px;
+  max-width: 780px;
+}
+
+.mainMenuHero h1 {
+  font-size: clamp(2.8rem, 7vw, 6.4rem);
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.mainMenuHero > p:last-child {
+  color: #aeb8c5;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  max-width: 680px;
+}
+
+.mainMenuGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menuCard,
+.menuLoadCard {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(20, 24, 30, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 10px;
+  color: #f4f7fa;
+  display: grid;
+  gap: 9px;
+  min-height: 150px;
+  padding: 22px;
+  text-align: left;
+}
+
+.menuCard {
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.menuCard:hover {
+  border-color: rgba(236, 224, 108, 0.6);
+  transform: translateY(-2px);
+}
+
+.menuCard > span,
+.menuLoadCard span {
+  color: #8f9aa8;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.menuCard strong,
+.menuLoadCard strong {
+  font-size: 1.3rem;
+}
+
+.menuCard small,
+.menuLoadCard small {
+  color: #9faab8;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.menuCardPrimary {
+  background:
+    linear-gradient(145deg, rgba(236, 224, 108, 0.16), transparent 65%),
+    #171b21;
+  border-color: rgba(236, 224, 108, 0.35);
+}
+
+.menuCardResume {
+  border-color: rgba(84, 190, 120, 0.38);
+}
+
+.menuLoadCard {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.menuLoadCard > div,
+.menuLoadCard > select,
+.menuLoadCard > small,
+.menuLoadCard > p {
+  grid-column: 1 / -1;
+}
+
 .commandStrip {
   align-items: center;
   background: rgba(20, 23, 28, 0.88);
@@ -274,6 +376,70 @@ h1 {
   border-radius: 8px;
   min-height: 0;
   overflow: hidden;
+}
+
+.battleIntel .armiesGrid {
+  grid-template-columns: 1fr;
+}
+
+.battleIntel .armyColumn {
+  overflow: visible;
+}
+
+.battleIntel .armyHeader {
+  padding: 10px;
+}
+
+.battleIntel .armyHeader h2 {
+  font-size: 0.92rem;
+}
+
+.battleIntel .armyHeader strong {
+  font-size: 0.7rem;
+  padding: 5px 7px;
+}
+
+.battleIntel .unitList {
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.battleIntel .unitCard {
+  gap: 8px;
+  padding: 10px;
+}
+
+.battleIntel .unitTopline {
+  align-items: center;
+}
+
+.battleIntel .unitTopline h3 {
+  font-size: 0.88rem;
+}
+
+.battleIntel .category {
+  font-size: 0.62rem;
+}
+
+.battleIntel .statGrid {
+  grid-template-columns: repeat(5, minmax(38px, 1fr));
+}
+
+.battleIntel .stat {
+  padding: 5px 2px;
+}
+
+.battleIntel .stat strong {
+  font-size: 0.95rem;
+}
+
+.battleIntel .abilityList {
+  gap: 4px;
+}
+
+.battleIntel .abilityList span {
+  font-size: 0.64rem;
+  padding: 4px 6px;
 }
 
 .intelTabs {
@@ -1923,6 +2089,14 @@ select {
   }
 
   .commandStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .mainMenu {
+    padding: 24px 0;
+  }
+
+  .mainMenuGrid {
     grid-template-columns: 1fr;
   }
 

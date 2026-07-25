@@ -144,6 +144,24 @@
   line-height: 1.35;
 }
 
+.missionInPlay {
+  gap: 12px;
+}
+
+.missionCombatants {
+  display: grid;
+  gap: 6px;
+}
+
+.missionCombatants span {
+  color: #9eabba;
+  font-size: 0.72rem;
+}
+
+.missionCombatants strong {
+  color: #f0f3f7;
+}
+
 .territoryScoreboard {
   display: grid;
   gap: 6px;
