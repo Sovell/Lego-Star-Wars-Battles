@@ -4,6 +4,7 @@ import { BattleSavePanel } from "./app/components/BattleSavePanel";
 import { MissionPanel } from "./app/components/MissionPanel";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
+import { chooseAttackerBotAction } from "./core/ai/attacker-bot";
 import {
   applyBattleAction,
   createBattle,
@@ -78,6 +79,7 @@ export function App() {
   const [armyJson, setArmyJson] = useState<string>(() => JSON.stringify(starterArmies, null, 2));
   const [importError, setImportError] = useState<string>("");
   const [debugMode, setDebugMode] = useState<boolean>(false);
+  const [attackerBotEnabled, setAttackerBotEnabled] = useState<boolean>(true);
   const activeScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
 
@@ -234,6 +236,7 @@ export function App() {
         <BattleView
           activeArmyId={activeArmyId}
           armyJson={armyJson}
+          attackerBotEnabled={attackerBotEnabled}
           battle={battle}
           debugMode={debugMode}
           importError={importError}
@@ -248,6 +251,7 @@ export function App() {
           onActiveArmyChange={setActiveArmyId}
           onAddLog={addLog}
           onArmyJsonChange={setArmyJson}
+          onAttackerBotEnabledChange={setAttackerBotEnabled}
           onBattleChange={setBattle}
           onImportError={setImportError}
           onLoadArmies={loadArmies}
@@ -291,6 +295,7 @@ export function App() {
 function BattleView({
   activeArmyId,
   armyJson,
+  attackerBotEnabled,
   battle,
   debugMode,
   importError,
@@ -305,6 +310,7 @@ function BattleView({
   onActiveArmyChange,
   onAddLog,
   onArmyJsonChange,
+  onAttackerBotEnabledChange,
   onBattleChange,
   onImportError,
   onLoadArmies,
@@ -323,6 +329,7 @@ function BattleView({
 }: {
   activeArmyId?: string;
   armyJson: string;
+  attackerBotEnabled: boolean;
   battle: Battle;
   debugMode: boolean;
   importError: string;
@@ -337,6 +344,7 @@ function BattleView({
   onActiveArmyChange: (armyId: string | undefined) => void;
   onAddLog: (message: string) => void;
   onArmyJsonChange: (json: string) => void;
+  onAttackerBotEnabledChange: (enabled: boolean) => void;
   onBattleChange: (battle: Battle) => void;
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
@@ -436,13 +444,51 @@ function BattleView({
 
   function handleDrawActivation() {
     setPendingAdvance(null);
-    const result = executeMissionAction({ type: "DrawActivation" });
-    onActiveArmyChange(result.battle.activeActivation?.armyId);
+    const drawResult = applyMissionAction(
+      { battle, mission },
+      scenario,
+      { type: "DrawActivation" },
+    );
+    let finalBattle = drawResult.battle;
+    let finalMission = drawResult.mission;
+
     onAddLog(
-      result.events.some((event) => event.type === "ActivationDrawn")
-        ? result.log
+      drawResult.events.some((event) => event.type === "ActivationDrawn")
+        ? drawResult.log
         : "Worek aktywacji jest pusty. Czas zakonczyc ture.",
     );
+    drawResult.missionEvents.forEach((event) => onAddLog(event.message));
+
+    if (
+      attackerBotEnabled &&
+      mission.attackerArmyId &&
+      drawResult.battle.activeActivation?.armyId === mission.attackerArmyId
+    ) {
+      const decision = chooseAttackerBotAction(
+        drawResult.battle,
+        scenario,
+        mission.attackerArmyId,
+      );
+
+      if (decision) {
+        onAddLog(`Bot atakujacy: ${decision.reason}`);
+        const botResult = applyMissionAction(
+          { battle: drawResult.battle, mission: drawResult.mission },
+          scenario,
+          decision.action,
+        );
+        finalBattle = botResult.battle;
+        finalMission = botResult.mission;
+        onAddLog(botResult.log);
+        botResult.missionEvents.forEach((event) => onAddLog(event.message));
+      } else {
+        onAddLog("Bot atakujacy nie znalazl legalnej akcji. Token pozostaje aktywny.");
+      }
+    }
+
+    onBattleChange(finalBattle);
+    onMissionChange(finalMission);
+    onActiveArmyChange(finalBattle.activeActivation?.armyId);
   }
 
   function handleOrder() {
@@ -570,10 +616,12 @@ function BattleView({
       <aside className="sidePanel commandPanel">
         <MissionPanel
           armies={battle.armies}
+          attackerBotEnabled={attackerBotEnabled}
           mission={mission}
           scenario={scenario}
           scenarios={scenarioOptions}
           onScenarioChange={onScenarioChange}
+          onAttackerBotEnabledChange={onAttackerBotEnabledChange}
           onDefenderArmyChange={onDefenderArmyChange}
           onRoundTargetChange={(rounds) =>
             onMissionChange({

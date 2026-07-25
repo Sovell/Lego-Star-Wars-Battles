@@ -5,19 +5,23 @@ import "./MissionPanel.css";
 
 export function MissionPanel({
   armies,
+  attackerBotEnabled,
   mission,
   scenario,
   scenarios,
   onScenarioChange,
+  onAttackerBotEnabledChange,
   onDefenderArmyChange,
   onRoundTargetChange,
   onRestart,
 }: {
   armies: Army[];
+  attackerBotEnabled: boolean;
   mission: MissionState;
   scenario: ScenarioDefinition;
   scenarios: ScenarioDefinition[];
   onScenarioChange: (scenarioId: string) => void;
+  onAttackerBotEnabledChange: (enabled: boolean) => void;
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
   onRestart: () => void;
@@ -66,6 +70,20 @@ export function MissionPanel({
           <strong>{attacker ? `${attacker.faction} — ${attacker.playerName}` : "Brak"}</strong>
         </div>
       </div>
+      <label className="missionBotToggle">
+        <input
+          checked={attackerBotEnabled}
+          disabled={mission.status !== "Active" || !attacker}
+          type="checkbox"
+          onChange={(event) => onAttackerBotEnabledChange(event.target.checked)}
+        />
+        <span>
+          <strong>Bot armii atakujacej</strong>
+          <small>
+            Po wylosowaniu jej tokenu bot automatycznie wybierze ruch albo atak.
+          </small>
+        </span>
+      </label>
       <h3>{scenario.name}</h3>
       <p>{scenario.description}</p>
       <label className="missionSelector">

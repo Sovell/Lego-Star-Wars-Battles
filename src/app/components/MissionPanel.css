@@ -66,6 +66,38 @@
   font-size: 0.76rem;
 }
 
+.missionBotToggle {
+  align-items: flex-start;
+  background: rgba(12, 17, 23, 0.48);
+  border: 1px solid rgba(236, 224, 108, 0.24);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 9px;
+  padding: 9px;
+}
+
+.missionBotToggle input {
+  accent-color: #ece06c;
+  margin-top: 2px;
+}
+
+.missionBotToggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.missionBotToggle strong {
+  color: #f0f3f7;
+  font-size: 0.76rem;
+}
+
+.missionBotToggle small {
+  color: #8f9aa7;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 1180px) {
   .missionRoles {
     grid-template-columns: 1fr;
