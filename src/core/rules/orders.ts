@@ -21,6 +21,7 @@ export function applyOrder(
     ...unit,
     status: "Activated",
     suppression: order === "Rally" ? Math.max(0, unit.suppression - 2) : unit.suppression,
+    activeEffects: unit.activeEffects?.filter((effect) => effect !== "advance_pending"),
   };
 
   return {

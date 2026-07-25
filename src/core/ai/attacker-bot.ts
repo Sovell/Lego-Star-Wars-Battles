@@ -8,7 +8,9 @@ import type { BattleAction } from "../battle-actions";
 import { distance, lineOfSight, type GridPosition } from "../rules/geometry";
 import { getTemplate } from "../rules/state";
 import { getDefenseBonus } from "../rules/terrain";
-import type { ScenarioDefinition } from "../scenario/scenario-types";
+import { isPositionFree } from "../rules/occupancy";
+import { getUnitActiveAbilities } from "../rules/active-abilities";
+import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 
 export type BotDecision = {
   action: BattleAction;
@@ -39,19 +41,28 @@ export function chooseAttackerBotAction(
   battle: Battle,
   scenario: ScenarioDefinition,
   attackerArmyId: string,
+  mission?: MissionState,
 ): BotDecision | undefined {
   if (battle.activeActivation?.armyId !== attackerArmyId) {
     return undefined;
   }
 
-  const attackers = battle.armies
+  const availableAttackers = battle.armies
     .find((army) => army.id === attackerArmyId)
     ?.units.filter((unit) => unit.status !== "Activated" && unit.status !== "Destroyed") ?? [];
+  const pendingAdvanceUnit = availableAttackers.find((unit) =>
+    unit.activeEffects?.includes("advance_pending"),
+  );
+  const attackers = pendingAdvanceUnit ? [pendingAdvanceUnit] : availableAttackers;
   if (attackers.length === 0) {
     return undefined;
   }
 
   const objective = getAttackObjective(battle, scenario);
+  const abilityDecision = chooseOffensiveAbility(battle, attackers, attackerArmyId);
+  if (abilityDecision) {
+    return abilityDecision;
+  }
   const objectAttack = chooseBestObjectAttack(battle, attackers, objective);
   if (objectAttack) {
     return {
@@ -71,13 +82,26 @@ export function chooseAttackerBotAction(
     };
   }
 
-  const movementTarget = objective?.position ?? findNearestEnemyPosition(battle, attackers, attackerArmyId);
+  if (pendingAdvanceUnit) {
+    return {
+      action: {
+        type: "ApplyOrder",
+        unitId: pendingAdvanceUnit.id,
+        order: "Advance",
+      },
+      reason: `${getTemplate(pendingAdvanceUnit).name} kończy Advance bez dostępnego celu.`,
+    };
+  }
+
+  const movementTarget = objective?.position ??
+    findTerritoryTarget(battle, scenario, mission, attackers, attackerArmyId) ??
+    findNearestEnemyPosition(battle, attackers, attackerArmyId);
   if (movementTarget) {
     const movement = chooseBestMovement(battle, attackers, movementTarget);
     if (movement) {
       return {
         action: {
-          type: "MoveUnit",
+          type: "AdvanceUnit",
           unitId: movement.unit.id,
           targetPosition: movement.position,
         },
@@ -221,6 +245,9 @@ function chooseBestMovement(
           const movementDistance = unit.position ? distance(unit.position, position) : 1;
 
           if (movementDistance <= maximumDistance) {
+            if (!isPositionFree(battle, position, unit.id)) {
+              continue;
+            }
             positions.push(position);
           }
         }
@@ -243,6 +270,104 @@ function chooseBestMovement(
         });
     })
     .sort((left, right) => right.score - left.score)[0];
+}
+
+function chooseOffensiveAbility(
+  battle: Battle,
+  attackers: UnitInstance[],
+  attackerArmyId: string,
+): BotDecision | undefined {
+  const enemies = battle.armies
+    .filter((army) => army.id !== attackerArmyId)
+    .flatMap((army) => army.units)
+    .filter((unit) => unit.status !== "Destroyed" && unit.position);
+
+  for (const attacker of attackers) {
+    if (!attacker.position) continue;
+    const activeAbilities = getUnitActiveAbilities(battle, attacker).filter(
+      (ability) =>
+        (attacker.abilityCooldowns?.[ability.id] ?? 0) === 0,
+    );
+
+    for (const ability of activeAbilities) {
+      if (
+        ability.effect.type !== "direct_damage" &&
+        ability.effect.type !== "damage_and_push" &&
+        ability.effect.type !== "bonus_move_then_melee_attack"
+      ) {
+        continue;
+      }
+      const range = ability.effect.type === "bonus_move_then_melee_attack"
+        ? (ability.effect.value ?? 0) + 1
+        : ability.range ?? 1;
+      const target = enemies
+        .filter(
+          (enemy) =>
+            enemy.position &&
+            distance(attacker.position!, enemy.position) <= range,
+        )
+        .sort((left, right) => left.currentHp - right.currentHp)[0];
+      if (target) {
+        return {
+          action: {
+            type: "UseAbility",
+            unitId: attacker.id,
+            abilityId: ability.id,
+            targetUnitId: target.id,
+          },
+          reason: `${getTemplate(attacker).name} wykorzystuje zdolność ${ability.name} przeciw ${getTemplate(target).name}.`,
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function findTerritoryTarget(
+  battle: Battle,
+  scenario: ScenarioDefinition,
+  mission: MissionState | undefined,
+  attackers: UnitInstance[],
+  attackerArmyId: string,
+): GridPosition | undefined {
+  if (scenario.victoryCondition.type !== "ControlTerritory") {
+    return undefined;
+  }
+  const origins = attackers.flatMap((unit) => unit.position ? [unit.position] : []);
+  const candidates: GridPosition[] = [];
+  for (let y = 0; y < battle.board.height; y += 1) {
+    for (let x = 0; x < battle.board.width; x += 1) {
+      if (
+        mission?.territoryOwners?.[`${x},${y}`] !== attackerArmyId &&
+        isPositionFree(battle, { x, y })
+      ) {
+        candidates.push({ x, y });
+      }
+    }
+  }
+  return candidates.sort((left, right) => {
+    const leftStrategic = isStrategicPosition(battle, left) ? 1 : 0;
+    const rightStrategic = isStrategicPosition(battle, right) ? 1 : 0;
+    if (leftStrategic !== rightStrategic) {
+      return rightStrategic - leftStrategic;
+    }
+    const leftDistance = Math.min(...origins.map((origin) => distance(origin, left)));
+    const rightDistance = Math.min(...origins.map((origin) => distance(origin, right)));
+    return leftDistance - rightDistance;
+  })[0];
+}
+
+function isStrategicPosition(battle: Battle, position: GridPosition): boolean {
+  return Boolean(
+    battle.board.objects?.some(
+      (object) =>
+        object.type === "StrategicPoint" &&
+        object.status === "Active" &&
+        object.position.x === position.x &&
+        object.position.y === position.y,
+    ),
+  );
 }
 
 function getAttackObjective(

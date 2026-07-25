@@ -45,8 +45,19 @@ export const protectGeneratorScenario: ScenarioDefinition = {
   },
 };
 
+export const controlTerritoryScenario: ScenarioDefinition = {
+  id: "control-territory",
+  name: "Kontrola terytorium",
+  description: "Zajmuj pola i zdobywaj za nie punkty na koniec każdej rundy. Punkty strategiczne ★ są warte 2 pkt. Po wybranej liczbie rund wygrywa armia z większą liczbą punktów.",
+  victoryCondition: {
+    type: "ControlTerritory",
+    rounds: 6,
+  },
+};
+
 export const scenarios: ScenarioDefinition[] = [
   survivalTestScenario,
   defendPointScenario,
   protectGeneratorScenario,
+  controlTerritoryScenario,
 ];

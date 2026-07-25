@@ -23,6 +23,9 @@ export function createMissionState(
     roundsCompleted: 0,
     ...(defenderArmyId ? { defenderArmyId } : {}),
     ...(attackerArmyId ? { attackerArmyId } : {}),
+    ...(scenario.victoryCondition.type === "ControlTerritory"
+      ? { territoryOwners: {}, territoryScores: {} }
+      : {}),
   };
 }
 
@@ -90,6 +93,16 @@ export function applyScenarioEvents(
   const completedRounds = battleEvents.filter((event) => event.type === "TurnEnded").length;
   if (completedRounds === 0) {
     return { mission, events: [] };
+  }
+
+  if (scenario.victoryCondition.type === "ControlTerritory") {
+    return applyTerritoryRound(
+      mission,
+      scenario,
+      battle,
+      completedRounds,
+      defenderArmyId,
+    );
   }
 
   let roundsCompleted = mission.roundsCompleted + completedRounds;
@@ -182,5 +195,90 @@ export function applyScenarioEvents(
             : `Misja zakonczona zwyciestwem: przetrwano ${requiredRounds} rundy.`,
       },
     ],
+  };
+}
+
+function applyTerritoryRound(
+  mission: MissionState,
+  scenario: ScenarioDefinition,
+  battle: Battle | undefined,
+  completedRounds: number,
+  defenderArmyId: string | undefined,
+): ScenarioEngineResult {
+  const territoryOwners = { ...(mission.territoryOwners ?? {}) };
+  for (const unit of (battle?.armies ?? []).flatMap((army) => army.units)) {
+    if (unit.status !== "Destroyed" && unit.position) {
+      territoryOwners[`${unit.position.x},${unit.position.y}`] = unit.armyId;
+    }
+  }
+
+  const territoryScores = { ...(mission.territoryScores ?? {}) };
+  for (const army of battle?.armies ?? []) {
+    const controlledPoints = Object.entries(territoryOwners).reduce(
+      (total, [positionKey, armyId]) => {
+        if (armyId !== army.id) {
+          return total;
+        }
+        const strategic = battle?.board.objects?.some(
+          (object) =>
+            object.type === "StrategicPoint" &&
+            object.status === "Active" &&
+            `${object.position.x},${object.position.y}` === positionKey,
+        );
+        return total + (strategic ? 2 : 1);
+      },
+      0,
+    );
+    territoryScores[army.id] =
+      (territoryScores[army.id] ?? 0) + controlledPoints * completedRounds;
+  }
+
+  const roundsCompleted = mission.roundsCompleted + completedRounds;
+  const requiredRounds = mission.roundTarget ?? scenario.victoryCondition.rounds;
+  const rankedArmies = [...(battle?.armies ?? [])].sort(
+    (left, right) =>
+      (territoryScores[right.id] ?? 0) - (territoryScores[left.id] ?? 0),
+  );
+  const leader = rankedArmies[0];
+  const runnerUp = rankedArmies[1];
+  const tied =
+    leader &&
+    runnerUp &&
+    (territoryScores[leader.id] ?? 0) === (territoryScores[runnerUp.id] ?? 0);
+
+  if (roundsCompleted < requiredRounds || tied || !leader) {
+    return {
+      mission: {
+        ...mission,
+        roundsCompleted,
+        territoryOwners,
+        territoryScores,
+      },
+      events: tied && roundsCompleted >= requiredRounds
+        ? [{
+            type: "MissionProgress",
+            message: "Kontrola terytorium pozostaje nierozstrzygnięta. Rozpoczyna się dogrywka.",
+          }]
+        : [{
+            type: "MissionProgress",
+            message: `Punktacja terytorium: ${rankedArmies.map((army) => `${army.faction} ${territoryScores[army.id] ?? 0}`).join(", ")}.`,
+          }],
+    };
+  }
+
+  const status = leader.id === defenderArmyId ? "Victory" : "Defeat";
+  return {
+    mission: {
+      ...mission,
+      status,
+      roundsCompleted,
+      territoryOwners,
+      territoryScores,
+    },
+    events: [{
+      type: "MissionCompleted",
+      status,
+      message: `${leader.faction} wygrywa kontrolę terytorium wynikiem ${territoryScores[leader.id] ?? 0} pkt.`,
+    }],
   };
 }

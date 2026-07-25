@@ -5,6 +5,7 @@ import { createBattlefieldObject } from "../battlefield-objects";
 import { applyScenarioEvents, createMissionState } from "./scenario-engine";
 import {
   defendPointScenario,
+  controlTerritoryScenario,
   protectGeneratorScenario,
   survivalTestScenario,
 } from "./scenarios";
@@ -204,5 +205,63 @@ describe("scenario engine", () => {
 
     expect(result.mission.status).toBe("Victory");
     expect(result.mission.roundsCompleted).toBe(12);
+  });
+
+  it("claims occupied fields and scores them in territory control", () => {
+    const battle = createBattle();
+    const mission = createMissionState(controlTerritoryScenario, battle.armies);
+
+    const result = applyScenarioEvents(
+      mission,
+      controlTerritoryScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+
+    expect(Object.keys(result.mission.territoryOwners ?? {})).toHaveLength(6);
+    expect(result.mission.territoryScores).toEqual({
+      army_republic: 3,
+      army_separatists: 3,
+    });
+    expect(result.mission.roundsCompleted).toBe(1);
+  });
+
+  it("awards two points for a controlled strategic field", () => {
+    const battle = createBattle();
+    battle.board.objects = [
+      createBattlefieldObject("StrategicPoint", { x: 1, y: 2 }),
+    ];
+
+    const result = applyScenarioEvents(
+      createMissionState(controlTerritoryScenario, battle.armies),
+      controlTerritoryScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+
+    expect(result.mission.territoryScores).toEqual({
+      army_republic: 4,
+      army_separatists: 3,
+    });
+  });
+
+  it("honors a custom round target in territory control", () => {
+    const battle = createBattle();
+    const mission = {
+      ...createMissionState(controlTerritoryScenario, battle.armies),
+      roundTarget: 12,
+      roundsCompleted: 5,
+    };
+
+    const result = applyScenarioEvents(
+      mission,
+      controlTerritoryScenario,
+      [{ type: "TurnEnded", turn: 7 }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Active");
+    expect(result.mission.roundTarget).toBe(12);
+    expect(result.mission.roundsCompleted).toBe(6);
   });
 });

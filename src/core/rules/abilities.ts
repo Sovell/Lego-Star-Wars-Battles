@@ -42,6 +42,18 @@ export function getAttackDiceBonus(
   }
 
   bonus += getFriendlyAuraAttackBonus(battle, attacker);
+  if (
+    defender.currentHp < getTemplate(defender).maxHp &&
+    attacker.activeEffects?.includes("attack_bonus_damaged:1")
+  ) {
+    bonus += 1;
+  }
+  if (
+    getTemplate(defender).category === "hero" &&
+    attacker.activeEffects?.includes("attack_bonus_hero:1")
+  ) {
+    bonus += 1;
+  }
   return bonus;
 }
 

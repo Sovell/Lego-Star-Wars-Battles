@@ -98,6 +98,15 @@ export function validateUnitActivation(battle: Battle, unitId: string): string |
     return `Ten token nalezy do armii ${activeArmy.playerName}. Wybierz jednostke tej armii.`;
   }
 
+  const pendingAdvanceUnit = activeArmy.units.find(
+    (candidate) =>
+      candidate.status !== "Destroyed" &&
+      candidate.activeEffects?.includes("advance_pending"),
+  );
+  if (pendingAdvanceUnit && pendingAdvanceUnit.id !== unit.id) {
+    return "Najpierw dokończ Advance jednostki, która rozpoczęła ruch.";
+  }
+
   if (unit.status === "Destroyed") {
     return "Zniszczona jednostka nie moze otrzymac rozkazu.";
   }

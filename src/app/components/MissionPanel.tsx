@@ -6,6 +6,8 @@ import "./MissionPanel.css";
 export function MissionPanel({
   armies,
   attackerBotEnabled,
+  canStart,
+  gamePhase,
   mission,
   scenario,
   scenarios,
@@ -14,9 +16,12 @@ export function MissionPanel({
   onDefenderArmyChange,
   onRoundTargetChange,
   onRestart,
+  onStart,
 }: {
   armies: Army[];
   attackerBotEnabled: boolean;
+  canStart: boolean;
+  gamePhase: "Preparation" | "Playing";
   mission: MissionState;
   scenario: ScenarioDefinition;
   scenarios: ScenarioDefinition[];
@@ -25,13 +30,14 @@ export function MissionPanel({
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
   onRestart: () => void;
+  onStart: () => void;
 }) {
   const requiredRounds = mission.roundTarget ?? scenario.victoryCondition.rounds;
   const defender = armies.find((army) => army.id === mission.defenderArmyId) ?? armies[0];
   const attacker = armies.find((army) => army.id === mission.attackerArmyId)
     ?? armies.find((army) => army.id !== defender?.id);
   const statusLabel = mission.status === "Active"
-    ? "w toku"
+    ? gamePhase === "Preparation" ? "przygotowanie" : "w toku"
     : mission.status === "Victory"
       ? "zwyciestwo"
       : "porazka";
@@ -42,6 +48,7 @@ export function MissionPanel({
       <label className="missionSelector">
         Tryb scenariusza
         <select
+          disabled={gamePhase !== "Preparation"}
           value={scenario.id}
           onChange={(event) => onScenarioChange(event.target.value)}
         >
@@ -54,7 +61,7 @@ export function MissionPanel({
         <label className="missionSelector">
           Frakcja broniąca
           <select
-            disabled={mission.status !== "Active"}
+            disabled={gamePhase !== "Preparation"}
             value={defender?.id ?? ""}
             onChange={(event) => onDefenderArmyChange(event.target.value)}
           >
@@ -91,7 +98,7 @@ export function MissionPanel({
         <input
           type="number"
           min="1"
-          disabled={mission.status !== "Active"}
+          disabled={gamePhase !== "Preparation"}
           value={requiredRounds}
           onChange={(event) => onRoundTargetChange(Number(event.target.value))}
         />
@@ -102,15 +109,42 @@ export function MissionPanel({
         <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
       </div>
       <progress max={requiredRounds} value={mission.roundsCompleted} />
+      {scenario.victoryCondition.type === "ControlTerritory" ? (
+        <div className="territoryScoreboard">
+          {armies.map((army) => (
+            <span key={army.id}>
+              {army.faction}
+              <strong>{mission.territoryScores?.[army.id] ?? 0} pkt</strong>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {mission.status === "Victory" ? (
         <p className="missionOutcome">Cel wykonany. Misja zakonczona zwyciestwem.</p>
       ) : null}
       {mission.status === "Defeat" ? (
-        <p className="missionOutcome">Obroncy zostali wyeliminowani. Misja przegrana.</p>
+        <p className="missionOutcome">Warunek porażki został spełniony. Misja przegrana.</p>
       ) : null}
-      <button className="secondaryButton" onClick={onRestart}>
-        Uruchom misje ponownie
-      </button>
+      {gamePhase === "Preparation" ? (
+        <>
+          <button
+            className="primaryButton missionStartButton"
+            disabled={!canStart}
+            onClick={onStart}
+          >
+            Rozegraj scenariusz
+          </button>
+          {!canStart ? (
+            <small className="missionStartHint">
+              Wczytaj co najmniej dwie armie zawierające jednostki.
+            </small>
+          ) : null}
+        </>
+      ) : (
+        <button className="secondaryButton" onClick={onRestart}>
+          Zakończ i przygotuj nową rozgrywkę
+        </button>
+      )}
     </section>
   );
 }

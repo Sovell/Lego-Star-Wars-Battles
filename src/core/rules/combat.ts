@@ -2,7 +2,11 @@ import type { AttackResult, Battle, UnitInstance } from "../../types";
 import { validateUnitActivation } from "./activation";
 import { getAttackDiceBonus, getDamageBonus, getNumericAbilityEffect } from "./abilities";
 import { distance, lineOfSight } from "./geometry";
-import { getStatusAfterDamage } from "./morale";
+import {
+  crossedCriticalHpThreshold,
+  getStatusAfterDamage,
+  resolveMoraleRetreat,
+} from "./morale";
 import { getTemplate, findUnit, replaceUnit } from "./state";
 import { getDefenseBonus } from "./terrain";
 import { randomD6, type DiceRoller } from "../random";
@@ -87,7 +91,11 @@ export function resolveAttack(
   const savedHits = armorRolls.filter((roll) => roll >= armorSave).length;
   const unsavedHits = Math.max(0, hits - savedHits);
   const rawDamage = unsavedHits > 0 ? unsavedHits * weapon.damage + antiVehicleBonus + categoryDamageBonus : 0;
-  const damage = Math.max(0, rawDamage - shieldReduction - forceReduction);
+  const damageMultiplier = readIncomingDamageMultiplier(defender);
+  const damage = Math.max(
+    0,
+    Math.floor((rawDamage - shieldReduction - forceReduction) * damageMultiplier),
+  );
   const suppression = hits > 0 ? 1 : 0;
   const nextHp = Math.max(0, defender.currentHp - damage);
   const nextSuppression = defender.suppression + suppression;
@@ -98,11 +106,25 @@ export function resolveAttack(
     suppression: nextSuppression,
     status: getStatusAfterDamage(defender, defenderTemplate, nextHp, nextSuppression),
   };
-  const nextAttacker: UnitInstance = { ...attacker, status: "Activated" };
-  const nextBattle = {
+  const nextAttacker: UnitInstance = {
+    ...attacker,
+    status: "Activated",
+    activeEffects: attacker.activeEffects?.filter((effect) => effect !== "advance_pending"),
+  };
+  let nextBattle: Battle = {
     ...replaceUnit(replaceUnit(battle, nextDefender), nextAttacker),
     activeActivation: undefined,
   };
+  const moraleResult = crossedCriticalHpThreshold(
+    defenderTemplate,
+    defender.currentHp,
+    nextHp,
+  )
+    ? resolveMoraleRetreat(nextBattle, defender.id, attacker.position, rollD6)
+    : undefined;
+  if (moraleResult) {
+    nextBattle = moraleResult.battle;
+  }
 
   return {
     battle: nextBattle,
@@ -118,9 +140,19 @@ export function resolveAttack(
       damage,
       suppression,
       destroyed: nextHp === 0,
+      ...(moraleResult ? { moraleRolls: moraleResult.rolls } : {}),
+      ...(moraleResult?.retreatedTo ? { retreatedTo: moraleResult.retreatedTo } : {}),
     },
-    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, ataki ${attackDice}${attackDiceBonus ? ` (+${attackDiceBonus})` : ""}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, bonus obrazen +${categoryDamageBonus}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.`,
+    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, ataki ${attackDice}${attackDiceBonus ? ` (+${attackDiceBonus})` : ""}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, bonus obrazen +${categoryDamageBonus}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.${moraleResult ? ` Morale ${moraleResult.rolls.join("+")} ${moraleResult.failed ? moraleResult.retreatedTo ? `nieudane: odwrot na ${moraleResult.retreatedTo.x}, ${moraleResult.retreatedTo.y}.` : "nieudane: brak wolnego pola odwrotu." : "zdane: jednostka utrzymuje pozycje."}` : ""}`,
   };
+}
+
+function readIncomingDamageMultiplier(unit: UnitInstance): number {
+  const effect = unit.activeEffects?.find((candidate) =>
+    candidate.startsWith("incoming_damage_multiplier:"),
+  );
+  const percentage = effect ? Number(effect.split(":")[1]) : 100;
+  return Number.isFinite(percentage) ? percentage / 100 : 1;
 }
 
 function rollD6Pool(count: number, rollD6: DiceRoller): number[] {

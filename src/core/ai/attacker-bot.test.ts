@@ -81,8 +81,8 @@ describe("attacker bot", () => {
       attackerArmyId,
     );
 
-    expect(decision?.action.type).toBe("MoveUnit");
-    if (decision?.action.type !== "MoveUnit") {
+    expect(decision?.action.type).toBe("AdvanceUnit");
+    if (decision?.action.type !== "AdvanceUnit") {
       throw new Error("Expected a movement decision.");
     }
 

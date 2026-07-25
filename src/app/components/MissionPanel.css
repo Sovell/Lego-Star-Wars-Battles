@@ -133,3 +133,34 @@
 .missionPanel.defeat .missionOutcome {
   color: #f19a9a;
 }
+
+.missionStartButton {
+  min-height: 50px;
+}
+
+.missionStartHint {
+  color: #f0b0a8;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.territoryScoreboard {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.territoryScoreboard span {
+  background: rgba(12, 17, 23, 0.48);
+  border-radius: 6px;
+  color: #9eabba;
+  display: grid;
+  font-size: 0.68rem;
+  gap: 3px;
+  padding: 7px;
+}
+
+.territoryScoreboard strong {
+  color: #f0f3f7;
+  font-size: 0.78rem;
+}

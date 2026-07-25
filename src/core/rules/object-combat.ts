@@ -59,7 +59,11 @@ export function resolveObjectAttack(
     currentHp: nextHp,
     status: nextHp === 0 ? "Destroyed" : "Active",
   };
-  const nextAttacker: UnitInstance = { ...attacker, status: "Activated" };
+  const nextAttacker: UnitInstance = {
+    ...attacker,
+    status: "Activated",
+    activeEffects: attacker.activeEffects?.filter((effect) => effect !== "advance_pending"),
+  };
   const nextBattle: Battle = {
     ...replaceUnit(battle, nextAttacker),
     board: {

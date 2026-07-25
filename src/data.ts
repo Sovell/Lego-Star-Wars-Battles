@@ -13,7 +13,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "dc_15_blaster_rifles",
         name: "DC-15 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 3,
         damage: 1,
         keywords: ["RapidFire"],
@@ -96,7 +96,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "e_5_blaster_rifles",
         name: "E-5 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 3,
         damage: 1,
         keywords: [],
@@ -174,7 +174,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "aat_heavy_cannon",
         name: "Heavy Cannon",
-        range: 3,
+        range: 2,
         attacks: 2,
         damage: 3,
         keywords: ["AntiVehicle", "Blast"],
@@ -278,7 +278,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "clone_squad_blaster_rifles",
         name: "DC-15 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 4,
         damage: 1,
         keywords: [],
@@ -304,7 +304,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "command_squad_blaster_rifles",
         name: "DC-15 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 4,
         damage: 1,
         keywords: [],
@@ -356,7 +356,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "engineer_blaster_rifles",
         name: "DC-15 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 3,
         damage: 1,
         keywords: [],
@@ -382,7 +382,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "b1_squad_e_5_blaster_rifles",
         name: "E-5 Blaster Rifles",
-        range: 2,
+        range: 1,
         attacks: 3,
         damage: 1,
         keywords: [],
@@ -434,7 +434,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "jango_dual_westars",
         name: "Dual WESTAR-34 Blasters",
-        range: 2,
+        range: 1,
         attacks: 6,
         damage: 1,
         keywords: ["RapidFire"],
@@ -512,7 +512,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "arc_blaster_carbine",
         name: "ARC Blaster Carbine",
-        range: 2,
+        range: 1,
         attacks: 5,
         damage: 1,
         keywords: ["RapidFire"],
@@ -538,7 +538,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "cody_dc_15a_rifle",
         name: "DC-15A Blaster Rifle",
-        range: 3,
+        range: 2,
         attacks: 5,
         damage: 1,
         keywords: [],
@@ -564,7 +564,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "rex_dual_dc_17",
         name: "Dual DC-17 Blasters",
-        range: 2,
+        range: 1,
         attacks: 6,
         damage: 1,
         keywords: ["RapidFire"],
@@ -590,7 +590,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "bx_blaster_rifle",
         name: "E-5 Blaster Rifle",
-        range: 2,
+        range: 1,
         attacks: 4,
         damage: 1,
         keywords: [],
@@ -650,7 +650,7 @@ export const unitTemplates: UnitTemplate[] = [
       {
         id: "at_rt_rotary_blaster",
         name: "Rotary Blaster Cannon",
-        range: 3,
+        range: 2,
         attacks: 4,
         damage: 2,
         keywords: ["AntiVehicle"],
@@ -771,7 +771,7 @@ export const abilities: AbilityDefinition[] = [
     trigger: "Passive",
     range: 1,
     effect: { type: "aura_attack_bonus", value: 1, target: "friendly_clone" },
-    description: "Sojusznicze jednostki klonow w zasiegu 2 otrzymuja +1 atak.",
+    description: "Sojusznicze jednostki klonów w zasięgu 1 otrzymują +1 atak.",
   },
   {
     id: "force_push",
@@ -896,7 +896,7 @@ export const abilities: AbilityDefinition[] = [
     cooldown: 3,
     range: 2,
     effect: { type: "direct_damage", value: 3, target: "enemy_in_cover" },
-    description: "Atak specjalny przeciw celom w oslonie: 3 obrazenia w zasiegu 3. Przygotowane pod UI aktywnych zdolnosci.",
+    description: "Atak specjalny przeciw celom w osłonie: 3 obrażenia w zasięgu 2.",
   },
   {
     id: "relentless_fury",
@@ -931,7 +931,7 @@ export const abilities: AbilityDefinition[] = [
     trigger: "Passive",
     range: 1,
     effect: { type: "task_force_defense_bonus_near_unit", value: 1, target: "friendly_clone" },
-    description: "Klonowe jednostki z task force'a otrzymuja +1 defense w zasiegu 2 od Yody.",
+    description: "Klonowe jednostki z task force'a otrzymują +1 defense w zasięgu 1 od Yody.",
   },
   {
     id: "hold_the_line",

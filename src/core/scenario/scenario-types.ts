@@ -3,6 +3,7 @@ export type MissionStatus = "Active" | "Victory" | "Defeat";
 export type ScenarioVictoryCondition =
   | { type: "SurviveRounds"; rounds: number }
   | { type: "ProtectObject"; rounds: number; objectType: "Generator" }
+  | { type: "ControlTerritory"; rounds: number }
   | {
       type: "DefendPoint";
       rounds: number;
@@ -29,6 +30,8 @@ export type MissionState = {
   roundTarget?: number;
   defenderArmyId?: string;
   attackerArmyId?: string;
+  territoryOwners?: Record<string, string>;
+  territoryScores?: Record<string, number>;
 };
 
 export type MissionEvent =

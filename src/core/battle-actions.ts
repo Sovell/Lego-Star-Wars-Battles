@@ -13,27 +13,38 @@ import {
 } from "./rules/activation";
 import { resolveAttack } from "./rules/combat";
 import { resolveObjectAttack } from "./rules/object-combat";
-import { moveUnit } from "./rules/movement";
+import { advanceUnit, moveUnit } from "./rules/movement";
 import { resetUnitForNextTurn } from "./rules/morale";
 import { applyOrder } from "./rules/orders";
 import { getTemplate } from "./rules/state";
 import { applyVictoryState } from "./rules/victory";
 import { createD6Roller, type DiceRoller, type RandomSource } from "./random";
+import { useActiveAbility } from "./rules/active-abilities";
 
 export type BattleAction =
   | { type: "DrawActivation" }
   | { type: "MoveUnit"; unitId: string; targetPosition: { x: number; y: number } }
+  | { type: "AdvanceUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "ApplyOrder"; unitId: string; order: OrderType }
   | { type: "Attack"; attackerId: string; defenderId: string; weaponId: string }
   | { type: "AttackObject"; attackerId: string; objectId: string; weaponId: string }
+  | {
+      type: "UseAbility";
+      unitId: string;
+      abilityId: string;
+      targetUnitId?: string;
+      targetPosition?: { x: number; y: number };
+    }
   | { type: "EndTurn" };
 
 export type BattleEvent =
   | { type: "ActivationDrawn"; armyId: string }
   | { type: "UnitMoved"; unitId: string; position: { x: number; y: number } }
   | { type: "OrderApplied"; unitId: string; order: OrderType }
+  | { type: "AbilityUsed"; unitId: string; abilityId: string }
   | { type: "AttackResolved"; result: AttackResult }
   | { type: "UnitDestroyed"; unitId: string }
+  | { type: "UnitRetreated"; unitId: string; position: { x: number; y: number } }
   | { type: "ArmyEliminated"; armyId: string }
   | { type: "BattlefieldObjectDamaged"; objectId: string; damage: number }
   | {
@@ -84,6 +95,18 @@ export function applyBattleAction(
       };
     }
 
+    case "AdvanceUnit": {
+      const result = advanceUnit(battle, action.unitId, action.targetPosition);
+
+      return {
+        battle: result.battle,
+        events: result.battle === battle
+          ? []
+          : [{ type: "UnitMoved", unitId: action.unitId, position: action.targetPosition }],
+        log: result.log,
+      };
+    }
+
     case "ApplyOrder": {
       const result = applyOrder(battle, action.unitId, action.order);
 
@@ -119,6 +142,14 @@ export function applyBattleAction(
         if (defenderArmy && defenderArmy.units.every((unit) => unit.status === "Destroyed")) {
           events.push({ type: "ArmyEliminated", armyId: defenderArmy.id });
         }
+      }
+
+      if (result.result?.retreatedTo) {
+        events.push({
+          type: "UnitRetreated",
+          unitId: action.defenderId,
+          position: result.result.retreatedTo,
+        });
       }
 
       if (nextBattle.phase === "Finished" && battle.phase !== "Finished") {
@@ -171,6 +202,31 @@ export function applyBattleAction(
         log: result.log,
         objectAttackResult: result.result,
       };
+    }
+
+    case "UseAbility": {
+      const rollD6 = context.rollD6 ??
+        (context.randomSource ? createD6Roller(context.randomSource) : undefined);
+      const result = useActiveAbility(
+        battle,
+        action,
+        rollD6 ?? (() => Math.floor(Math.random() * 6) + 1),
+      );
+      const events: BattleEvent[] = result.battle === battle
+        ? []
+        : [{ type: "AbilityUsed", unitId: action.unitId, abilityId: action.abilityId }];
+
+      if (result.destroyedUnitId) {
+        events.push({ type: "UnitDestroyed", unitId: result.destroyedUnitId });
+        const destroyedArmy = result.battle.armies.find((army) =>
+          army.units.some((unit) => unit.id === result.destroyedUnitId),
+        );
+        if (destroyedArmy?.units.every((unit) => unit.status === "Destroyed")) {
+          events.push({ type: "ArmyEliminated", armyId: destroyedArmy.id });
+        }
+      }
+
+      return { battle: result.battle, events, log: result.log };
     }
 
     case "EndTurn": {

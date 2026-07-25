@@ -16,6 +16,14 @@ export const battlefieldObjectPresets: BattlefieldObjectPreset[] = [
     blocksLineOfSight: false,
   },
   {
+    type: "StrategicPoint",
+    name: "Punkt strategiczny ★",
+    maxHp: 0,
+    defenseBonus: 0,
+    destructible: false,
+    blocksLineOfSight: false,
+  },
+  {
     type: "Generator",
     name: "Generator",
     maxHp: 8,

@@ -71,6 +71,45 @@ describe("applyBattleAction", () => {
     ]);
   });
 
+  it("keeps an Advance activation open for one attack", () => {
+    const battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
+      defender: { id: "sep_unit_1", position: { x: 3, y: 2 } },
+    });
+
+    const advance = applyBattleAction(battle, {
+      type: "AdvanceUnit",
+      unitId: "rep_unit_1",
+      targetPosition: { x: 2, y: 1 },
+    });
+
+    expect(advance.battle.activeActivation?.armyId).toBe("army_republic");
+    expect(findUnit(advance.battle, "rep_unit_1")).toMatchObject({
+      position: { x: 2, y: 1 },
+      status: "Ready",
+      movedThisTurn: true,
+      activeEffects: ["advance_pending"],
+    });
+
+    const attack = applyBattleAction(
+      advance.battle,
+      {
+        type: "Attack",
+        attackerId: "rep_unit_1",
+        defenderId: "sep_unit_1",
+        weaponId: "dc_15_blaster_rifles",
+      },
+      { rollD6: createSequenceDiceRoller([4, 4, 1, 1, 1]) },
+    );
+
+    expect(attack.attackResult).toBeDefined();
+    expect(attack.battle.activeActivation).toBeUndefined();
+    expect(findUnit(attack.battle, "rep_unit_1")?.status).toBe("Activated");
+    expect(findUnit(attack.battle, "rep_unit_1")?.activeEffects).not.toContain(
+      "advance_pending",
+    );
+  });
+
   it("resolves combat with deterministic hit and armor rolls", () => {
     const battle = readyBattle({
       attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },

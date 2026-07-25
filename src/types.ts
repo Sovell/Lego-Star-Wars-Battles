@@ -89,6 +89,7 @@ export type TerrainTile = {
 
 export type BattlefieldObjectType =
   | "DefensePoint"
+  | "StrategicPoint"
   | "Generator"
   | "LightFortification"
   | "HeavyFortification";
@@ -169,7 +170,7 @@ export type Battle = {
   phase: BattlePhase;
 };
 
-export type OrderType = "Advance" | "Attack" | "Rally" | "Overwatch";
+export type OrderType = "Move" | "Advance" | "Attack" | "Rally" | "Overwatch";
 
 export type CombatLogEntry = {
   id: string;
@@ -192,6 +193,11 @@ export type AttackResult = {
   damage: number;
   suppression: number;
   destroyed: boolean;
+  moraleRolls?: [number, number];
+  retreatedTo?: {
+    x: number;
+    y: number;
+  };
 };
 
 export type ObjectAttackResult = {

@@ -14,10 +14,13 @@ import {
   getVictoryState,
 } from "./core/battle-state";
 import type { BattleAction } from "./core/battle-actions";
+import { getUnitActiveAbilities } from "./core/rules/active-abilities";
 import {
+  buildActivationBag,
   canEndTurn,
   getRemainingActivationCount,
 } from "./core/rules/activation";
+import { isPositionFree } from "./core/rules/occupancy";
 import {
   battlefieldObjectPresets,
   createBattlefieldObject,
@@ -41,6 +44,7 @@ import type {
 } from "./types";
 
 type AppView = "battle" | "composer" | "rules";
+type GamePhase = "Preparation" | "Playing";
 type AppTitle = Record<AppView, string>;
 type DraftCounts = Record<string, number>;
 type PendingAdvance = {
@@ -53,7 +57,7 @@ type PendingAdvance = {
   };
 };
 
-const orders: OrderType[] = ["Advance", "Attack", "Rally", "Overwatch"];
+const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
 const composerFactions: FactionId[] = ["Republic", "Separatists"];
 const appTitles: AppTitle = {
   battle: "Panel dowodzenia",
@@ -75,11 +79,12 @@ export function App() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [targetUnitId, setTargetUnitId] = useState<string>("");
   const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
-  const [selectedOrder, setSelectedOrder] = useState<OrderType>("Advance");
+  const [selectedOrder, setSelectedOrder] = useState<OrderType>("Move");
   const [armyJson, setArmyJson] = useState<string>(() => JSON.stringify(starterArmies, null, 2));
   const [importError, setImportError] = useState<string>("");
   const [debugMode, setDebugMode] = useState<boolean>(false);
   const [attackerBotEnabled, setAttackerBotEnabled] = useState<boolean>(true);
+  const [gamePhase, setGamePhase] = useState<GamePhase>("Preparation");
   const activeScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
 
@@ -103,6 +108,7 @@ export function App() {
     setArmyJson(JSON.stringify(armies, null, 2));
     setImportError("");
     setLogs([createLog(1, logMessage)]);
+    setGamePhase("Preparation");
   }
 
   function handleScenarioChange(scenarioId: string) {
@@ -153,6 +159,9 @@ export function App() {
   }
 
   function handleTerrainPaint(tile: TerrainTile) {
+    if (gamePhase !== "Preparation") {
+      return;
+    }
     setBattle((current) => {
       const otherTiles = current.board.tiles.filter(
         (existingTile) => existingTile.x !== tile.x || existingTile.y !== tile.y,
@@ -172,6 +181,9 @@ export function App() {
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
   ) {
+    if (gamePhase !== "Preparation") {
+      return;
+    }
     setBattle((current) => {
       const objects = current.board.objects ?? [];
       const remaining = objects.filter((object) => {
@@ -192,6 +204,51 @@ export function App() {
         },
       };
     });
+  }
+
+  function handleStartScenario() {
+    if (
+      battle.armies.length < 2 ||
+      battle.armies.some((army) => army.units.length === 0)
+    ) {
+      return;
+    }
+
+    const readyArmies = battle.armies.map((army) => ({
+      ...army,
+      units: army.units.map((unit) => ({
+        ...unit,
+        currentHp: getTemplate(unit).maxHp,
+        suppression: 0,
+        abilityCooldowns: {},
+        activeEffects: [],
+        movedThisTurn: false,
+        status: "Ready" as const,
+      })),
+    }));
+    const nextBattle: Battle = {
+      ...createBattle(readyArmies),
+      board: structuredClone(battle.board),
+      activationBag: buildActivationBag(readyArmies),
+    };
+    const nextMission = {
+      ...createMissionState(
+        activeScenario,
+        nextBattle.armies,
+        mission.defenderArmyId,
+      ),
+      ...(mission.roundTarget ? { roundTarget: mission.roundTarget } : {}),
+    };
+
+    setBattle(nextBattle);
+    setMission(nextMission);
+    setMissionArmies(structuredClone(readyArmies));
+    setActiveArmyId(undefined);
+    setSelectedUnitId("");
+    setTargetUnitId("");
+    setSelectedWeaponId("");
+    setLogs([createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`)]);
+    setGamePhase("Playing");
   }
 
   return (
@@ -228,7 +285,11 @@ export function App() {
           <strong>{battle.turn}</strong>
         </div>
         <div className="phasePill">
-          {mission.status === "Active" ? battle.phase : `Mission ${mission.status}`}
+          {gamePhase === "Preparation"
+            ? "Preparation"
+            : mission.status === "Active"
+              ? battle.phase
+              : `Mission ${mission.status}`}
         </div>
       </section>
 
@@ -238,6 +299,7 @@ export function App() {
           armyJson={armyJson}
           attackerBotEnabled={attackerBotEnabled}
           battle={battle}
+          gamePhase={gamePhase}
           debugMode={debugMode}
           importError={importError}
           logs={logs}
@@ -253,6 +315,7 @@ export function App() {
           onArmyJsonChange={setArmyJson}
           onAttackerBotEnabledChange={setAttackerBotEnabled}
           onBattleChange={setBattle}
+          onGamePhaseChange={setGamePhase}
           onImportError={setImportError}
           onLoadArmies={loadArmies}
           onLogsChange={setLogs}
@@ -268,6 +331,7 @@ export function App() {
               mission.defenderArmyId,
             )
           }
+          onStartScenario={handleStartScenario}
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
           onSelectedWeaponChange={setSelectedWeaponId}
@@ -297,6 +361,7 @@ function BattleView({
   armyJson,
   attackerBotEnabled,
   battle,
+  gamePhase,
   debugMode,
   importError,
   logs,
@@ -312,6 +377,7 @@ function BattleView({
   onArmyJsonChange,
   onAttackerBotEnabledChange,
   onBattleChange,
+  onGamePhaseChange,
   onImportError,
   onLoadArmies,
   onLogsChange,
@@ -319,6 +385,7 @@ function BattleView({
   onDefenderArmyChange,
   onMissionChange,
   onMissionRestart,
+  onStartScenario,
   onScenarioChange,
   onOrderChange,
   onSelectedUnitChange,
@@ -331,6 +398,7 @@ function BattleView({
   armyJson: string;
   attackerBotEnabled: boolean;
   battle: Battle;
+  gamePhase: GamePhase;
   debugMode: boolean;
   importError: string;
   logs: CombatLogEntry[];
@@ -346,6 +414,7 @@ function BattleView({
   onArmyJsonChange: (json: string) => void;
   onAttackerBotEnabledChange: (enabled: boolean) => void;
   onBattleChange: (battle: Battle) => void;
+  onGamePhaseChange: (phase: GamePhase) => void;
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
   onLogsChange: (logs: CombatLogEntry[]) => void;
@@ -356,6 +425,7 @@ function BattleView({
   onDefenderArmyChange: (armyId: string) => void;
   onMissionChange: (mission: MissionState) => void;
   onMissionRestart: () => void;
+  onStartScenario: () => void;
   onScenarioChange: (scenarioId: string) => void;
   onOrderChange: (order: OrderType) => void;
   onSelectedUnitChange: (unitId: string) => void;
@@ -365,6 +435,11 @@ function BattleView({
   onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
   const [pendingAdvance, setPendingAdvance] = useState<PendingAdvance | null>(null);
+  const [selectedAbilityId, setSelectedAbilityId] = useState("");
+  const [abilityTargetUnitId, setAbilityTargetUnitId] = useState("");
+  const [abilityTargetPosition, setAbilityTargetPosition] = useState<{ x: number; y: number }>();
+  const [selectingAbilityPosition, setSelectingAbilityPosition] = useState(false);
+  const [intelTab, setIntelTab] = useState<"armies" | "logs">("logs");
   const [mapMode, setMapMode] = useState<"units" | "terrain" | "objects">("units");
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
   const [selectedObjectType, setSelectedObjectType] = useState<
@@ -379,6 +454,11 @@ function BattleView({
   const selectedTerrainPreset =
     terrainPresets.find((terrain) => terrain.terrainType === selectedTerrain) ?? terrainPresets[0];
   const availableWeapons = selectedTemplate?.weapons ?? [];
+  const activeAbilities = selectedUnit
+    ? getUnitActiveAbilities(battle, selectedUnit)
+    : [];
+  const selectedAbility = activeAbilities.find((ability) => ability.id === selectedAbilityId)
+    ?? activeAbilities[0];
   const activeWeaponId = availableWeapons.some((weapon) => weapon.id === selectedWeaponId)
     ? selectedWeaponId
     : availableWeapons[0]?.id || "";
@@ -391,7 +471,11 @@ function BattleView({
   const remainingActivations = getRemainingActivationCount(battle);
   const livingUnits = allUnits.filter((unit) => unit.status !== "Destroyed").length;
   const turnCanEnd = canEndTurn(battle);
-  const missionActive = mission.status === "Active";
+  const missionActive = mission.status === "Active" && gamePhase === "Playing";
+  const preparationActive = gamePhase === "Preparation";
+  const canStartScenario =
+    battle.armies.length >= 2 &&
+    battle.armies.every((army) => army.units.length > 0);
 
   function executeMissionAction(action: BattleAction) {
     const result = applyMissionAction(
@@ -407,16 +491,20 @@ function BattleView({
   }
 
   function handleCellClick(x: number, y: number) {
-    if (!missionActive) {
+    if (selectingAbilityPosition) {
+      setAbilityTargetPosition({ x, y });
+      setSelectingAbilityPosition(false);
       return;
     }
 
     if (mapMode === "terrain") {
+      if (!preparationActive) return;
       onTerrainPaint({ ...selectedTerrainPreset, x, y });
       return;
     }
 
     if (mapMode === "objects") {
+      if (!preparationActive) return;
       onBattlefieldObjectPlace(
         selectedObjectType === "Remove" ? undefined : selectedObjectType,
         { x, y },
@@ -428,13 +516,26 @@ function BattleView({
       return;
     }
 
-    if (debugMode) {
+    if (preparationActive || debugMode) {
+      if (!isPositionFree(battle, { x, y }, selectedUnit.id)) {
+        onAddLog(`Pole ${x}, ${y} jest już zajęte.`);
+        return;
+      }
       onUnitPatch(selectedUnit.id, { position: { x, y } });
       return;
     }
 
+    if (!missionActive) {
+      return;
+    }
+
+    if (selectedOrder !== "Move" && selectedOrder !== "Advance") {
+      onAddLog("Aby poruszyć jednostkę, wybierz rozkaz Move albo Advance.");
+      return;
+    }
+
     const result = executeMissionAction({
-      type: "MoveUnit",
+      type: selectedOrder === "Advance" ? "AdvanceUnit" : "MoveUnit",
       unitId: selectedUnit.id,
       targetPosition: { x, y },
     });
@@ -464,16 +565,22 @@ function BattleView({
       mission.attackerArmyId &&
       drawResult.battle.activeActivation?.armyId === mission.attackerArmyId
     ) {
-      const decision = chooseAttackerBotAction(
-        drawResult.battle,
-        scenario,
-        mission.attackerArmyId,
-      );
+      for (let botStep = 0; botStep < 2 && finalBattle.activeActivation; botStep += 1) {
+        const decision = chooseAttackerBotAction(
+          finalBattle,
+          scenario,
+          mission.attackerArmyId,
+          finalMission,
+        );
 
-      if (decision) {
+        if (!decision) {
+          onAddLog("Bot atakujacy nie znalazl legalnej akcji. Token pozostaje aktywny.");
+          break;
+        }
+
         onAddLog(`Bot atakujacy: ${decision.reason}`);
         const botResult = applyMissionAction(
-          { battle: drawResult.battle, mission: drawResult.mission },
+          { battle: finalBattle, mission: finalMission },
           scenario,
           decision.action,
         );
@@ -481,8 +588,6 @@ function BattleView({
         finalMission = botResult.mission;
         onAddLog(botResult.log);
         botResult.missionEvents.forEach((event) => onAddLog(event.message));
-      } else {
-        onAddLog("Bot atakujacy nie znalazl legalnej akcji. Token pozostaje aktywny.");
       }
     }
 
@@ -500,6 +605,23 @@ function BattleView({
     });
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
+  }
+
+  function handleUseAbility() {
+    if (!selectedUnit || !selectedAbility) {
+      return;
+    }
+    const result = executeMissionAction({
+      type: "UseAbility",
+      unitId: selectedUnit.id,
+      abilityId: selectedAbility.id,
+      ...(abilityTargetUnitId ? { targetUnitId: abilityTargetUnitId } : {}),
+      ...(abilityTargetPosition ? { targetPosition: abilityTargetPosition } : {}),
+    });
+    onActiveArmyChange(result.battle.activeActivation?.armyId);
+    onAddLog(result.log);
+    setAbilityTargetPosition(undefined);
+    setSelectingAbilityPosition(false);
   }
 
   function handleAttack() {
@@ -609,6 +731,7 @@ function BattleView({
     onSelectedUnitChange("");
     onTargetUnitChange("");
     onSelectedWeaponChange("");
+    onGamePhaseChange("Playing");
   }
 
   return (
@@ -617,6 +740,8 @@ function BattleView({
         <MissionPanel
           armies={battle.armies}
           attackerBotEnabled={attackerBotEnabled}
+          canStart={canStartScenario}
+          gamePhase={gamePhase}
           mission={mission}
           scenario={scenario}
           scenarios={scenarioOptions}
@@ -631,9 +756,12 @@ function BattleView({
             })
           }
           onRestart={onMissionRestart}
+          onStart={onStartScenario}
         />
 
-        <PanelTitle title="Mapa" detail={mapMode} />
+        {preparationActive ? (
+          <>
+        <PanelTitle title="Przygotowanie mapy" detail={mapMode} />
         <div className="segmented mapModeSwitch">
           <button className={mapMode === "units" ? "active" : ""} onClick={() => setMapMode("units")}>
             Oddzialy
@@ -707,110 +835,21 @@ function BattleView({
           </>
         )}
 
-        <PanelTitle title="Aktywacja" detail={`${remainingActivations}/${livingUnits}`} />
-        <button
-          className="primaryButton"
-          disabled={!missionActive || Boolean(battle.activeActivation) || remainingActivations === 0}
-          onClick={handleDrawActivation}
-        >
-          Losuj aktywacje
-        </button>
-        <div className="tokenReadout">
-          {activeArmyId
-            ? `Aktywna armia: ${battle.armies.find((army) => army.id === activeArmyId)?.playerName}`
-            : "Brak aktywnego tokena"}
-        </div>
-
-        <PanelTitle title="Rozkaz" detail={selectedOrder} />
-        <div className="segmented">
-          {orders.map((order) => (
-            <button
-              key={order}
-              className={order === selectedOrder ? "active" : ""}
-              disabled={!missionActive}
-              onClick={() => onOrderChange(order)}
-            >
-              {order}
-            </button>
-          ))}
-        </div>
-        <button
-          className="secondaryButton"
-          onClick={handleOrder}
-          disabled={!missionActive || !selectedUnitId || !activeArmyId}
-        >
-          Wydaj rozkaz
-        </button>
-
-        <PanelTitle title="Atak" detail="D6" />
-        <select
-          value={activeWeaponId}
-          onChange={(event) => onSelectedWeaponChange(event.target.value)}
-          disabled={!missionActive || !selectedUnitId}
-        >
-          <option value="">Wybierz bron</option>
-          {availableWeapons.map((weapon) => (
-            <option key={weapon.id} value={weapon.id}>
-              {weapon.name} | R{weapon.range} A{weapon.attacks} D{weapon.damage}
-            </option>
-          ))}
-        </select>
-        <select
-          value={targetUnitId}
-          disabled={!missionActive}
-          onChange={(event) => onTargetUnitChange(event.target.value)}
-        >
-          <option value="">Wybierz cel</option>
-          {availableTargets.map((unit) => (
-            <option key={unit.id} value={unit.id}>
-              {getTemplate(unit).name}
-            </option>
-          ))}
-          {availableObjectTargets.map((object) => (
-            <option key={object.id} value={`object:${object.id}`}>
-              {object.name} | HP {object.currentHp}/{object.maxHp}
-            </option>
-          ))}
-        </select>
-        <button
-          className="dangerButton"
-          onClick={handleAttack}
-          disabled={
-            !missionActive || !selectedUnitId || !targetUnitId || !activeArmyId || !activeWeaponId
-          }
-        >
-          Rozstrzygnij atak
-        </button>
-        {pendingAdvance ? (
-          <div className="decisionPanel">
-            <PanelTitle title="Po starciu" detail="wybor zwyciezcy" />
-            <p>
-              {pendingAdvance.attackerName} pokonal {pendingAdvance.defenderName}. Mozesz zajac
-              opuszczone pole albo zostac na obecnej pozycji.
-            </p>
-            <div className="decisionActions">
-              <button className="primaryButton" onClick={handleAdvanceAfterCombat}>
-                Zajmij pozycje
-              </button>
-              <button className="secondaryButton" onClick={handleHoldAfterCombat}>
-                Zostan
-              </button>
-            </div>
+          </>
+        ) : (
+          <div className="playingSideSummary">
+            <PanelTitle title="Rozgrywka" detail={`Tura ${battle.turn}`} />
+            <span>{scenario.name}</span>
+            <span>
+              Aktywacje: {remainingActivations}/{livingUnits}
+            </span>
+            <span>
+              {activeArmyId
+                ? `Aktywna: ${battle.armies.find((army) => army.id === activeArmyId)?.playerName}`
+                : "Oczekiwanie na losowanie"}
+            </span>
           </div>
-        ) : null}
-        <button
-          className="secondaryButton"
-          disabled={!missionActive || !turnCanEnd}
-          onClick={handleEndTurn}
-        >
-          {!missionActive
-            ? "Misja zakonczona"
-            : battle.activeActivation
-              ? "Dokończ aktywację"
-              : remainingActivations > 0
-                ? `Pozostało rozkazów: ${remainingActivations}`
-                : "Koniec tury"}
-        </button>
+        )}
 
         <BattleSavePanel
           battle={battle}
@@ -819,7 +858,7 @@ function BattleView({
           onBattleLoad={handleBattleLoad}
         />
 
-        <details className="jsonDetails">
+        {preparationActive ? <details className="jsonDetails">
           <summary>Import armii JSON</summary>
           <textarea
             className="armyInput jsonInput"
@@ -832,13 +871,193 @@ function BattleView({
           <button className="secondaryButton" onClick={handleLoadArmies}>
             Wczytaj armie
           </button>
-        </details>
+        </details> : null}
       </aside>
 
       <section className="battlefield commandMain">
+        {missionActive ? (
+          <section className="battleHud">
+            <div className="hudActivation">
+              <button
+                className="primaryButton"
+                disabled={Boolean(battle.activeActivation) || remainingActivations === 0}
+                onClick={handleDrawActivation}
+              >
+                Losuj aktywację
+              </button>
+              <span>
+                {activeArmyId
+                  ? battle.armies.find((army) => army.id === activeArmyId)?.playerName
+                  : `${remainingActivations} pozostało`}
+              </span>
+            </div>
+
+            <label>
+              Jednostka
+              <select
+                value={selectedUnitId}
+                onChange={(event) => onSelectedUnitChange(event.target.value)}
+              >
+                <option value="">Kliknij jednostkę lub wybierz</option>
+                {allUnits.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {getTemplate(unit).name} | {unit.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Rozkaz
+              <select
+                value={selectedOrder}
+                onChange={(event) => onOrderChange(event.target.value as OrderType)}
+              >
+                {orders.map((order) => (
+                  <option key={order} value={order}>{order}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="secondaryButton"
+              disabled={!selectedUnitId || !activeArmyId}
+              onClick={handleOrder}
+            >
+              {selectedOrder === "Advance" &&
+              selectedUnit?.activeEffects?.includes("advance_pending")
+                ? "Zakończ Advance"
+                : "Wykonaj"}
+            </button>
+
+            <label>
+              Broń
+              <select
+                value={activeWeaponId}
+                disabled={!selectedUnitId}
+                onChange={(event) => onSelectedWeaponChange(event.target.value)}
+              >
+                <option value="">Wybierz broń</option>
+                {availableWeapons.map((weapon) => (
+                  <option key={weapon.id} value={weapon.id}>
+                    {weapon.name} | R{weapon.range} A{weapon.attacks}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Cel
+              <select
+                value={targetUnitId}
+                onChange={(event) => onTargetUnitChange(event.target.value)}
+              >
+                <option value="">Wybierz cel</option>
+                {availableTargets.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {getTemplate(unit).name}
+                  </option>
+                ))}
+                {availableObjectTargets.map((object) => (
+                  <option key={object.id} value={`object:${object.id}`}>
+                    {object.name} | {object.currentHp} HP
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="dangerButton"
+              disabled={!selectedUnitId || !targetUnitId || !activeArmyId || !activeWeaponId}
+              onClick={handleAttack}
+            >
+              Atakuj
+            </button>
+
+            <details className="hudAbility">
+              <summary>Zdolność{selectedAbility ? `: ${selectedAbility.name}` : ""}</summary>
+              {activeAbilities.length > 0 ? (
+                <div className="hudAbilityControls">
+                  <select
+                    value={selectedAbility?.id ?? ""}
+                    onChange={(event) => {
+                      setSelectedAbilityId(event.target.value);
+                      setAbilityTargetPosition(undefined);
+                    }}
+                  >
+                    {activeAbilities.map((ability) => (
+                      <option key={ability.id} value={ability.id}>
+                        {ability.name} | CD {selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={abilityTargetUnitId}
+                    onChange={(event) => setAbilityTargetUnitId(event.target.value)}
+                  >
+                    <option value="">Brak celu jednostkowego</option>
+                    {allUnits
+                      .filter((unit) => unit.id !== selectedUnitId && unit.status !== "Destroyed")
+                      .map((unit) => (
+                        <option key={unit.id} value={unit.id}>
+                          {getTemplate(unit).name}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    className="secondaryButton"
+                    onClick={() => setSelectingAbilityPosition((current) => !current)}
+                  >
+                    {selectingAbilityPosition
+                      ? "Kliknij pole"
+                      : abilityTargetPosition
+                        ? `${abilityTargetPosition.x}, ${abilityTargetPosition.y}`
+                        : "Cel pola"}
+                  </button>
+                  <button
+                    className="primaryButton"
+                    disabled={
+                      !activeArmyId ||
+                      !selectedAbility ||
+                      (selectedUnit?.abilityCooldowns?.[selectedAbility.id] ?? 0) > 0
+                    }
+                    onClick={handleUseAbility}
+                  >
+                    Użyj
+                  </button>
+                </div>
+              ) : (
+                <p>Brak aktywnych zdolności.</p>
+              )}
+            </details>
+
+            <button
+              className="secondaryButton"
+              disabled={!turnCanEnd}
+              onClick={handleEndTurn}
+            >
+              {remainingActivations > 0 ? `${remainingActivations} aktywacji` : "Koniec tury"}
+            </button>
+          </section>
+        ) : null}
+
+        {pendingAdvance ? (
+          <div className="decisionPanel compactDecision">
+            <p>
+              {pendingAdvance.attackerName} pokonał {pendingAdvance.defenderName}.
+            </p>
+            <div className="decisionActions">
+              <button className="primaryButton" onClick={handleAdvanceAfterCombat}>
+                Zajmij pozycję
+              </button>
+              <button className="secondaryButton" onClick={handleHoldAfterCombat}>
+                Zostań
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <MapBoard
           battle={battle}
-          interactionDisabled={!missionActive}
+          interactionDisabled={gamePhase === "Playing" && !missionActive}
+          mission={mission}
           selectedUnitId={selectedUnitId}
           onCellClick={handleCellClick}
           onSelectedUnitChange={onSelectedUnitChange}
@@ -850,33 +1069,41 @@ function BattleView({
           <BattleSummary battle={battle} />
         ) : null}
 
-        <details className="collapsiblePanel" open>
-          <summary>Składy armii</summary>
-          <div className="armiesGrid">
+        <section className="battleIntel">
+          <div className="intelTabs">
+            <button
+              className={intelTab === "logs" ? "active" : ""}
+              onClick={() => setIntelTab("logs")}
+            >
+              Dziennik
+            </button>
+            <button
+              className={intelTab === "armies" ? "active" : ""}
+              onClick={() => setIntelTab("armies")}
+            >
+              Jednostki
+            </button>
+          </div>
+          {intelTab === "armies" ? <div className="armiesGrid intelContent">
             {battle.armies.map((army) => (
               <ArmyColumn
                 key={army.id}
                 army={army}
-                debugMode={debugMode && missionActive}
+                debugMode={debugMode && preparationActive}
                 selectedUnitId={selectedUnitId}
                 onSelect={onSelectedUnitChange}
                 onPatch={onUnitPatch}
               />
             ))}
-          </div>
-        </details>
-
-        <details className="logPanel collapsiblePanel" open>
-          <summary>Dziennik bitwy</summary>
-          <div className="logs">
+          </div> : <div className="logs intelContent">
             {logs.map((entry) => (
               <div className="logEntry" key={entry.id}>
                 <span>T{entry.turn}</span>
                 <p>{entry.message}</p>
               </div>
             ))}
-          </div>
-        </details>
+          </div>}
+        </section>
       </section>
     </section>
   );
@@ -1042,12 +1269,14 @@ function UnitDetails({
 function MapBoard({
   battle,
   interactionDisabled,
+  mission,
   selectedUnitId,
   onCellClick,
   onSelectedUnitChange,
 }: {
   battle: Battle;
   interactionDisabled: boolean;
+  mission: MissionState;
   selectedUnitId: string;
   onCellClick: (x: number, y: number) => void;
   onSelectedUnitChange: (unitId: string) => void;
@@ -1068,10 +1297,20 @@ function MapBoard({
           (object) => object.position.x === x && object.position.y === y,
         );
         const tileUnits = units.filter((unit) => unit.position?.x === x && unit.position.y === y);
+        const territoryArmyId = mission.territoryOwners?.[`${x},${y}`];
+        const territoryFaction = battle.armies.find(
+          (army) => army.id === territoryArmyId,
+        )?.faction;
 
         return (
           <button
-            className={`mapCell ${tile?.terrainType ?? "Open"}`}
+            className={`mapCell ${tile?.terrainType ?? "Open"} ${
+              territoryFaction === "Republic"
+                ? "territoryRepublic"
+                : territoryFaction === "Separatists"
+                  ? "territorySeparatists"
+                  : ""
+            }`}
             key={`${x}-${y}`}
             onClick={() => onCellClick(x, y)}
           >
@@ -1814,6 +2053,7 @@ function getTokenImageUrl(template: UnitTemplate): string | undefined {
 function getObjectCode(type: BattlefieldObjectType): string {
   switch (type) {
     case "DefensePoint": return "P";
+    case "StrategicPoint": return "★";
     case "Generator": return "G";
     case "LightFortification": return "L";
     case "HeavyFortification": return "H";
