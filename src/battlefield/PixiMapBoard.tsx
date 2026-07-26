@@ -2,10 +2,13 @@ import { Application, extend } from "@pixi/react";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   Container,
+  type FederatedPointerEvent,
   Graphics,
+  Rectangle,
   Text as PixiText,
 } from "pixi.js";
 import type { BattlefieldObjectType, FactionId, TerrainType } from "../types";
+import { calculateSquareBoardLayout } from "./board-layout";
 import { boardPositionKey } from "./board-view-model";
 import type { BoardRendererProps } from "./board-renderer";
 
@@ -30,16 +33,30 @@ export function PixiMapBoard(props: BoardRendererProps) {
 
     const updateSize = () => {
       const bounds = host.getBoundingClientRect();
-      setSize({
+      const nextSize = {
         width: Math.max(1, Math.floor(bounds.width)),
         height: Math.max(1, Math.floor(bounds.height)),
-      });
+      };
+      setSize((current) =>
+        current.width === nextSize.width && current.height === nextSize.height
+          ? current
+          : nextSize
+      );
     };
-    updateSize();
 
     const observer = new ResizeObserver(updateSize);
     observer.observe(host);
-    return () => observer.disconnect();
+    updateSize();
+    let settleFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      updateSize();
+      settleFrame = requestAnimationFrame(updateSize);
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(settleFrame);
+      observer.disconnect();
+    };
   }, []);
 
   return (
@@ -53,6 +70,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
           antialias
           backgroundColor={0x11161d}
           height={size.height}
+          key={`${size.width}x${size.height}`}
           resolution={1}
           width={size.width}
         >
@@ -69,45 +87,69 @@ function PixiBoardScene({
   selectedUnitId,
   viewModel,
   width,
+  onCellClick,
   onSelectedUnitChange,
 }: BoardRendererProps & {
   height: number;
   width: number;
 }) {
-  const cellWidth = Math.max(
-    1,
-    (width - BOARD_PADDING * 2 - CELL_GAP * (viewModel.width - 1)) / viewModel.width,
-  );
-  const cellHeight = Math.max(
-    1,
-    (height - BOARD_PADDING * 2 - CELL_GAP * (viewModel.height - 1)) / viewModel.height,
-  );
-  const tokenRadius = Math.max(10, Math.min(18, Math.min(cellWidth, cellHeight) * 0.27));
+  const [hoveredCellKey, setHoveredCellKey] = useState<string>();
+  const {
+    cellSize,
+    x: boardX,
+    y: boardY,
+  } = calculateSquareBoardLayout({
+    columns: viewModel.width,
+    gap: CELL_GAP,
+    height,
+    padding: BOARD_PADDING,
+    rows: viewModel.height,
+    width,
+  });
+  const tokenRadius = Math.max(10, Math.min(18, cellSize * 0.27));
 
   return (
-    <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING}>
+    <pixiContainer x={boardX} y={boardY}>
       {viewModel.positions.map(({ x, y }) => {
         const key = boardPositionKey(x, y);
         const tile = viewModel.tilesByPosition.get(key);
         const object = viewModel.objectsByPosition.get(key);
         const territory = viewModel.territoryByPosition.get(key);
         const tokens = viewModel.unitsByPosition.get(key) ?? [];
-        const cellX = x * (cellWidth + CELL_GAP);
-        const cellY = y * (cellHeight + CELL_GAP);
+        const cellX = x * (cellSize + CELL_GAP);
+        const cellY = y * (cellSize + CELL_GAP);
+        const hovered = hoveredCellKey === key && !interactionDisabled;
 
         return (
-          <pixiContainer key={key} x={cellX} y={cellY}>
+          <pixiContainer
+            cursor={interactionDisabled ? "default" : "crosshair"}
+            eventMode={interactionDisabled ? "none" : "static"}
+            hitArea={new Rectangle(0, 0, cellSize, cellSize)}
+            key={key}
+            onPointerOut={() => setHoveredCellKey((current) => current === key ? undefined : current)}
+            onPointerOver={() => setHoveredCellKey(key)}
+            onPointerTap={() => onCellClick(x, y)}
+            x={cellX}
+            y={cellY}
+          >
             <pixiGraphics
               draw={(graphics) => {
                 graphics.clear();
                 graphics
-                  .roundRect(0, 0, cellWidth, cellHeight, 5)
+                  .roundRect(0, 0, cellSize, cellSize, 5)
                   .fill({ color: getTerrainColor(tile?.terrainType), alpha: 1 })
                   .stroke({
-                    color: getTerritoryColor(territory?.faction) ?? 0x39434f,
-                    width: territory ? 3 : 1,
-                    alpha: territory ? 0.95 : 0.8,
+                    color: hovered
+                      ? 0xffef67
+                      : getTerritoryColor(territory?.faction) ?? 0x39434f,
+                    width: hovered ? 2.5 : territory ? 3 : 1,
+                    alpha: hovered || territory ? 0.95 : 0.8,
                   });
+                if (hovered) {
+                  graphics
+                    .roundRect(2, 2, cellSize - 4, cellSize - 4, 4)
+                    .fill({ color: 0xffef67, alpha: 0.08 });
+                }
               }}
             />
             <pixiText
@@ -117,7 +159,7 @@ function PixiBoardScene({
               style={{
                 fill: 0xaec0d3,
                 fontFamily: "Arial",
-                fontSize: Math.max(9, Math.min(12, cellHeight * 0.13)),
+                fontSize: Math.max(9, Math.min(12, cellSize * 0.13)),
                 fontWeight: "700",
               }}
             />
@@ -125,11 +167,11 @@ function PixiBoardScene({
               <pixiText
                 text={getTerrainLabel(tile.terrainType)}
                 x={6}
-                y={cellHeight - 17}
+                y={cellSize - 17}
                 style={{
                   fill: 0xd3dbe4,
                   fontFamily: "Arial",
-                  fontSize: Math.max(8, Math.min(10, cellHeight * 0.11)),
+                  fontSize: Math.max(8, Math.min(10, cellSize * 0.11)),
                   fontWeight: "600",
                 }}
               />
@@ -140,7 +182,7 @@ function PixiBoardScene({
                   draw={(graphics) => {
                     graphics.clear();
                     graphics
-                      .roundRect(cellWidth - 27, 5, 22, 22, 5)
+                      .roundRect(cellSize - 27, 5, 22, 22, 5)
                       .fill({ color: 0x171b21, alpha: 0.92 })
                       .stroke({ color: 0xece06c, width: 1.5 });
                   }}
@@ -148,7 +190,7 @@ function PixiBoardScene({
                 <pixiText
                   anchor={0.5}
                   text={getObjectCode(object.type)}
-                  x={cellWidth - 16}
+                  x={cellSize - 16}
                   y={16}
                   style={{
                     fill: object.status === "Destroyed" ? 0x7c858f : 0xfff27a,
@@ -160,8 +202,8 @@ function PixiBoardScene({
               </>
             ) : null}
             {tokens.map((token, index) => {
-              const tokenX = cellWidth / 2 + (index - (tokens.length - 1) / 2) * (tokenRadius * 1.5);
-              const tokenY = cellHeight / 2;
+              const tokenX = cellSize / 2 + (index - (tokens.length - 1) / 2) * (tokenRadius * 1.5);
+              const tokenY = cellSize / 2;
               const selected = token.unitId === selectedUnitId;
 
               return (
@@ -169,7 +211,10 @@ function PixiBoardScene({
                   cursor={interactionDisabled ? "default" : "pointer"}
                   eventMode={interactionDisabled ? "none" : "static"}
                   key={token.unitId}
-                  onPointerTap={() => onSelectedUnitChange(token.unitId)}
+                  onPointerTap={(event: FederatedPointerEvent) => {
+                    event.stopPropagation();
+                    onSelectedUnitChange(token.unitId);
+                  }}
                   x={tokenX}
                   y={tokenY}
                 >

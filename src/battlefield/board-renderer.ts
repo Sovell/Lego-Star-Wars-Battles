@@ -2,6 +2,13 @@ import type { BoardViewModel } from "./board-view-model";
 
 export type BoardRendererMode = "dom" | "pixi";
 
+export function resolveBoardRendererMode(
+  enableRendererSwitch: boolean,
+  renderer: BoardRendererMode,
+): BoardRendererMode {
+  return enableRendererSwitch ? renderer : "dom";
+}
+
 export type BoardRendererProps = {
   interactionDisabled: boolean;
   selectedUnitId: string;

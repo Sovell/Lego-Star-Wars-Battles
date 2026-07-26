@@ -2,7 +2,11 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import type { MissionState } from "../core/scenario/scenario-types";
 import type { Battle } from "../types";
 import { createBoardViewModel } from "./board-view-model";
-import type { BoardRendererMode, BoardRendererProps } from "./board-renderer";
+import {
+  resolveBoardRendererMode,
+  type BoardRendererMode,
+  type BoardRendererProps,
+} from "./board-renderer";
 import { DomMapBoard } from "./DomMapBoard";
 import "./battlefield-view.css";
 
@@ -29,6 +33,7 @@ export function BattlefieldView({
   onSelectedUnitChange: (unitId: string) => void;
 }) {
   const [renderer, setRenderer] = useState<BoardRendererMode>("dom");
+  const activeRenderer = resolveBoardRendererMode(enableRendererSwitch, renderer);
   const viewModel = useMemo(
     () => createBoardViewModel(battle, mission),
     [battle, mission],
@@ -58,10 +63,10 @@ export function BattlefieldView({
           >
             Pixi
           </button>
-          {renderer === "pixi" ? <small>Podgląd: tylko wybór jednostki</small> : null}
+          {renderer === "pixi" ? <small>Renderer eksperymentalny</small> : null}
         </div>
       ) : null}
-      {renderer === "pixi" ? (
+      {activeRenderer === "pixi" ? (
         <Suspense fallback={<div className="pixiMapLoading">Uruchamianie Pixi…</div>}>
           <PixiMapBoard {...rendererProps} />
         </Suspense>

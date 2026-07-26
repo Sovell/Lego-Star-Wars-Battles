@@ -216,7 +216,7 @@ export function BattleScreen({
       return;
     }
 
-    if (preparationActive || debugMode) {
+    if (preparationActive) {
       if (!isPositionFree(battle, { x, y }, selectedUnit.id)) {
         onAddLog(`Pole ${x}, ${y} jest już zajęte.`);
         return;
