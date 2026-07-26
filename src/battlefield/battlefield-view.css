@@ -1,0 +1,68 @@
+.battlefieldView {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+}
+
+.rendererSwitch {
+  align-items: center;
+  background: rgba(8, 11, 16, 0.94);
+  border: 1px solid rgba(236, 224, 108, 0.32);
+  border-radius: 7px;
+  display: flex;
+  gap: 4px;
+  left: 16px;
+  padding: 4px;
+  position: absolute;
+  top: 16px;
+  z-index: 5;
+}
+
+.rendererSwitch span,
+.rendererSwitch small {
+  color: #aeb8c5;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 0 5px;
+}
+
+.rendererSwitch button {
+  min-height: 28px;
+  padding: 3px 10px;
+}
+
+.rendererSwitch button.active {
+  background: #ece06c;
+  color: #11151b;
+}
+
+.pixiMapBoard {
+  background: #11161d;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pixiMapLoading {
+  align-items: center;
+  background: #11161d;
+  color: #aeb8c5;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.pixiMapBoard canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}

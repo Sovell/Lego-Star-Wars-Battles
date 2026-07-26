@@ -8,6 +8,7 @@ import { BattleInspector } from "../battle/BattleInspector";
 import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
 import { BattleShell } from "../battle/BattleShell";
 import { SetupToolRail, type SetupToolMode } from "../battle/SetupToolRail";
+import { createInitialBattleSnapshot } from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
 import { chooseAttackerBotAction } from "../../core/ai/attacker-bot";
 import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
@@ -35,7 +36,7 @@ import type {
   TerrainType,
   UnitInstance,
 } from "../../types";
-import { DomMapBoard } from "../../battlefield/DomMapBoard";
+import { BattlefieldView } from "../../battlefield/BattlefieldView";
 import { getUnitInitials } from "../../presentation/unit-presentation";
 
 type PendingAdvance = {
@@ -443,8 +444,12 @@ export function BattleScreen({
       ...createMissionState(scenario, loadedBattle.armies, loadedMission?.defenderArmyId),
       ...loadedMission,
     };
-    onBattleChange(loadedBattle);
-    onInitialBattleChange(loadedInitialBattle ?? loadedBattle);
+    onBattleChange(structuredClone(loadedBattle));
+    onInitialBattleChange(
+      loadedInitialBattle
+        ? structuredClone(loadedInitialBattle)
+        : createInitialBattleSnapshot(loadedBattle),
+    );
     onMissionChange(missionWithRoles);
     onLogsChange(loadedLogs);
     onActiveArmyChange(loadedBattle.activeActivation?.armyId);
@@ -778,8 +783,9 @@ export function BattleScreen({
         </BattleActionBar>
       ) : undefined}
       battlefield={(
-        <DomMapBoard
+        <BattlefieldView
           battle={battle}
+          enableRendererSwitch={debugMode}
           interactionDisabled={gamePhase === "Playing" && !missionActive}
           mission={mission}
           selectedUnitId={selectedUnitId}

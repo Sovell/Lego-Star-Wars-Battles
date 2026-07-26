@@ -1,39 +1,25 @@
-import type { MissionState } from "../core/scenario/scenario-types";
 import type {
-  Battle,
   BattlefieldObjectType,
   FactionId,
   UnitTemplate,
 } from "../types";
-import {
-  boardPositionKey,
-  createBoardViewModel,
-} from "./board-view-model";
+import { boardPositionKey } from "./board-view-model";
+import type { BoardRendererProps } from "./board-renderer";
 
 export function DomMapBoard({
-  battle,
   interactionDisabled,
-  mission,
   selectedUnitId,
+  viewModel,
   onCellClick,
   onSelectedUnitChange,
-}: {
-  battle: Battle;
-  interactionDisabled: boolean;
-  mission: MissionState;
-  selectedUnitId: string;
-  onCellClick: (x: number, y: number) => void;
-  onSelectedUnitChange: (unitId: string) => void;
-}) {
-  const viewModel = createBoardViewModel(battle, mission);
-
+}: BoardRendererProps) {
   return (
     <section
       aria-disabled={interactionDisabled}
       className={`mapBoard commandMapBoard ${interactionDisabled ? "missionLocked" : ""}`}
       style={{
-        gridTemplateColumns: `repeat(${battle.board.width}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${battle.board.height}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${viewModel.width}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${viewModel.height}, minmax(0, 1fr))`,
       }}
     >
       {viewModel.positions.map(({ x, y }) => {
