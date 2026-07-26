@@ -145,12 +145,13 @@
 }
 
 .missionInPlay {
-  gap: 12px;
+  gap: 8px;
 }
 
 .missionCombatants {
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .missionCombatants span {

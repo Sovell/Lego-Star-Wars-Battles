@@ -644,6 +644,25 @@ function BattleView({
 
   function handleOrder() {
     setPendingAdvance(null);
+
+    if (
+      selectedOrder === "Move" ||
+      (selectedOrder === "Advance" &&
+        !selectedUnit?.activeEffects?.includes("advance_pending"))
+    ) {
+      onAddLog(
+        selectedOrder === "Advance"
+          ? "Wskaż na mapie pole ruchu dla rozkazu Advance."
+          : "Wskaż na mapie pole docelowe dla rozkazu Move.",
+      );
+      return;
+    }
+
+    if (selectedOrder === "Attack") {
+      onAddLog("Wybierz broń i cel, a następnie użyj przycisku Atakuj.");
+      return;
+    }
+
     const result = executeMissionAction({
       type: "ApplyOrder",
       unitId: selectedUnitId,
@@ -969,10 +988,16 @@ function BattleView({
               disabled={!selectedUnitId || !activeArmyId}
               onClick={handleOrder}
             >
-              {selectedOrder === "Advance" &&
-              selectedUnit?.activeEffects?.includes("advance_pending")
-                ? "Zakończ Advance"
-                : "Wykonaj"}
+              {selectedOrder === "Move"
+                ? "Wskaż pole"
+                : selectedOrder === "Advance" &&
+                    selectedUnit?.activeEffects?.includes("advance_pending")
+                  ? "Zakończ Advance"
+                  : selectedOrder === "Advance"
+                    ? "Wskaż pole"
+                    : selectedOrder === "Attack"
+                      ? "Wybierz cel"
+                      : "Wykonaj"}
             </button>
 
             <label>

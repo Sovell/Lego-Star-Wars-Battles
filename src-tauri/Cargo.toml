@@ -1,6 +1,6 @@
 [package]
 name = "lego-star-wars-battles"
-version = "0.1.3"
+version = "0.1.4"
 description = "Lego Star Wars Battles desktop app"
 authors = ["Lego Star Wars Battles"]
 edition = "2021"

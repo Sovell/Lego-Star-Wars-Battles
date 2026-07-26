@@ -278,7 +278,7 @@ h1 {
 .commandMain {
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 270px);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -379,7 +379,7 @@ h1 {
 }
 
 .battleIntel .armiesGrid {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .battleIntel .armyColumn {
@@ -401,6 +401,7 @@ h1 {
 
 .battleIntel .unitList {
   gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   padding: 0 10px 10px;
 }
 
@@ -467,7 +468,7 @@ h1 {
 }
 
 .intelContent {
-  max-height: calc(100% - 45px);
+  max-height: 440px;
   overflow: auto;
   padding: 10px;
 }
@@ -492,6 +493,34 @@ h1 {
   padding: 16px;
   position: sticky;
   top: 18px;
+}
+
+.sidePanel.commandPanel {
+  gap: 8px;
+  max-height: none;
+  overflow: visible;
+  padding: 10px;
+  position: static;
+}
+
+.commandPanel .missionPanel {
+  gap: 8px;
+  padding: 10px;
+}
+
+.commandPanel .missionPanel > p {
+  font-size: 0.76rem;
+  line-height: 1.32;
+}
+
+.commandPanel .playingSideSummary {
+  gap: 5px;
+  padding: 8px 10px;
+}
+
+.commandPanel button {
+  min-height: 34px;
+  padding-block: 7px;
 }
 
 .panelTitle {
@@ -826,8 +855,45 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   display: grid;
-  gap: 10px;
   padding: 12px;
+}
+
+.savePanelSummary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.savePanelSummary::-webkit-details-marker {
+  display: none;
+}
+
+.savePanelSummary::before {
+  color: #ece06c;
+  content: "▸";
+  margin-right: 8px;
+}
+
+.savePanel[open] .savePanelSummary::before {
+  content: "▾";
+}
+
+.savePanelSummary strong {
+  margin-right: auto;
+}
+
+.savePanelSummary small {
+  color: #8f9aa7;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.savePanelBody {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
 }
 
 .savePanel input {
@@ -1555,7 +1621,7 @@ select {
 }
 
 .battleIntel {
-  height: clamp(460px, calc(100vh - 300px), 650px);
+  height: auto;
 }
 
 .commandMain > .battleSummary {

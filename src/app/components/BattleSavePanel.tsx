@@ -3,7 +3,6 @@ import { createPersistenceAdapter } from "../../core/persistence/create-persiste
 import { createSavedBattle, type SavedBattleSummary } from "../../core/persistence/save-types";
 import type { MissionState } from "../../core/scenario/scenario-types";
 import type { Battle, CombatLogEntry } from "../../types";
-import { PanelTitle } from "./PanelTitle";
 
 export function BattleSavePanel({
   battle,
@@ -100,37 +99,42 @@ export function BattleSavePanel({
   }
 
   return (
-    <div className="savePanel">
-      <PanelTitle title="Zapis bitwy" detail={`${savedBattles.length} lokalnie`} />
-      <input
-        value={saveName}
-        onChange={(event) => setSaveName(event.target.value)}
-        placeholder="Nazwa zapisu"
-      />
-      <button className="primaryButton" onClick={handleSaveBattle}>
-        Zapisz bitwe
-      </button>
-      <select
-        value={selectedSaveId}
-        onChange={(event) => setSelectedSaveId(event.target.value)}
-      >
-        <option value="">Wybierz zapis</option>
-        {savedBattles.map((savedBattle) => (
-          <option key={savedBattle.id} value={savedBattle.id}>
-            {savedBattle.name} | T{savedBattle.turn} | {formatDateTime(savedBattle.updatedAt)}
-          </option>
-        ))}
-      </select>
-      <div className="saveActions">
-        <button className="secondaryButton" disabled={!selectedSaveId} onClick={handleLoadSavedBattle}>
-          Wczytaj
+    <details className="savePanel">
+      <summary className="savePanelSummary">
+        <strong>Zapis bitwy</strong>
+        <small>{savedBattles.length} lokalnie</small>
+      </summary>
+      <div className="savePanelBody">
+        <input
+          value={saveName}
+          onChange={(event) => setSaveName(event.target.value)}
+          placeholder="Nazwa zapisu"
+        />
+        <button className="primaryButton" onClick={handleSaveBattle}>
+          Zapisz bitwę
         </button>
-        <button className="dangerButton" disabled={!selectedSaveId} onClick={handleDeleteSavedBattle}>
-          Usun
-        </button>
+        <select
+          value={selectedSaveId}
+          onChange={(event) => setSelectedSaveId(event.target.value)}
+        >
+          <option value="">Wybierz zapis</option>
+          {savedBattles.map((savedBattle) => (
+            <option key={savedBattle.id} value={savedBattle.id}>
+              {savedBattle.name} | T{savedBattle.turn} | {formatDateTime(savedBattle.updatedAt)}
+            </option>
+          ))}
+        </select>
+        <div className="saveActions">
+          <button className="secondaryButton" disabled={!selectedSaveId} onClick={handleLoadSavedBattle}>
+            Wczytaj
+          </button>
+          <button className="dangerButton" disabled={!selectedSaveId} onClick={handleDeleteSavedBattle}>
+            Usuń
+          </button>
+        </div>
+        {saveStatus ? <p className="saveStatus">{saveStatus}</p> : null}
       </div>
-      {saveStatus ? <p className="saveStatus">{saveStatus}</p> : null}
-    </div>
+    </details>
   );
 }
 

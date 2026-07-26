@@ -71,6 +71,27 @@ describe("applyBattleAction", () => {
     ]);
   });
 
+  it("places a reserve unit on a free field through Move", () => {
+    const battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: null },
+      defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
+    });
+
+    const result = applyBattleAction(battle, {
+      type: "MoveUnit",
+      unitId: "rep_unit_1",
+      targetPosition: { x: 3, y: 4 },
+    });
+
+    expect(findUnit(result.battle, "rep_unit_1")).toMatchObject({
+      position: { x: 3, y: 4 },
+      status: "Activated",
+      movedThisTurn: true,
+    });
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(result.log).toContain("wykonuje Move");
+  });
+
   it("keeps an Advance activation open for one attack", () => {
     const battle = readyBattle({
       attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },
@@ -309,8 +330,8 @@ describe("applyBattleAction", () => {
 });
 
 function readyBattle(options: {
-  attacker: { id: string; position: { x: number; y: number } };
-  defender: { id: string; position: { x: number; y: number } };
+  attacker: { id: string; position: UnitInstance["position"] };
+  defender: { id: string; position: UnitInstance["position"] };
 }): Battle {
   const battle = createBattle();
 
