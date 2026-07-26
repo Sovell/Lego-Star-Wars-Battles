@@ -34,6 +34,7 @@ export type SavedBattleSummary = {
 
 export type SavedBattle = SavedBattleSummary & {
   battle: Battle;
+  initialBattle?: Battle;
   logs: CombatLogEntry[];
   mission?: MissionState;
 };
@@ -85,6 +86,7 @@ export function createSavedBattle(input: {
   id: string;
   name: string;
   battle: Battle;
+  initialBattle?: Battle;
   logs: CombatLogEntry[];
   mission?: MissionState;
   campaignId?: string;
@@ -102,6 +104,7 @@ export function createSavedBattle(input: {
     turn: input.battle.turn,
     phase: input.battle.phase,
     battle: input.battle,
+    ...(input.initialBattle ? { initialBattle: input.initialBattle } : {}),
     logs: input.logs,
     ...(input.mission ? { mission: input.mission } : {}),
     createdAt: input.createdAt ?? timestamp,

@@ -6,14 +6,21 @@ import type { Battle, CombatLogEntry } from "../../types";
 
 export function BattleSavePanel({
   battle,
+  initialBattle,
   logs,
   mission,
   onBattleLoad,
 }: {
   battle: Battle;
+  initialBattle?: Battle;
   logs: CombatLogEntry[];
   mission: MissionState;
-  onBattleLoad: (battle: Battle, logs: CombatLogEntry[], mission?: MissionState) => void;
+  onBattleLoad: (
+    battle: Battle,
+    logs: CombatLogEntry[],
+    mission?: MissionState,
+    initialBattle?: Battle,
+  ) => void;
 }) {
   const [saveName, setSaveName] = useState<string>("Bitwa treningowa");
   const [saveStatus, setSaveStatus] = useState<string>("");
@@ -46,6 +53,7 @@ export function BattleSavePanel({
       id: battle.id,
       name: trimmedName,
       battle,
+      initialBattle,
       logs,
       mission,
     });
@@ -74,7 +82,12 @@ export function BattleSavePanel({
         return;
       }
 
-      onBattleLoad(savedBattle.battle, savedBattle.logs, savedBattle.mission);
+      onBattleLoad(
+        savedBattle.battle,
+        savedBattle.logs,
+        savedBattle.mission,
+        savedBattle.initialBattle,
+      );
       setSaveName(savedBattle.name);
       setSaveStatus(`Wczytano: ${savedBattle.name}.`);
     } catch (error) {

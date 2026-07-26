@@ -12,6 +12,7 @@ describe("createLocalStoragePersistence", () => {
       id: "battle-1",
       name: "Opening Clash",
       battle,
+      initialBattle: structuredClone(battle),
       logs: [{ id: "log-1", turn: 1, message: "Battle ready." }],
       mission: {
         scenarioId: "survival-test",
@@ -24,6 +25,9 @@ describe("createLocalStoragePersistence", () => {
     await persistence.saveBattle(savedBattle);
 
     await expect(persistence.loadBattle("battle-1")).resolves.toEqual(savedBattle);
+    await expect(persistence.loadBattle("battle-1")).resolves.toMatchObject({
+      initialBattle: { id: battle.id, turn: 1 },
+    });
     await expect(persistence.listBattles()).resolves.toEqual([
       {
         id: "battle-1",

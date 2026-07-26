@@ -35,7 +35,8 @@ import type {
   TerrainType,
   UnitInstance,
 } from "../../types";
-import { DomMapBoard, getUnitInitials } from "../../battlefield/DomMapBoard";
+import { DomMapBoard } from "../../battlefield/DomMapBoard";
+import { getUnitInitials } from "../../presentation/unit-presentation";
 
 type PendingAdvance = {
   attackerId: string;
@@ -54,6 +55,7 @@ export function BattleScreen({
   armyJson,
   attackerBotEnabled,
   battle,
+  initialBattle,
   gamePhase,
   debugMode,
   importError,
@@ -70,6 +72,7 @@ export function BattleScreen({
   onArmyJsonChange,
   onAttackerBotEnabledChange,
   onBattleChange,
+  onInitialBattleChange,
   onGamePhaseChange,
   onImportError,
   onLoadArmies,
@@ -91,6 +94,7 @@ export function BattleScreen({
   armyJson: string;
   attackerBotEnabled: boolean;
   battle: Battle;
+  initialBattle?: Battle;
   gamePhase: GamePhase;
   debugMode: boolean;
   importError: string;
@@ -107,6 +111,7 @@ export function BattleScreen({
   onArmyJsonChange: (json: string) => void;
   onAttackerBotEnabledChange: (enabled: boolean) => void;
   onBattleChange: (battle: Battle) => void;
+  onInitialBattleChange: (battle: Battle) => void;
   onGamePhaseChange: (phase: GamePhase) => void;
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
@@ -431,6 +436,7 @@ export function BattleScreen({
     loadedBattle: Battle,
     loadedLogs: CombatLogEntry[],
     loadedMission?: MissionState,
+    loadedInitialBattle?: Battle,
   ) {
     setPendingAdvance(null);
     const missionWithRoles = {
@@ -438,6 +444,7 @@ export function BattleScreen({
       ...loadedMission,
     };
     onBattleChange(loadedBattle);
+    onInitialBattleChange(loadedInitialBattle ?? loadedBattle);
     onMissionChange(missionWithRoles);
     onLogsChange(loadedLogs);
     onActiveArmyChange(loadedBattle.activeActivation?.armyId);
@@ -568,6 +575,7 @@ export function BattleScreen({
               />
               <BattleSavePanel
                 battle={battle}
+                initialBattle={initialBattle}
                 logs={logs}
                 mission={mission}
                 onBattleLoad={handleBattleLoad}

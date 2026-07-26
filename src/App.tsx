@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react";
 import { abilities, taskForces, unitTemplates } from "./data";
 import { createNewGameBattle } from "./app/new-game-state";
+import {
+  createInitialBattleSnapshot,
+  createPreparationBattle,
+  createScenarioDraft,
+  prepareComposerDraft,
+  restartDraftFromBattle,
+  startBattleFromDraft,
+} from "./app/scenario-draft";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
 import { MainMenu } from "./app/screens/MainMenu";
 import { BattleScreen } from "./app/screens/BattleScreen";
 import type { GamePhase } from "./app/types/game-phase";
 import {
-  createBattle,
   createLog,
   getArmyCost,
   getTemplate,
 } from "./core/battle-state";
-import { buildActivationBag } from "./core/rules/activation";
 import { createBattlefieldObject } from "./core/battlefield-objects";
 import { createMissionState } from "./core/scenario/scenario-engine";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
@@ -45,10 +51,13 @@ const appTitles: AppTitle = {
 export function App() {
   const [view, setView] = useState<AppView>("home");
   const [battle, setBattle] = useState<Battle>(() => createNewGameBattle());
+  const [battleStartSnapshot, setBattleStartSnapshot] = useState<Battle>();
+  const [scenarioDraft, setScenarioDraft] = useState(() =>
+    createScenarioDraft(survivalTestScenario.id),
+  );
   const [mission, setMission] = useState<MissionState>(() =>
     createMissionState(survivalTestScenario, []),
   );
-  const [missionArmies, setMissionArmies] = useState<Army[]>([]);
   const [logs, setLogs] = useState<CombatLogEntry[]>([
     createLog(1, "Nowa rozgrywka jest gotowa do przygotowania."),
   ]);
@@ -64,9 +73,14 @@ export function App() {
   const [gamePhase, setGamePhase] = useState<GamePhase>("Preparation");
   const activeScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
+  const preparationBattle = useMemo(
+    () => createPreparationBattle(scenarioDraft),
+    [scenarioDraft],
+  );
+  const visibleBattle = gamePhase === "Preparation" ? preparationBattle : battle;
 
   function addLog(message: string) {
-    setLogs((current) => [createLog(battle.turn, message), ...current].slice(0, 12));
+    setLogs((current) => [createLog(visibleBattle.turn, message), ...current].slice(0, 12));
   }
 
   function loadArmies(
@@ -75,13 +89,23 @@ export function App() {
     scenario: ScenarioDefinition = activeScenario,
     defenderArmyId?: string,
   ) {
-    const nextBattle = {
-      ...createBattle(armies),
-      board: structuredClone(battle.board),
+    const nextArmies = structuredClone(armies);
+    const roundTarget = scenario.id === scenarioDraft.scenarioId
+      ? scenarioDraft.roundTarget
+      : undefined;
+    const nextMission = {
+      ...createMissionState(scenario, nextArmies, defenderArmyId),
+      ...(roundTarget ? { roundTarget } : {}),
     };
-    setBattle(nextBattle);
-    setMission(createMissionState(scenario, nextBattle.armies, defenderArmyId));
-    setMissionArmies(structuredClone(armies));
+    const nextDraft = {
+      ...scenarioDraft,
+      armies: nextArmies,
+      scenarioId: scenario.id,
+      defenderArmyId: nextMission.defenderArmyId,
+      roundTarget,
+    };
+    setScenarioDraft(nextDraft);
+    setMission(nextMission);
     setActiveArmyId(undefined);
     setSelectedUnitId("");
     setTargetUnitId("");
@@ -92,10 +116,11 @@ export function App() {
   }
 
   function prepareNewScenario() {
-    const nextBattle = createNewGameBattle();
-    setBattle(nextBattle);
+    const nextDraft = createScenarioDraft(survivalTestScenario.id);
+    setScenarioDraft(nextDraft);
+    setBattle(createNewGameBattle());
+    setBattleStartSnapshot(undefined);
     setMission(createMissionState(survivalTestScenario, []));
-    setMissionArmies([]);
     setActiveArmyId(undefined);
     setSelectedUnitId("");
     setTargetUnitId("");
@@ -115,7 +140,7 @@ export function App() {
     }
 
     loadArmies(
-      missionArmies,
+      scenarioDraft.armies,
       `Uruchomiono scenariusz: ${nextScenario.name}.`,
       nextScenario,
       mission.defenderArmyId,
@@ -123,8 +148,8 @@ export function App() {
   }
 
   function handleDefenderArmyChange(defenderArmyId: string) {
-    const defender = battle.armies.find((army) => army.id === defenderArmyId);
-    const attacker = battle.armies.find((army) => army.id !== defenderArmyId);
+    const defender = scenarioDraft.armies.find((army) => army.id === defenderArmyId);
+    const attacker = scenarioDraft.armies.find((army) => army.id !== defenderArmyId);
     if (!defender || !attacker) {
       return;
     }
@@ -136,9 +161,13 @@ export function App() {
       defenderArmyId: defender.id,
       attackerArmyId: attacker.id,
     }));
+    setScenarioDraft((current) => ({
+      ...current,
+      defenderArmyId,
+    }));
     setLogs((current) => [
       createLog(
-        battle.turn,
+        visibleBattle.turn,
         `Role scenariusza: ${defender.faction} broni, ${attacker.faction} atakuje.`,
       ),
       ...current,
@@ -146,6 +175,19 @@ export function App() {
   }
 
   function handleUnitPatch(unitId: string, patch: Partial<UnitInstance>) {
+    if (gamePhase === "Preparation") {
+      setScenarioDraft((current) => ({
+        ...current,
+        armies: current.armies.map((army) => ({
+          ...army,
+          units: army.units.map((unit) =>
+            unit.id === unitId ? { ...unit, ...patch } : unit
+          ),
+        })),
+      }));
+      return;
+    }
+
     setBattle((current) => ({
       ...current,
       armies: current.armies.map((army) => ({
@@ -159,7 +201,7 @@ export function App() {
     if (gamePhase !== "Preparation") {
       return;
     }
-    setBattle((current) => {
+    setScenarioDraft((current) => {
       const otherTiles = current.board.tiles.filter(
         (existingTile) => existingTile.x !== tile.x || existingTile.y !== tile.y,
       );
@@ -181,7 +223,7 @@ export function App() {
     if (gamePhase !== "Preparation") {
       return;
     }
-    setBattle((current) => {
+    setScenarioDraft((current) => {
       const objects = current.board.objects ?? [];
       const remaining = objects.filter((object) => {
         const occupiesPosition =
@@ -205,41 +247,25 @@ export function App() {
 
   function handleStartScenario() {
     if (
-      battle.armies.length < 2 ||
-      battle.armies.some((army) => army.units.length === 0)
+      scenarioDraft.armies.length < 2 ||
+      scenarioDraft.armies.some((army) => army.units.length === 0)
     ) {
       return;
     }
 
-    const readyArmies = battle.armies.map((army) => ({
-      ...army,
-      units: army.units.map((unit) => ({
-        ...unit,
-        currentHp: getTemplate(unit).maxHp,
-        suppression: 0,
-        abilityCooldowns: {},
-        activeEffects: [],
-        movedThisTurn: false,
-        status: "Ready" as const,
-      })),
-    }));
-    const nextBattle: Battle = {
-      ...createBattle(readyArmies),
-      board: structuredClone(battle.board),
-      activationBag: buildActivationBag(readyArmies),
-    };
+    const nextBattle = startBattleFromDraft(scenarioDraft);
     const nextMission = {
       ...createMissionState(
         activeScenario,
         nextBattle.armies,
-        mission.defenderArmyId,
+        scenarioDraft.defenderArmyId,
       ),
-      ...(mission.roundTarget ? { roundTarget: mission.roundTarget } : {}),
+      ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
     };
 
     setBattle(nextBattle);
+    setBattleStartSnapshot(structuredClone(nextBattle));
     setMission(nextMission);
-    setMissionArmies(structuredClone(readyArmies));
     setActiveArmyId(undefined);
     setSelectedUnitId("");
     setTargetUnitId("");
@@ -260,8 +286,17 @@ export function App() {
       ...savedBattle.mission,
     };
     setBattle(savedBattle.battle);
+    const initialBattle = savedBattle.initialBattle
+      ? structuredClone(savedBattle.initialBattle)
+      : createInitialBattleSnapshot(savedBattle.battle);
+    setBattleStartSnapshot(initialBattle);
+    setScenarioDraft(restartDraftFromBattle(
+      initialBattle,
+      loadedMission.scenarioId,
+      loadedMission.defenderArmyId,
+      loadedMission.roundTarget,
+    ));
     setMission(loadedMission);
-    setMissionArmies(structuredClone(savedBattle.battle.armies));
     setLogs(savedBattle.logs);
     setActiveArmyId(savedBattle.battle.activeActivation?.armyId);
     setSelectedUnitId("");
@@ -271,12 +306,72 @@ export function App() {
     setView("battle");
   }
 
+  function handleMissionChange(nextMission: MissionState) {
+    setMission(nextMission);
+    if (gamePhase === "Preparation") {
+      setScenarioDraft((current) => ({
+        ...current,
+        scenarioId: nextMission.scenarioId,
+        defenderArmyId: nextMission.defenderArmyId,
+        roundTarget: nextMission.roundTarget,
+      }));
+    }
+  }
+
+  function handleMissionRestart() {
+    const initialBattle = battleStartSnapshot ?? createInitialBattleSnapshot(battle);
+    const nextDraft = restartDraftFromBattle(
+      initialBattle,
+      activeScenario.id,
+      mission.defenderArmyId,
+      mission.roundTarget,
+    );
+    setScenarioDraft(nextDraft);
+    setBattle(structuredClone(initialBattle));
+    setMission({
+      ...createMissionState(activeScenario, nextDraft.armies, nextDraft.defenderArmyId),
+      ...(nextDraft.roundTarget ? { roundTarget: nextDraft.roundTarget } : {}),
+    });
+    setActiveArmyId(undefined);
+    setSelectedUnitId("");
+    setTargetUnitId("");
+    setSelectedWeaponId("");
+    setArmyJson(JSON.stringify(nextDraft.armies, null, 2));
+    setLogs([createLog(1, "Misja została przywrócona do stanu początkowego.")]);
+    setGamePhase("Preparation");
+    setView("setup");
+  }
+
+  function openComposer(origin: "menu" | "setup") {
+    const nextDraft = prepareComposerDraft(
+      origin,
+      scenarioDraft,
+      survivalTestScenario.id,
+    );
+    setScenarioDraft(nextDraft);
+    if (origin === "menu") {
+      setBattle(createNewGameBattle());
+      setBattleStartSnapshot(undefined);
+      setMission(createMissionState(survivalTestScenario, []));
+      setActiveArmyId(undefined);
+      setSelectedUnitId("");
+      setTargetUnitId("");
+      setSelectedWeaponId("");
+      setSelectedOrder("Move");
+      setArmyJson("[]");
+      setImportError("");
+      setLogs([createLog(1, "Rozpoczęto tworzenie armii dla nowego scenariusza.")]);
+      setGamePhase("Preparation");
+    }
+    setView("composer");
+  }
+
   return (
     <main className={`app ${view === "setup" || view === "battle" ? "battleApp" : ""}`}>
       {view === "home" ? (
         <MainMenu
           onNewScenario={prepareNewScenario}
-          onOpenComposer={() => setView("composer")}
+          onOpenComposer={() => openComposer("menu")}
           onOpenRules={() => setView("rules")}
           onResumeBattle={
             gamePhase === "Playing" ? () => setView("battle") : undefined
@@ -295,7 +390,7 @@ export function App() {
             Menu
           </button>
           {view === "setup" ? (
-            <button onClick={() => setView("composer")}>Army Composer</button>
+            <button onClick={() => openComposer("setup")}>Army Composer</button>
           ) : null}
           {view === "composer" ? (
             <button onClick={() => setView("setup")}>Kreator scenariusza</button>
@@ -311,7 +406,7 @@ export function App() {
         </label> : null}
         {view === "setup" || view === "battle" ? <div className="turnCounter">
           <span>Tura</span>
-          <strong>{battle.turn}</strong>
+          <strong>{visibleBattle.turn}</strong>
         </div> : null}
         {view === "setup" || view === "battle" ? <div className="phasePill">
           {gamePhase === "Preparation"
@@ -327,7 +422,8 @@ export function App() {
           activeArmyId={activeArmyId}
           armyJson={armyJson}
           attackerBotEnabled={attackerBotEnabled}
-          battle={battle}
+          battle={visibleBattle}
+          initialBattle={battleStartSnapshot}
           gamePhase={gamePhase}
           debugMode={debugMode}
           importError={importError}
@@ -344,23 +440,16 @@ export function App() {
           onArmyJsonChange={setArmyJson}
           onAttackerBotEnabledChange={setAttackerBotEnabled}
           onBattleChange={setBattle}
+          onInitialBattleChange={setBattleStartSnapshot}
           onGamePhaseChange={setGamePhase}
           onImportError={setImportError}
           onLoadArmies={loadArmies}
           onLogsChange={setLogs}
-          onMissionChange={setMission}
+          onMissionChange={handleMissionChange}
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
           onDefenderArmyChange={handleDefenderArmyChange}
           onScenarioChange={handleScenarioChange}
-          onMissionRestart={() => {
-            loadArmies(
-              missionArmies,
-              "Misja zostala uruchomiona ponownie.",
-              activeScenario,
-              mission.defenderArmyId,
-            );
-            setView("setup");
-          }}
+          onMissionRestart={handleMissionRestart}
           onStartScenario={handleStartScenario}
           onOrderChange={setSelectedOrder}
           onSelectedUnitChange={setSelectedUnitId}
@@ -373,7 +462,7 @@ export function App() {
 
       {view === "composer" ? (
         <ArmyComposerView
-          currentArmies={battle.armies}
+          currentArmies={scenarioDraft.armies}
           onLoadArmies={(armies) => {
             loadArmies(armies, "Armie z Army Composera zostały wczytane do kreatora.");
             setView("setup");

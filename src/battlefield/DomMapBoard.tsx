@@ -1,4 +1,3 @@
-import { getTemplate } from "../core/battle-state";
 import type { MissionState } from "../core/scenario/scenario-types";
 import type {
   Battle,
@@ -6,6 +5,10 @@ import type {
   FactionId,
   UnitTemplate,
 } from "../types";
+import {
+  boardPositionKey,
+  createBoardViewModel,
+} from "./board-view-model";
 
 export function DomMapBoard({
   battle,
@@ -22,7 +25,7 @@ export function DomMapBoard({
   onCellClick: (x: number, y: number) => void;
   onSelectedUnitChange: (unitId: string) => void;
 }) {
-  const units = battle.armies.flatMap((army) => army.units);
+  const viewModel = createBoardViewModel(battle, mission);
 
   return (
     <section
@@ -33,18 +36,12 @@ export function DomMapBoard({
         gridTemplateRows: `repeat(${battle.board.height}, minmax(0, 1fr))`,
       }}
     >
-      {Array.from({ length: battle.board.width * battle.board.height }, (_, index) => {
-        const x = index % battle.board.width;
-        const y = Math.floor(index / battle.board.width);
-        const tile = battle.board.tiles.find((terrain) => terrain.x === x && terrain.y === y);
-        const battlefieldObject = (battle.board.objects ?? []).find(
-          (object) => object.position.x === x && object.position.y === y,
-        );
-        const tileUnits = units.filter((unit) => unit.position?.x === x && unit.position.y === y);
-        const territoryArmyId = mission.territoryOwners?.[`${x},${y}`];
-        const territoryFaction = battle.armies.find(
-          (army) => army.id === territoryArmyId,
-        )?.faction;
+      {viewModel.positions.map(({ x, y }) => {
+        const key = boardPositionKey(x, y);
+        const tile = viewModel.tilesByPosition.get(key);
+        const battlefieldObject = viewModel.objectsByPosition.get(key);
+        const tileUnits = viewModel.unitsByPosition.get(key) ?? [];
+        const territoryFaction = viewModel.territoryByPosition.get(key)?.faction;
 
         return (
           <button
@@ -78,29 +75,25 @@ export function DomMapBoard({
               </span>
             ) : null}
             <div className="mapUnitStack">
-              {tileUnits.map((unit) => {
-                const template = getTemplate(unit);
-                const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
-                const tokenImageUrl = getTokenImageUrl(template);
-
+              {tileUnits.map((token) => {
                 return (
                   <span
-                    className={`mapUnit ${getTokenClass(template, army?.faction)} ${
-                      unit.id === selectedUnitId ? "selected" : ""
+                    className={`mapUnit ${getTokenClass(token.template, token.faction)} ${
+                      token.unitId === selectedUnitId ? "selected" : ""
                     }`}
-                    key={unit.id}
+                    key={token.unitId}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onSelectedUnitChange(unit.id);
+                      onSelectedUnitChange(token.unitId);
                     }}
-                    title={`${template.name} | ${army?.faction ?? "Unknown"}`}
+                    title={`${token.name} | ${token.faction ?? "Unknown"}`}
                   >
-                    {tokenImageUrl ? (
+                    {token.imageUrl ? (
                       <img
                         alt=""
                         aria-hidden="true"
                         className="tokenPortrait"
-                        src={tokenImageUrl}
+                        src={token.imageUrl}
                         onError={(event) => {
                           event.currentTarget.hidden = true;
                         }}
@@ -110,7 +103,7 @@ export function DomMapBoard({
                       <span className="tokenVisor" />
                       <span className="tokenMouth" />
                     </span>
-                    <span className="tokenCode">{getUnitInitials(template)}</span>
+                    <span className="tokenCode">{token.initials}</span>
                   </span>
                 );
               })}
@@ -120,23 +113,6 @@ export function DomMapBoard({
       })}
     </section>
   );
-}
-
-export function getUnitInitials(template: UnitTemplate): string {
-  return template.name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
-}
-
-function getTokenImageUrl(template: UnitTemplate): string | undefined {
-  const photoPrefix = "/unit-images/photos/";
-
-  return template.imageUrl?.startsWith(photoPrefix)
-    ? template.imageUrl.replace(photoPrefix, "/unit-images/tokens/")
-    : undefined;
 }
 
 function getObjectCode(type: BattlefieldObjectType): string {
