@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { abilities, starterArmies, taskForces, unitTemplates } from "./data";
+import { abilities, taskForces, unitTemplates } from "./data";
+import { createNewGameBattle } from "./app/new-game-state";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
 import { MainMenu } from "./app/screens/MainMenu";
-import { BattleScreen, type GamePhase } from "./app/screens/BattleScreen";
+import { BattleScreen } from "./app/screens/BattleScreen";
+import type { GamePhase } from "./app/types/game-phase";
 import {
   createBattle,
   createLog,
@@ -42,20 +44,20 @@ const appTitles: AppTitle = {
 
 export function App() {
   const [view, setView] = useState<AppView>("home");
-  const [battle, setBattle] = useState<Battle>(() => createBattle());
+  const [battle, setBattle] = useState<Battle>(() => createNewGameBattle());
   const [mission, setMission] = useState<MissionState>(() =>
-    createMissionState(survivalTestScenario, starterArmies),
+    createMissionState(survivalTestScenario, []),
   );
-  const [missionArmies, setMissionArmies] = useState<Army[]>(() => structuredClone(starterArmies));
+  const [missionArmies, setMissionArmies] = useState<Army[]>([]);
   const [logs, setLogs] = useState<CombatLogEntry[]>([
-    createLog(1, "Bitwa gotowa. W worku aktywacji sa tokeny obu armii."),
+    createLog(1, "Nowa rozgrywka jest gotowa do przygotowania."),
   ]);
   const [activeArmyId, setActiveArmyId] = useState<string | undefined>();
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [targetUnitId, setTargetUnitId] = useState<string>("");
   const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderType>("Move");
-  const [armyJson, setArmyJson] = useState<string>(() => JSON.stringify(starterArmies, null, 2));
+  const [armyJson, setArmyJson] = useState<string>("[]");
   const [importError, setImportError] = useState<string>("");
   const [debugMode, setDebugMode] = useState<boolean>(false);
   const [attackerBotEnabled, setAttackerBotEnabled] = useState<boolean>(true);
@@ -73,7 +75,10 @@ export function App() {
     scenario: ScenarioDefinition = activeScenario,
     defenderArmyId?: string,
   ) {
-    const nextBattle = createBattle(armies);
+    const nextBattle = {
+      ...createBattle(armies),
+      board: structuredClone(battle.board),
+    };
     setBattle(nextBattle);
     setMission(createMissionState(scenario, nextBattle.armies, defenderArmyId));
     setMissionArmies(structuredClone(armies));
@@ -84,6 +89,23 @@ export function App() {
     setImportError("");
     setLogs([createLog(1, logMessage)]);
     setGamePhase("Preparation");
+  }
+
+  function prepareNewScenario() {
+    const nextBattle = createNewGameBattle();
+    setBattle(nextBattle);
+    setMission(createMissionState(survivalTestScenario, []));
+    setMissionArmies([]);
+    setActiveArmyId(undefined);
+    setSelectedUnitId("");
+    setTargetUnitId("");
+    setSelectedWeaponId("");
+    setSelectedOrder("Move");
+    setArmyJson("[]");
+    setImportError("");
+    setLogs([createLog(1, "Rozpoczęto przygotowanie pustego scenariusza.")]);
+    setGamePhase("Preparation");
+    setView("setup");
   }
 
   function handleScenarioChange(scenarioId: string) {
@@ -250,17 +272,10 @@ export function App() {
   }
 
   return (
-    <main className="app">
+    <main className={`app ${view === "setup" || view === "battle" ? "battleApp" : ""}`}>
       {view === "home" ? (
         <MainMenu
-          onNewScenario={() => {
-            loadArmies(
-              starterArmies,
-              "Rozpoczęto przygotowanie nowego scenariusza.",
-              survivalTestScenario,
-            );
-            setView("setup");
-          }}
+          onNewScenario={prepareNewScenario}
           onOpenComposer={() => setView("composer")}
           onOpenRules={() => setView("rules")}
           onResumeBattle={

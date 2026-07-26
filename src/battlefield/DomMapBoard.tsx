@@ -28,7 +28,10 @@ export function DomMapBoard({
     <section
       aria-disabled={interactionDisabled}
       className={`mapBoard commandMapBoard ${interactionDisabled ? "missionLocked" : ""}`}
-      style={{ gridTemplateColumns: `repeat(${battle.board.width}, minmax(64px, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${battle.board.width}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${battle.board.height}, minmax(0, 1fr))`,
+      }}
     >
       {Array.from({ length: battle.board.width * battle.board.height }, (_, index) => {
         const x = index % battle.board.width;

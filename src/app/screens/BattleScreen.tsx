@@ -3,6 +3,12 @@ import { abilities } from "../../data";
 import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
 import { PanelTitle } from "../components/PanelTitle";
+import { BattleActionBar } from "../battle/BattleActionBar";
+import { BattleInspector } from "../battle/BattleInspector";
+import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
+import { BattleShell } from "../battle/BattleShell";
+import { SetupToolRail, type SetupToolMode } from "../battle/SetupToolRail";
+import type { GamePhase } from "../types/game-phase";
 import { chooseAttackerBotAction } from "../../core/ai/attacker-bot";
 import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
 import type { BattleAction } from "../../core/battle-actions";
@@ -30,8 +36,6 @@ import type {
   UnitInstance,
 } from "../../types";
 import { DomMapBoard, getUnitInitials } from "../../battlefield/DomMapBoard";
-
-export type GamePhase = "Preparation" | "Playing";
 
 type PendingAdvance = {
   attackerId: string;
@@ -128,8 +132,9 @@ export function BattleScreen({
   const [abilityTargetUnitId, setAbilityTargetUnitId] = useState("");
   const [abilityTargetPosition, setAbilityTargetPosition] = useState<{ x: number; y: number }>();
   const [selectingAbilityPosition, setSelectingAbilityPosition] = useState(false);
-  const [intelTab, setIntelTab] = useState<"armies" | "logs">("logs");
-  const [mapMode, setMapMode] = useState<"units" | "terrain" | "objects">("units");
+  const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mapMode, setMapMode] = useState<SetupToolMode>("units");
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
   const [selectedObjectType, setSelectedObjectType] = useState<
     BattlefieldObjectType | "Remove"
@@ -443,49 +448,16 @@ export function BattleScreen({
   }
 
   return (
-    <section className="commandLayout">
-      <aside className="sidePanel commandPanel">
-        <MissionPanel
-          armies={battle.armies}
-          attackerBotEnabled={attackerBotEnabled}
-          canStart={canStartScenario}
-          gamePhase={gamePhase}
-          mission={mission}
-          scenario={scenario}
-          scenarios={scenarioOptions}
-          onScenarioChange={onScenarioChange}
-          onAttackerBotEnabledChange={onAttackerBotEnabledChange}
-          onDefenderArmyChange={onDefenderArmyChange}
-          onRoundTargetChange={(rounds) =>
-            onMissionChange({
-              ...mission,
-              roundTarget: Math.max(1, Math.floor(rounds || 1)),
-              roundsCompleted: 0,
-            })
-          }
-          onRestart={onMissionRestart}
-          onStart={onStartScenario}
-        />
-
-        {preparationActive ? (
-          <>
-        <PanelTitle title="Przygotowanie mapy" detail={mapMode} />
-        <div className="segmented mapModeSwitch">
-          <button className={mapMode === "units" ? "active" : ""} onClick={() => setMapMode("units")}>
-            Oddzialy
-          </button>
-          <button className={mapMode === "terrain" ? "active" : ""} onClick={() => setMapMode("terrain")}>
-            Teren
-          </button>
-          <button className={mapMode === "objects" ? "active" : ""} onClick={() => setMapMode("objects")}>
-            Obiekty
-          </button>
-        </div>
-
-        {mapMode === "units" ? (
-          <>
-            <select value={selectedUnitId} onChange={(event) => onSelectedUnitChange(event.target.value)}>
-              <option value="">Wybierz oddzial</option>
+    <BattleShell
+      phase={gamePhase}
+      setupTools={preparationActive ? (
+        <SetupToolRail mode={mapMode} onModeChange={setMapMode}>
+          {mapMode === "units" ? (
+            <select
+              value={selectedUnitId}
+              onChange={(event) => onSelectedUnitChange(event.target.value)}
+            >
+              <option value="">Wybierz oddział</option>
               {allUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {getTemplate(unit).name} -{" "}
@@ -493,97 +465,136 @@ export function BattleScreen({
                 </option>
               ))}
             </select>
+          ) : mapMode === "terrain" ? (
+            <>
+              <select
+                value={selectedTerrain}
+                onChange={(event) => setSelectedTerrain(event.target.value)}
+              >
+                {terrainPresets.map((terrain) => (
+                  <option key={terrain.terrainType} value={terrain.terrainType}>
+                    {terrain.terrainType}
+                  </option>
+                ))}
+              </select>
+              <div className="mapReadout">
+                <strong>{selectedTerrainPreset.terrainType}</strong>
+                <span>Obrona: +{selectedTerrainPreset.defenseBonus}</span>
+                <span>Atak: +{selectedTerrainPreset.attackBonus}</span>
+                <span>Koszt ruchu: {selectedTerrainPreset.movementCost}</span>
+                <span>
+                  Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <select
+                value={selectedObjectType}
+                onChange={(event) =>
+                  setSelectedObjectType(
+                    event.target.value as BattlefieldObjectType | "Remove",
+                  )
+                }
+              >
+                {battlefieldObjectPresets.map((object) => (
+                  <option key={object.type} value={object.type}>
+                    {object.name}{object.destructible ? ` | HP ${object.maxHp}` : ""}
+                  </option>
+                ))}
+                <option value="Remove">Usuń obiekt z pola</option>
+              </select>
+              <div className="mapReadout">
+                <strong>Obiekty pola bitwy</strong>
+                <span>Kliknij pole, aby postawić lub usunąć wybrany obiekt.</span>
+                <span>Osłony dodają obronę jednostkom na tym samym polu.</span>
+              </div>
+            </>
+          )}
+        </SetupToolRail>
+      ) : undefined}
+      inspector={(
+        <BattleInspector phase={gamePhase}>
+          <MissionPanel
+            armies={battle.armies}
+            attackerBotEnabled={attackerBotEnabled}
+            canStart={canStartScenario}
+            gamePhase={gamePhase}
+            mission={mission}
+            scenario={scenario}
+            scenarios={scenarioOptions}
+            onScenarioChange={onScenarioChange}
+            onAttackerBotEnabledChange={onAttackerBotEnabledChange}
+            onDefenderArmyChange={onDefenderArmyChange}
+            onRoundTargetChange={(rounds) =>
+              onMissionChange({
+                ...mission,
+                roundTarget: Math.max(1, Math.floor(rounds || 1)),
+                roundsCompleted: 0,
+              })
+            }
+            onRestart={onMissionRestart}
+            onStart={onStartScenario}
+          />
+
+          {preparationActive && mapMode === "units" ? (
             <UnitDetails
-              debugMode={debugMode && missionActive}
+              debugMode={false}
               selectedArmy={selectedArmy}
               selectedUnit={selectedUnit}
               onUnitPatch={onUnitPatch}
             />
-          </>
-        ) : mapMode === "terrain" ? (
-          <>
-            <select
-              value={selectedTerrain}
-              onChange={(event) => setSelectedTerrain(event.target.value)}
-            >
-              {terrainPresets.map((terrain) => (
-                <option key={terrain.terrainType} value={terrain.terrainType}>
-                  {terrain.terrainType}
-                </option>
-              ))}
-            </select>
-            <div className="mapReadout">
-              <strong>{selectedTerrainPreset.terrainType}</strong>
-              <span>Obrona: +{selectedTerrainPreset.defenseBonus}</span>
-              <span>Atak: +{selectedTerrainPreset.attackBonus}</span>
-              <span>Koszt ruchu: {selectedTerrainPreset.movementCost}</span>
-              <span>Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <select
-              value={selectedObjectType}
-              onChange={(event) =>
-                setSelectedObjectType(event.target.value as BattlefieldObjectType | "Remove")
-              }
-            >
-              {battlefieldObjectPresets.map((object) => (
-                <option key={object.type} value={object.type}>
-                  {object.name}{object.destructible ? ` | HP ${object.maxHp}` : ""}
-                </option>
-              ))}
-              <option value="Remove">Usun obiekt z pola</option>
-            </select>
-            <div className="mapReadout">
-              <strong>Obiekty pola bitwy</strong>
-              <span>Kliknij pole, aby postawic lub usunac wybrany obiekt.</span>
-              <span>Oslony dodaja obrone jednostkom na tym samym polu.</span>
-            </div>
-          </>
-        )}
+          ) : null}
 
-          </>
-        ) : (
-          <div className="playingSideSummary">
-            <PanelTitle title="Rozgrywka" detail={`Tura ${battle.turn}`} />
-            <span>{scenario.name}</span>
-            <span>
-              Aktywacje: {remainingActivations}/{livingUnits}
-            </span>
-            <span>
-              {activeArmyId
-                ? `Aktywna: ${battle.armies.find((army) => army.id === activeArmyId)?.playerName}`
-                : "Oczekiwanie na losowanie"}
-            </span>
-          </div>
-        )}
+          {!preparationActive ? (
+            <>
+              <div className="playingSideSummary">
+                <PanelTitle title="Rozgrywka" detail={`Tura ${battle.turn}`} />
+                <span>{scenario.name}</span>
+                <span>Aktywacje: {remainingActivations}/{livingUnits}</span>
+                <span>
+                  {activeArmyId
+                    ? `Aktywna: ${
+                        battle.armies.find((army) => army.id === activeArmyId)?.playerName
+                      }`
+                    : "Oczekiwanie na losowanie"}
+                </span>
+              </div>
+              <UnitDetails
+                debugMode={false}
+                selectedArmy={selectedArmy}
+                selectedUnit={selectedUnit}
+                onUnitPatch={onUnitPatch}
+              />
+              <BattleSavePanel
+                battle={battle}
+                logs={logs}
+                mission={mission}
+                onBattleLoad={handleBattleLoad}
+              />
+            </>
+          ) : null}
 
-        {gamePhase === "Playing" ? <BattleSavePanel
-          battle={battle}
-          logs={logs}
-          mission={mission}
-          onBattleLoad={handleBattleLoad}
-        /> : null}
-
-        {preparationActive ? <details className="jsonDetails">
-          <summary>Import armii JSON</summary>
-          <textarea
-            className="armyInput jsonInput"
-            value={armyJson}
-            spellCheck={false}
-            wrap="off"
-            onChange={(event) => onArmyJsonChange(event.target.value)}
-          />
-          {importError ? <p className="errorText">{importError}</p> : null}
-          <button className="secondaryButton" onClick={handleLoadArmies}>
-            Wczytaj armie
-          </button>
-        </details> : null}
-      </aside>
-
-      <section className="battlefield commandMain">
-        {missionActive ? (
+          {preparationActive ? (
+            <details className="jsonDetails">
+              <summary>Import armii JSON</summary>
+              <textarea
+                className="armyInput jsonInput"
+                value={armyJson}
+                spellCheck={false}
+                wrap="off"
+                onChange={(event) => onArmyJsonChange(event.target.value)}
+              />
+              {importError ? <p className="errorText">{importError}</p> : null}
+              <button className="secondaryButton" onClick={handleLoadArmies}>
+                Wczytaj armie
+              </button>
+            </details>
+          ) : null}
+        </BattleInspector>
+      )}
+      actionBar={missionActive ? (
+        <BattleActionBar>
           <section className="battleHud">
             <div className="hudActivation">
               <button
@@ -698,7 +709,8 @@ export function BattleScreen({
                   >
                     {activeAbilities.map((ability) => (
                       <option key={ability.id} value={ability.id}>
-                        {ability.name} | CD {selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}
+                        {ability.name} | CD{" "}
+                        {selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}
                       </option>
                     ))}
                   </select>
@@ -708,7 +720,10 @@ export function BattleScreen({
                   >
                     <option value="">Brak celu jednostkowego</option>
                     {allUnits
-                      .filter((unit) => unit.id !== selectedUnitId && unit.status !== "Destroyed")
+                      .filter(
+                        (unit) =>
+                          unit.id !== selectedUnitId && unit.status !== "Destroyed",
+                      )
                       .map((unit) => (
                         <option key={unit.id} value={unit.id}>
                           {getTemplate(unit).name}
@@ -747,27 +762,14 @@ export function BattleScreen({
               disabled={!turnCanEnd}
               onClick={handleEndTurn}
             >
-              {remainingActivations > 0 ? `${remainingActivations} aktywacji` : "Koniec tury"}
+              {remainingActivations > 0
+                ? `${remainingActivations} aktywacji`
+                : "Koniec tury"}
             </button>
           </section>
-        ) : null}
-
-        {pendingAdvance ? (
-          <div className="decisionPanel compactDecision">
-            <p>
-              {pendingAdvance.attackerName} pokonał {pendingAdvance.defenderName}.
-            </p>
-            <div className="decisionActions">
-              <button className="primaryButton" onClick={handleAdvanceAfterCombat}>
-                Zajmij pozycję
-              </button>
-              <button className="secondaryButton" onClick={handleHoldAfterCombat}>
-                Zostań
-              </button>
-            </div>
-          </div>
-        ) : null}
-
+        </BattleActionBar>
+      ) : undefined}
+      battlefield={(
         <DomMapBoard
           battle={battle}
           interactionDisabled={gamePhase === "Playing" && !missionActive}
@@ -776,50 +778,64 @@ export function BattleScreen({
           onCellClick={handleCellClick}
           onSelectedUnitChange={onSelectedUnitChange}
         />
-
-        {mission.status !== "Active" ? (
-          <MissionSummary mission={mission} scenario={scenario} />
-        ) : battle.phase === "Finished" ? (
-          <BattleSummary battle={battle} />
-        ) : null}
-
-        <section className="battleIntel">
-          <div className="intelTabs">
-            <button
-              className={intelTab === "logs" ? "active" : ""}
-              onClick={() => setIntelTab("logs")}
-            >
-              Dziennik
-            </button>
-            <button
-              className={intelTab === "armies" ? "active" : ""}
-              onClick={() => setIntelTab("armies")}
-            >
-              Jednostki
-            </button>
-          </div>
-          {intelTab === "armies" ? <div className="armiesGrid intelContent">
-            {battle.armies.map((army) => (
-              <ArmyColumn
-                key={army.id}
-                army={army}
-                debugMode={debugMode && preparationActive}
-                selectedUnitId={selectedUnitId}
-                onSelect={onSelectedUnitChange}
-                onPatch={onUnitPatch}
-              />
-            ))}
-          </div> : <div className="logs intelContent">
-            {logs.map((entry) => (
-              <div className="logEntry" key={entry.id}>
-                <span>T{entry.turn}</span>
-                <p>{entry.message}</p>
+      )}
+      overlay={(
+        <>
+          {pendingAdvance ? (
+            <div className="decisionPanel compactDecision">
+              <p>
+                {pendingAdvance.attackerName} pokonał {pendingAdvance.defenderName}.
+              </p>
+              <div className="decisionActions">
+                <button className="primaryButton" onClick={handleAdvanceAfterCombat}>
+                  Zajmij pozycję
+                </button>
+                <button className="secondaryButton" onClick={handleHoldAfterCombat}>
+                  Zostań
+                </button>
               </div>
-            ))}
-          </div>}
-        </section>
-      </section>
-    </section>
+            </div>
+          ) : null}
+          {mission.status !== "Active" ? (
+            <MissionSummary mission={mission} scenario={scenario} />
+          ) : battle.phase === "Finished" ? (
+            <BattleSummary battle={battle} />
+          ) : null}
+        </>
+      )}
+      drawer={(
+        <BattleLogDrawer
+          activeTab={intelTab}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          onTabChange={setIntelTab}
+          armies={(
+            <div className="armiesGrid intelContent">
+              {battle.armies.map((army) => (
+                <ArmyColumn
+                  key={army.id}
+                  army={army}
+                  debugMode={debugMode && preparationActive}
+                  selectedUnitId={selectedUnitId}
+                  onSelect={onSelectedUnitChange}
+                  onPatch={onUnitPatch}
+                />
+              ))}
+            </div>
+          )}
+          logs={(
+            <div className="logs intelContent">
+              {logs.map((entry) => (
+                <div className="logEntry" key={entry.id}>
+                  <span>T{entry.turn}</span>
+                  <p>{entry.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        />
+      )}
+    />
   );
 }
 
