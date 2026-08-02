@@ -10,6 +10,7 @@ import { getTemplate } from "../rules/state";
 import { getDefenseBonus } from "../rules/terrain";
 import { isPositionFree } from "../rules/occupancy";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
+import { getLegalReserveEntryCells } from "../rules/deployment";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 
 export type BotDecision = {
@@ -96,6 +97,22 @@ export function chooseAttackerBotAction(
   const movementTarget = objective?.position ??
     findTerritoryTarget(battle, scenario, mission, attackers, attackerArmyId) ??
     findNearestEnemyPosition(battle, attackers, attackerArmyId);
+  const reserveDeployment = chooseBestReserveDeployment(
+    battle,
+    scenario,
+    attackers,
+    movementTarget,
+  );
+  if (reserveDeployment) {
+    return {
+      action: {
+        type: "DeployUnit",
+        unitId: reserveDeployment.unit.id,
+        targetPosition: reserveDeployment.position,
+      },
+      reason: `${getTemplate(reserveDeployment.unit).name} wchodzi z rezerwy przez strefę rozmieszczenia.`,
+    };
+  }
   if (movementTarget) {
     const movement = chooseBestMovement(battle, attackers, movementTarget);
     if (movement) {
@@ -229,9 +246,10 @@ function chooseBestMovement(
   target: GridPosition,
 ): { unit: UnitInstance; position: GridPosition; score: number } | undefined {
   return attackers
+    .filter((unit) => unit.position)
     .flatMap((unit) => {
       const template = getTemplate(unit);
-      const currentDistance = unit.position ? distance(unit.position, target) : Number.MAX_SAFE_INTEGER;
+      const currentDistance = distance(unit.position!, target);
       const positions: GridPosition[] = [];
 
       for (let y = 0; y < battle.board.height; y += 1) {
@@ -239,10 +257,8 @@ function chooseBestMovement(
           const position = { x, y };
           const terrain = battle.board.tiles.find((tile) => tile.x === x && tile.y === y);
           const movementCost = Math.max(1, terrain?.movementCost ?? 1);
-          const maximumDistance = unit.position
-            ? Math.max(1, Math.floor(template.movement / movementCost))
-            : 1;
-          const movementDistance = unit.position ? distance(unit.position, position) : 1;
+          const maximumDistance = Math.max(1, Math.floor(template.movement / movementCost));
+          const movementDistance = distance(unit.position!, position);
 
           if (movementDistance <= maximumDistance) {
             if (!isPositionFree(battle, position, unit.id)) {
@@ -254,7 +270,7 @@ function chooseBestMovement(
       }
 
       return positions
-        .filter((position) => !unit.position || distance(position, target) < currentDistance)
+        .filter((position) => distance(position, target) < currentDistance)
         .map((position) => {
           const terrain = battle.board.tiles.find(
             (tile) => tile.x === position.x && tile.y === position.y,
@@ -269,6 +285,30 @@ function chooseBestMovement(
           };
         });
     })
+    .sort((left, right) => right.score - left.score)[0];
+}
+
+function chooseBestReserveDeployment(
+  battle: Battle,
+  scenario: ScenarioDefinition,
+  attackers: UnitInstance[],
+  target?: GridPosition,
+): { unit: UnitInstance; position: GridPosition; score: number } | undefined {
+  const fallbackTarget = {
+    x: Math.floor((battle.board.width - 1) / 2),
+    y: Math.floor((battle.board.height - 1) / 2),
+  };
+  const deploymentTarget = target ?? fallbackTarget;
+
+  return attackers
+    .filter((unit) => !unit.position)
+    .flatMap((unit) =>
+      getLegalReserveEntryCells(battle, scenario, unit.id).map((position) => ({
+        unit,
+        position,
+        score: -distance(position, deploymentTarget),
+      })),
+    )
     .sort((left, right) => right.score - left.score)[0];
 }
 

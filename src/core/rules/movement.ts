@@ -44,6 +44,12 @@ function performMovement(
   if (!unit) {
     return { battle, log: "Nie znaleziono jednostki." };
   }
+  if (!unit.position) {
+    return {
+      battle,
+      log: "Jednostka jest w rezerwie i musi wejść przez strefę rozmieszczenia.",
+    };
+  }
 
   if (unit.movedThisTurn) {
     return { battle, log: "Ta jednostka wykonała już ruch w tej rundzie." };
@@ -60,11 +66,9 @@ function performMovement(
   const template = getTemplate(unit);
   const terrain = getTerrainAtPosition(battle, targetPosition);
   const movementCost = terrain?.movementCost ?? 1;
-  const movementDistance = unit.position ? distance(unit.position, targetPosition) : 1;
+  const movementDistance = distance(unit.position, targetPosition);
   const movementBonus = unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0;
-  const maxDistance = unit.position
-    ? getMoveDistance(template.movement + movementBonus, movementCost)
-    : 1;
+  const maxDistance = getMoveDistance(template.movement + movementBonus, movementCost);
 
   if (movementDistance > maxDistance) {
     return {

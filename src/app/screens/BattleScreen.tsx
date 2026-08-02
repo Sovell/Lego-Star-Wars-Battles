@@ -138,6 +138,7 @@ export function BattleScreen({
   const [abilityTargetUnitId, setAbilityTargetUnitId] = useState("");
   const [abilityTargetPosition, setAbilityTargetPosition] = useState<{ x: number; y: number }>();
   const [selectingAbilityPosition, setSelectingAbilityPosition] = useState(false);
+  const [selectingMovePosition, setSelectingMovePosition] = useState(false);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mapMode, setMapMode] = useState<SetupToolMode>("units");
@@ -234,11 +235,25 @@ export function BattleScreen({
       return;
     }
 
-    const result = executeMissionAction({
-      type: selectedOrder === "Advance" ? "AdvanceUnit" : "MoveUnit",
-      unitId: selectedUnit.id,
-      targetPosition: { x, y },
-    });
+    const result = executeMissionAction(
+      selectedUnit.position
+        ? {
+            type: selectedOrder === "Advance" ? "AdvanceUnit" : "MoveUnit",
+            unitId: selectedUnit.id,
+            targetPosition: { x, y },
+          }
+        : {
+            type: "DeployUnit",
+            unitId: selectedUnit.id,
+            targetPosition: { x, y },
+          },
+    );
+    const actionSucceeded = result.battle !== battle;
+    setSelectingMovePosition(!actionSucceeded);
+    if (!actionSucceeded) {
+      setIntelTab("logs");
+      setDrawerOpen(true);
+    }
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
   }
@@ -304,6 +319,7 @@ export function BattleScreen({
       (selectedOrder === "Advance" &&
         !selectedUnit?.activeEffects?.includes("advance_pending"))
     ) {
+      setSelectingMovePosition(true);
       onAddLog(
         selectedOrder === "Advance"
           ? "Wskaż na mapie pole ruchu dla rozkazu Advance."
@@ -655,8 +671,16 @@ export function BattleScreen({
               disabled={!selectedUnitId || !activeArmyId}
               onClick={handleOrder}
             >
-              {selectedOrder === "Move"
-                ? "Wskaż pole"
+              {!selectedUnit?.position &&
+              (selectedOrder === "Move" || selectedOrder === "Advance")
+                ? selectingMovePosition
+                  ? "Kliknij pole wejścia…"
+                  : "Wskaż wejście"
+                : selectingMovePosition &&
+              (selectedOrder === "Move" || selectedOrder === "Advance")
+                ? "Kliknij pole…"
+                : selectedOrder === "Move"
+                  ? "Wskaż pole"
                 : selectedOrder === "Advance" &&
                     selectedUnit?.activeEffects?.includes("advance_pending")
                   ? "Zakończ Advance"

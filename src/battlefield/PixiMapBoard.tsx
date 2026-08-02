@@ -128,7 +128,7 @@ function PixiBoardScene({
             key={key}
             onPointerOut={() => setHoveredCellKey((current) => current === key ? undefined : current)}
             onPointerOver={() => setHoveredCellKey(key)}
-            onPointerTap={() => onCellClick(x, y)}
+            onPointerDown={() => onCellClick(x, y)}
             x={cellX}
             y={cellY}
           >
@@ -211,7 +211,7 @@ function PixiBoardScene({
                   cursor={interactionDisabled ? "default" : "pointer"}
                   eventMode={interactionDisabled ? "none" : "static"}
                   key={token.unitId}
-                  onPointerTap={(event: FederatedPointerEvent) => {
+                  onPointerDown={(event: FederatedPointerEvent) => {
                     event.stopPropagation();
                     onSelectedUnitChange(token.unitId);
                   }}

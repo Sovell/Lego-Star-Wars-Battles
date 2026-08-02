@@ -1,5 +1,10 @@
 import type { Army, Battle, CombatLogEntry, FactionId } from "../../types";
 import type { MissionState } from "../scenario/scenario-types";
+export type {
+  DeploymentZone,
+  ObjectiveDefinition,
+  ScenarioDefinition,
+} from "../scenario/scenario-types";
 
 export const SAVE_SCHEMA_VERSION = 1;
 
@@ -46,29 +51,6 @@ export type SavedCampaign = {
   battleIds: string[];
   createdAt: string;
   updatedAt: string;
-};
-
-export type DeploymentZone = {
-  id: string;
-  armySlot: number;
-  cells: { x: number; y: number }[];
-};
-
-export type ObjectiveDefinition = {
-  id: string;
-  name: string;
-  description: string;
-  victoryPoints: number;
-};
-
-export type ScenarioDefinition = {
-  id: string;
-  name: string;
-  description?: string;
-  recommendedPoints?: number;
-  board: Battle["board"];
-  deploymentZones: DeploymentZone[];
-  objectives: ObjectiveDefinition[];
 };
 
 export function createSaveFile<TPayload, TKind extends SaveKind>(

@@ -13,7 +13,10 @@ export type MissionSessionState = {
   mission: MissionState;
 };
 
-export type MissionActionContext = Omit<BattleActionContext, "victoryMode">;
+export type MissionActionContext = Omit<
+  BattleActionContext,
+  "scenario" | "victoryMode"
+>;
 
 export type MissionActionResult = BattleActionResult & {
   mission: MissionState;
@@ -38,6 +41,7 @@ export function applyMissionAction(
 
   const battleResult = applyBattleAction(session.battle, action, {
     ...context,
+    scenario,
     victoryMode: "Scenario",
   });
   const scenarioResult = applyScenarioEvents(

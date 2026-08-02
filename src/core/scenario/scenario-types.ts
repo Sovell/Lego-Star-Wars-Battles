@@ -1,3 +1,5 @@
+import type { Battle } from "../../types";
+
 export type MissionStatus = "Active" | "Victory" | "Defeat";
 
 export type ScenarioVictoryCondition =
@@ -15,10 +17,27 @@ export type ScenarioDefeatCondition =
   | { type: "ArmyEliminated"; armySlot: number }
   | { type: "BattlefieldObjectDestroyed"; objectType: "Generator" };
 
+export type DeploymentZone = {
+  id: string;
+  armySlot: number;
+  cells: { x: number; y: number }[];
+};
+
+export type ObjectiveDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  victoryPoints: number;
+};
+
 export type ScenarioDefinition = {
   id: string;
   name: string;
   description: string;
+  recommendedPoints?: number;
+  board?: Battle["board"];
+  deploymentZones: DeploymentZone[];
+  objectives?: ObjectiveDefinition[];
   victoryCondition: ScenarioVictoryCondition;
   defeatCondition?: ScenarioDefeatCondition;
 };

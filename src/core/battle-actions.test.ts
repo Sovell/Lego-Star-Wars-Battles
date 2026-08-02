@@ -4,6 +4,7 @@ import { createBattle } from "./battle-state";
 import { createBattlefieldObject } from "./battlefield-objects";
 import { createSeededRandomSource, createSequenceDiceRoller } from "./random";
 import { getDefenseBonus } from "./rules/terrain";
+import { survivalTestScenario } from "./scenario/scenarios";
 import type { Battle, UnitInstance } from "../types";
 
 describe("applyBattleAction", () => {
@@ -71,7 +72,7 @@ describe("applyBattleAction", () => {
     ]);
   });
 
-  it("places a reserve unit on a free field through Move", () => {
+  it("rejects Move for a unit that is still in reserve", () => {
     const battle = readyBattle({
       attacker: { id: "rep_unit_1", position: null },
       defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
@@ -80,16 +81,64 @@ describe("applyBattleAction", () => {
     const result = applyBattleAction(battle, {
       type: "MoveUnit",
       unitId: "rep_unit_1",
-      targetPosition: { x: 3, y: 4 },
+      targetPosition: { x: 0, y: 4 },
     });
 
+    expect(result.battle).toBe(battle);
+    expect(result.events).toEqual([]);
+    expect(result.log).toContain("rezerwie");
+  });
+
+  it("deploys a reserve unit only inside its scenario entry zone", () => {
+    const battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: null },
+      defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
+    });
+
+    const result = applyBattleAction(
+      battle,
+      {
+        type: "DeployUnit",
+        unitId: "rep_unit_1",
+        targetPosition: { x: 1, y: 4 },
+      },
+      { scenario: survivalTestScenario },
+    );
+
     expect(findUnit(result.battle, "rep_unit_1")).toMatchObject({
-      position: { x: 3, y: 4 },
+      position: { x: 1, y: 4 },
       status: "Activated",
       movedThisTurn: true,
     });
     expect(result.battle.activeActivation).toBeUndefined();
-    expect(result.log).toContain("wykonuje Move");
+    expect(result.events).toEqual([
+      {
+        type: "UnitDeployed",
+        unitId: "rep_unit_1",
+        position: { x: 1, y: 4 },
+      },
+    ]);
+  });
+
+  it("rejects reserve deployment outside the army entry zone", () => {
+    const battle = readyBattle({
+      attacker: { id: "rep_unit_1", position: null },
+      defender: { id: "sep_unit_1", position: { x: 6, y: 2 } },
+    });
+
+    const result = applyBattleAction(
+      battle,
+      {
+        type: "DeployUnit",
+        unitId: "rep_unit_1",
+        targetPosition: { x: 5, y: 4 },
+      },
+      { scenario: survivalTestScenario },
+    );
+
+    expect(result.battle).toBe(battle);
+    expect(result.events).toEqual([]);
+    expect(result.log).toContain("nie jest legalnym polem wejścia");
   });
 
   it("keeps an Advance activation open for one attack", () => {

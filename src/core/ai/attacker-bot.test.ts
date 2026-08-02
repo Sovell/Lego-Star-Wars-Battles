@@ -91,6 +91,26 @@ describe("attacker bot", () => {
     expect(decision.reason).toContain("celu scenariusza");
   });
 
+  it("deploys a reserve only through the attacking army entry zone", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", { position: null });
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      survivalTestScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action.type).toBe("DeployUnit");
+    if (decision?.action.type !== "DeployUnit") {
+      throw new Error("Expected a reserve deployment decision.");
+    }
+
+    expect(decision.action.unitId).toBe("sep_unit_1");
+    expect(decision.action.targetPosition.x).toBeGreaterThanOrEqual(6);
+    expect(decision.reason).toContain("rezerwy");
+  });
+
   it("does nothing when the active token belongs to another army", () => {
     const battle = {
       ...readyAttackerBattle(),

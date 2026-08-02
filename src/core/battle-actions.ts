@@ -14,17 +14,20 @@ import {
 import { resolveAttack } from "./rules/combat";
 import { resolveObjectAttack } from "./rules/object-combat";
 import { advanceUnit, moveUnit } from "./rules/movement";
+import { deployUnit } from "./rules/deployment";
 import { resetUnitForNextTurn } from "./rules/morale";
 import { applyOrder } from "./rules/orders";
 import { getTemplate } from "./rules/state";
 import { applyVictoryState } from "./rules/victory";
 import { createD6Roller, type DiceRoller, type RandomSource } from "./random";
 import { useActiveAbility } from "./rules/active-abilities";
+import type { ScenarioDefinition } from "./scenario/scenario-types";
 
 export type BattleAction =
   | { type: "DrawActivation" }
   | { type: "MoveUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "AdvanceUnit"; unitId: string; targetPosition: { x: number; y: number } }
+  | { type: "DeployUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "ApplyOrder"; unitId: string; order: OrderType }
   | { type: "Attack"; attackerId: string; defenderId: string; weaponId: string }
   | { type: "AttackObject"; attackerId: string; objectId: string; weaponId: string }
@@ -40,6 +43,7 @@ export type BattleAction =
 export type BattleEvent =
   | { type: "ActivationDrawn"; armyId: string }
   | { type: "UnitMoved"; unitId: string; position: { x: number; y: number } }
+  | { type: "UnitDeployed"; unitId: string; position: { x: number; y: number } }
   | { type: "OrderApplied"; unitId: string; order: OrderType }
   | { type: "AbilityUsed"; unitId: string; abilityId: string }
   | { type: "AttackResolved"; result: AttackResult }
@@ -59,6 +63,7 @@ export type BattleActionContext = {
   randomSource?: RandomSource;
   rollD6?: DiceRoller;
   victoryMode?: "Elimination" | "Scenario";
+  scenario?: ScenarioDefinition;
 };
 
 export type BattleActionResult = {
@@ -103,6 +108,34 @@ export function applyBattleAction(
         events: result.battle === battle
           ? []
           : [{ type: "UnitMoved", unitId: action.unitId, position: action.targetPosition }],
+        log: result.log,
+      };
+    }
+
+    case "DeployUnit": {
+      if (!context.scenario) {
+        return {
+          battle,
+          events: [],
+          log: "Brak definicji scenariusza wymaganej do wejścia z rezerwy.",
+        };
+      }
+      const result = deployUnit(
+        battle,
+        context.scenario,
+        action.unitId,
+        action.targetPosition,
+      );
+
+      return {
+        battle: result.battle,
+        events: result.battle === battle
+          ? []
+          : [{
+              type: "UnitDeployed",
+              unitId: action.unitId,
+              position: action.targetPosition,
+            }],
         log: result.log,
       };
     }
