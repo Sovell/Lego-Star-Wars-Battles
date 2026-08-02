@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import type { MissionState } from "../core/scenario/scenario-types";
-import type { Battle } from "../types";
+import type { MissionState, ScenarioDefinition } from "../core/scenario/scenario-types";
+import type { AbilityDefinition, Battle, OrderType } from "../types";
+import { createBoardInteractionModel } from "./board-interaction-model";
 import { createBoardViewModel } from "./board-view-model";
 import {
   resolveBoardRendererMode,
@@ -20,7 +21,17 @@ export function BattlefieldView({
   enableRendererSwitch = false,
   interactionDisabled,
   mission,
+  missionActive,
+  scenario,
+  selectedAbility,
+  abilityTargetPosition,
+  abilityTargetUnitId,
+  selectedOrder,
+  selectedWeaponId,
   selectedUnitId,
+  selectingAbilityPosition,
+  selectingMovePosition,
+  targetUnitId,
   onCellClick,
   onSelectedUnitChange,
 }: {
@@ -28,7 +39,17 @@ export function BattlefieldView({
   enableRendererSwitch?: boolean;
   interactionDisabled: boolean;
   mission: MissionState;
+  missionActive: boolean;
+  scenario: ScenarioDefinition;
+  selectedAbility?: AbilityDefinition;
+  abilityTargetPosition?: { x: number; y: number };
+  abilityTargetUnitId?: string;
+  selectedOrder: OrderType;
+  selectedWeaponId: string;
   selectedUnitId: string;
+  selectingAbilityPosition: boolean;
+  selectingMovePosition: boolean;
+  targetUnitId?: string;
   onCellClick: (x: number, y: number) => void;
   onSelectedUnitChange: (unitId: string) => void;
 }) {
@@ -38,8 +59,41 @@ export function BattlefieldView({
     () => createBoardViewModel(battle, mission),
     [battle, mission],
   );
+  const interactionModel = useMemo(
+    () => createBoardInteractionModel({
+      battle,
+      scenario,
+      interactionDisabled,
+      missionActive,
+      selectedUnitId,
+      selectedOrder,
+      selectedWeaponId,
+      selectingMovePosition,
+      selectingAbilityPosition,
+      selectedAbility,
+      abilityTargetUnitId,
+      abilityTargetPosition,
+      targetUnitId,
+    }),
+    [
+      abilityTargetPosition,
+      abilityTargetUnitId,
+      battle,
+      interactionDisabled,
+      missionActive,
+      scenario,
+      selectedAbility,
+      selectedOrder,
+      selectedUnitId,
+      selectedWeaponId,
+      selectingAbilityPosition,
+      selectingMovePosition,
+      targetUnitId,
+    ],
+  );
   const rendererProps: BoardRendererProps = {
     interactionDisabled,
+    interactionModel,
     selectedUnitId,
     viewModel,
     onCellClick,
@@ -64,6 +118,11 @@ export function BattlefieldView({
             Pixi
           </button>
           {renderer === "pixi" ? <small>Renderer eksperymentalny</small> : null}
+        </div>
+      ) : null}
+      {interactionModel.hint ? (
+        <div className={`boardInteractionHint ${interactionModel.mode}`} role="status">
+          {interactionModel.hint}
         </div>
       ) : null}
       {activeRenderer === "pixi" ? (

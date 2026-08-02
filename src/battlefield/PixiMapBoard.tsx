@@ -10,6 +10,7 @@ import {
 import type { BattlefieldObjectType, FactionId, TerrainType } from "../types";
 import { calculateSquareBoardLayout } from "./board-layout";
 import { boardPositionKey } from "./board-view-model";
+import { getBoardCellInteraction, type BoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
 
 extend({
@@ -84,6 +85,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
 function PixiBoardScene({
   height,
   interactionDisabled,
+  interactionModel,
   selectedUnitId,
   viewModel,
   width,
@@ -119,6 +121,7 @@ function PixiBoardScene({
         const cellX = x * (cellSize + CELL_GAP);
         const cellY = y * (cellSize + CELL_GAP);
         const hovered = hoveredCellKey === key && !interactionDisabled;
+        const cellInteraction = getBoardCellInteraction(interactionModel, x, y);
 
         return (
           <pixiContainer
@@ -140,15 +143,36 @@ function PixiBoardScene({
                   .fill({ color: getTerrainColor(tile?.terrainType), alpha: 1 })
                   .stroke({
                     color: hovered
-                      ? 0xffef67
-                      : getTerritoryColor(territory?.faction) ?? 0x39434f,
-                    width: hovered ? 2.5 : territory ? 3 : 1,
+                      ? getInteractionColor(cellInteraction)
+                      : cellInteraction === "invalid"
+                        ? getTerritoryColor(territory?.faction) ?? 0x39434f
+                        : getInteractionColor(
+                            cellInteraction,
+                            getTerritoryColor(territory?.faction),
+                          ),
+                    width: hovered
+                      ? 3
+                      : cellInteraction !== "default" && cellInteraction !== "invalid"
+                        ? 3
+                        : territory
+                          ? 3
+                          : 1,
                     alpha: hovered || territory ? 0.95 : 0.8,
                   });
+                if (cellInteraction !== "default") {
+                  graphics
+                    .roundRect(2, 2, cellSize - 4, cellSize - 4, 4)
+                    .fill({
+                      color: cellInteraction === "invalid"
+                        ? 0x10151c
+                        : getInteractionColor(cellInteraction),
+                      alpha: cellInteraction === "invalid" ? 0.24 : 0.16,
+                    });
+                }
                 if (hovered) {
                   graphics
                     .roundRect(2, 2, cellSize - 4, cellSize - 4, 4)
-                    .fill({ color: 0xffef67, alpha: 0.08 });
+                    .fill({ color: getInteractionColor(cellInteraction), alpha: 0.12 });
                 }
               }}
             />
@@ -251,6 +275,20 @@ function PixiBoardScene({
       })}
     </pixiContainer>
   );
+}
+
+function getInteractionColor(
+  interaction: BoardCellInteraction,
+  fallback?: number,
+): number {
+  switch (interaction) {
+    case "legal": return 0x55d98a;
+    case "reserve": return 0x4da3ff;
+    case "target": return 0xff626d;
+    case "invalid": return 0x8d4248;
+    case "selected": return 0xc77dff;
+    default: return fallback ?? 0xffef67;
+  }
 }
 
 function getTerrainColor(terrainType?: TerrainType): number {

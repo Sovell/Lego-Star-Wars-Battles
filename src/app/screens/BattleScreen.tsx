@@ -808,11 +808,21 @@ export function BattleScreen({
       ) : undefined}
       battlefield={(
         <BattlefieldView
+          abilityTargetPosition={abilityTargetPosition}
+          abilityTargetUnitId={abilityTargetUnitId}
           battle={battle}
           enableRendererSwitch={debugMode}
           interactionDisabled={gamePhase === "Playing" && !missionActive}
           mission={mission}
+          missionActive={missionActive}
+          scenario={scenario}
+          selectedAbility={selectedAbility}
+          selectedOrder={selectedOrder}
           selectedUnitId={selectedUnitId}
+          selectedWeaponId={activeWeaponId}
+          selectingAbilityPosition={selectingAbilityPosition}
+          selectingMovePosition={selectingMovePosition}
+          targetUnitId={targetUnitId}
           onCellClick={handleCellClick}
           onSelectedUnitChange={onSelectedUnitChange}
         />

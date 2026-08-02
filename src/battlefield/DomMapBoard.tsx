@@ -4,10 +4,12 @@ import type {
   UnitTemplate,
 } from "../types";
 import { boardPositionKey } from "./board-view-model";
+import { getBoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
 
 export function DomMapBoard({
   interactionDisabled,
+  interactionModel,
   selectedUnitId,
   viewModel,
   onCellClick,
@@ -28,10 +30,12 @@ export function DomMapBoard({
         const battlefieldObject = viewModel.objectsByPosition.get(key);
         const tileUnits = viewModel.unitsByPosition.get(key) ?? [];
         const territoryFaction = viewModel.territoryByPosition.get(key)?.faction;
+        const cellInteraction = getBoardCellInteraction(interactionModel, x, y);
 
         return (
           <button
-            className={`mapCell ${tile?.terrainType ?? "Open"} ${
+            aria-label={`Pole ${x}, ${y}: ${getInteractionLabel(cellInteraction)}`}
+            className={`mapCell ${tile?.terrainType ?? "Open"} interaction-${cellInteraction} ${
               territoryFaction === "Republic"
                 ? "territoryRepublic"
                 : territoryFaction === "Separatists"
@@ -99,6 +103,17 @@ export function DomMapBoard({
       })}
     </section>
   );
+}
+
+function getInteractionLabel(interaction: ReturnType<typeof getBoardCellInteraction>): string {
+  switch (interaction) {
+    case "legal": return "legalny ruch";
+    case "reserve": return "legalne wejście z rezerwy";
+    case "target": return "legalny cel";
+    case "invalid": return "pole niedozwolone";
+    case "selected": return "pole wybrane";
+    default: return "pole planszy";
+  }
 }
 
 function getObjectCode(type: BattlefieldObjectType): string {
