@@ -24,6 +24,11 @@ export type BoardTokenViewModel = {
   name: string;
   initials: string;
   imageUrl?: string;
+  currentHp: number;
+  maxHp: number;
+  healthRatio: number;
+  healthState: "healthy" | "warning" | "critical";
+  status: UnitInstance["status"];
 };
 
 export type TerritoryViewModel = {
@@ -68,6 +73,7 @@ export function createBoardViewModel(
       }
       const template = getTemplate(unit);
       const key = boardPositionKey(unit.position.x, unit.position.y);
+      const healthRatio = template.maxHp > 0 ? unit.currentHp / template.maxHp : 0;
       const token: BoardTokenViewModel = {
         unit,
         template,
@@ -77,6 +83,15 @@ export function createBoardViewModel(
         name: template.name,
         initials: getUnitInitials(template),
         imageUrl: getUnitTokenImageUrl(template),
+        currentHp: unit.currentHp,
+        maxHp: template.maxHp,
+        healthRatio,
+        healthState: healthRatio <= 0.25
+          ? "critical"
+          : healthRatio <= 0.5
+            ? "warning"
+            : "healthy",
+        status: unit.status,
       };
       unitsByPosition.set(key, [...(unitsByPosition.get(key) ?? []), token]);
     }

@@ -40,6 +40,11 @@ describe("board view model", () => {
       faction: battle.armies[0].faction,
       name: "Clone Trooper Battalion",
       initials: "CTB",
+      currentHp: 3,
+      maxHp: 3,
+      healthRatio: 1,
+      healthState: "healthy",
+      status: "Ready",
     });
     expect(viewModel.territoryByPosition.get(key)).toEqual({
       armyId: battle.armies[0].id,

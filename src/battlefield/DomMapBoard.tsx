@@ -76,7 +76,7 @@ export function DomMapBoard({
                       event.stopPropagation();
                       onSelectedUnitChange(token.unitId);
                     }}
-                    title={`${token.name} | ${token.faction ?? "Unknown"}`}
+                    title={`${token.name} | ${token.faction ?? "Unknown"} | HP ${token.currentHp}/${token.maxHp} | ${token.status}`}
                   >
                     {token.imageUrl ? (
                       <img
@@ -94,6 +94,22 @@ export function DomMapBoard({
                       <span className="tokenMouth" />
                     </span>
                     <span className="tokenCode">{token.initials}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`tokenStatusBadge status-${token.status.toLowerCase()}`}
+                    >
+                      {getStatusCode(token.status)}
+                    </span>
+                    <span
+                      aria-label={`HP ${token.currentHp} z ${token.maxHp}`}
+                      className="tokenHealthTrack"
+                      role="meter"
+                    >
+                      <span
+                        className={`tokenHealthFill health-${token.healthState}`}
+                        style={{ width: `${Math.max(0, Math.min(1, token.healthRatio)) * 100}%` }}
+                      />
+                    </span>
                   </span>
                 );
               })}
@@ -103,6 +119,15 @@ export function DomMapBoard({
       })}
     </section>
   );
+}
+
+function getStatusCode(status: "Ready" | "Activated" | "Destroyed" | "Pinned"): string {
+  switch (status) {
+    case "Ready": return "R";
+    case "Activated": return "A";
+    case "Destroyed": return "X";
+    case "Pinned": return "P";
+  }
 }
 
 function getInteractionLabel(interaction: ReturnType<typeof getBoardCellInteraction>): string {

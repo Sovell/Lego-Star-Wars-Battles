@@ -148,7 +148,7 @@ function PixiBoardScene({
                         ? getTerritoryColor(territory?.faction) ?? 0x39434f
                         : getInteractionColor(
                             cellInteraction,
-                            getTerritoryColor(territory?.faction),
+                            getTerritoryColor(territory?.faction) ?? 0x39434f,
                           ),
                     width: hovered
                       ? 3
@@ -206,20 +206,20 @@ function PixiBoardScene({
                   draw={(graphics) => {
                     graphics.clear();
                     graphics
-                      .roundRect(cellSize - 27, 5, 22, 22, 5)
+                      .roundRect(cellSize - 49, 5, 44, 22, 5)
                       .fill({ color: 0x171b21, alpha: 0.92 })
                       .stroke({ color: 0xece06c, width: 1.5 });
                   }}
                 />
                 <pixiText
                   anchor={0.5}
-                  text={getObjectCode(object.type)}
-                  x={cellSize - 16}
+                  text={`${getObjectCode(object.type)} ${object.currentHp}/${object.maxHp}`}
+                  x={cellSize - 27}
                   y={16}
                   style={{
                     fill: object.status === "Destroyed" ? 0x7c858f : 0xfff27a,
                     fontFamily: "Arial",
-                    fontSize: 13,
+                    fontSize: Math.max(7, Math.min(9, cellSize * 0.1)),
                     fontWeight: "800",
                   }}
                 />
@@ -267,6 +267,53 @@ function PixiBoardScene({
                       fontWeight: "800",
                     }}
                   />
+                  <pixiGraphics
+                    draw={(graphics) => {
+                      const barWidth = tokenRadius * 2.15;
+                      const barY = tokenRadius + 3;
+                      graphics.clear();
+                      graphics
+                        .roundRect(-barWidth / 2, barY, barWidth, 5, 2)
+                        .fill({ color: 0x10151c, alpha: 0.96 })
+                        .stroke({ color: 0xd9e2eb, width: 0.7, alpha: 0.8 });
+                      graphics
+                        .roundRect(
+                          -barWidth / 2 + 1,
+                          barY + 1,
+                          Math.max(0, (barWidth - 2) * token.healthRatio),
+                          3,
+                          1,
+                        )
+                        .fill({ color: getHealthColor(token.healthState), alpha: 1 });
+                      graphics
+                        .circle(tokenRadius * 0.72, -tokenRadius * 0.72, 5.5)
+                        .fill({ color: getStatusColor(token.status), alpha: 1 })
+                        .stroke({ color: 0xf3f6fa, width: 1 });
+                    }}
+                  />
+                  <pixiText
+                    anchor={0.5}
+                    text={getStatusCode(token.status)}
+                    x={tokenRadius * 0.72}
+                    y={-tokenRadius * 0.72}
+                    style={{
+                      fill: 0xffffff,
+                      fontFamily: "Arial",
+                      fontSize: 6.5,
+                      fontWeight: "800",
+                    }}
+                  />
+                  <pixiText
+                    anchor={0.5}
+                    text={`${token.currentHp}/${token.maxHp}`}
+                    y={tokenRadius + 12}
+                    style={{
+                      fill: 0xe9f0f7,
+                      fontFamily: "Arial",
+                      fontSize: Math.max(6.5, Math.min(8, cellSize * 0.08)),
+                      fontWeight: "700",
+                    }}
+                  />
                 </pixiContainer>
               );
             })}
@@ -275,6 +322,30 @@ function PixiBoardScene({
       })}
     </pixiContainer>
   );
+}
+
+function getHealthColor(healthState: "healthy" | "warning" | "critical"): number {
+  if (healthState === "critical") return 0xff626d;
+  if (healthState === "warning") return 0xf2c94c;
+  return 0x55d98a;
+}
+
+function getStatusColor(status: "Ready" | "Activated" | "Destroyed" | "Pinned"): number {
+  switch (status) {
+    case "Ready": return 0x2f9b61;
+    case "Activated": return 0x5f6b78;
+    case "Destroyed": return 0x171b21;
+    case "Pinned": return 0xd59a2f;
+  }
+}
+
+function getStatusCode(status: "Ready" | "Activated" | "Destroyed" | "Pinned"): string {
+  switch (status) {
+    case "Ready": return "R";
+    case "Activated": return "A";
+    case "Destroyed": return "X";
+    case "Pinned": return "P";
+  }
 }
 
 function getInteractionColor(

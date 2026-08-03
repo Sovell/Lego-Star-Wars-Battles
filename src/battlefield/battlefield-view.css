@@ -108,3 +108,49 @@
 .mapCell.interaction-selected {
   box-shadow: inset 0 0 0 4px rgba(199, 125, 255, 0.98), inset 0 0 28px rgba(199, 125, 255, 0.26);
 }
+
+.mapUnit .tokenStatusBadge {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  color: #fff;
+  display: flex;
+  font-size: 0.48rem;
+  font-weight: 900;
+  height: 14px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 14px;
+  z-index: 3;
+}
+
+.tokenStatusBadge.status-ready { background: #2f9b61; }
+.tokenStatusBadge.status-activated { background: #5f6b78; }
+.tokenStatusBadge.status-destroyed { background: #171b21; }
+.tokenStatusBadge.status-pinned { background: #d59a2f; }
+
+.mapUnit .tokenHealthTrack {
+  background: #10151c;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  bottom: -5px;
+  display: block;
+  height: 5px;
+  left: 4px;
+  overflow: hidden;
+  position: absolute;
+  right: 4px;
+  z-index: 3;
+}
+
+.mapUnit .tokenHealthFill {
+  display: block;
+  height: 100%;
+}
+
+.tokenHealthFill.health-healthy { background: #55d98a; }
+.tokenHealthFill.health-warning { background: #f2c94c; }
+.tokenHealthFill.health-critical { background: #ff626d; }
