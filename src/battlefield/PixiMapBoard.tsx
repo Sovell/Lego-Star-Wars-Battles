@@ -21,6 +21,7 @@ import {
 } from "pixi.js";
 import type { BattlefieldObjectType, FactionId, TerrainType } from "../types";
 import { calculateSquareBoardLayout } from "./board-layout";
+import { zoomCameraAtPoint, type BoardCamera } from "./board-camera";
 import { getBoardCellInteraction, type BoardCellInteraction } from "./board-interaction-model";
 import type { BattlefieldVisualEvent } from "./battlefield-visual-events";
 import { boardPositionKey, type BoardTokenViewModel, type BoardViewModel } from "./board-view-model";
@@ -33,14 +34,12 @@ const CELL_GAP = 4;
 const MIN_ZOOM = 0.72;
 const MAX_ZOOM = 2.35;
 
-type CameraState = { zoom: number; x: number; y: number };
-
 export function PixiMapBoard(props: BoardRendererProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | undefined>(undefined);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [application, setApplication] = useState<PixiApplication | null>(null);
-  const [camera, setCamera] = useState<CameraState>({ zoom: 1, x: 0, y: 0 });
+  const [camera, setCamera] = useState<BoardCamera>({ zoom: 1, x: 0, y: 0 });
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -65,10 +64,16 @@ export function PixiMapBoard(props: BoardRendererProps) {
   function handleWheel(event: ReactWheelEvent<HTMLDivElement>) {
     event.preventDefault();
     const factor = Math.exp(-event.deltaY * 0.0012);
-    setCamera((current) => ({
-      ...current,
-      zoom: clamp(current.zoom * factor, MIN_ZOOM, MAX_ZOOM),
-    }));
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const point = {
+      x: event.clientX - bounds.left - bounds.width / 2,
+      y: event.clientY - bounds.top - bounds.height / 2,
+    };
+    setCamera((current) => zoomCameraAtPoint(
+      current,
+      clamp(current.zoom * factor, MIN_ZOOM, MAX_ZOOM),
+      point,
+    ));
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -118,10 +123,11 @@ export function PixiMapBoard(props: BoardRendererProps) {
       <div className="pixiCameraControls" aria-label="Sterowanie kamerą">
         <button
           aria-label="Oddal planszę"
-          onClick={() => setCamera((current) => ({
-            ...current,
-            zoom: clamp(current.zoom - 0.15, MIN_ZOOM, MAX_ZOOM),
-          }))}
+          onClick={() => setCamera((current) => zoomCameraAtPoint(
+            current,
+            clamp(current.zoom - 0.15, MIN_ZOOM, MAX_ZOOM),
+            { x: 0, y: 0 },
+          ))}
           type="button"
         >−</button>
         <button
@@ -132,14 +138,15 @@ export function PixiMapBoard(props: BoardRendererProps) {
         >{Math.round(camera.zoom * 100)}%</button>
         <button
           aria-label="Przybliż planszę"
-          onClick={() => setCamera((current) => ({
-            ...current,
-            zoom: clamp(current.zoom + 0.15, MIN_ZOOM, MAX_ZOOM),
-          }))}
+          onClick={() => setCamera((current) => zoomCameraAtPoint(
+            current,
+            clamp(current.zoom + 0.15, MIN_ZOOM, MAX_ZOOM),
+            { x: 0, y: 0 },
+          ))}
           type="button"
         >+</button>
       </div>
-      <small className="pixiCameraHint">Kółko: zoom · środkowy przycisk: przesuń</small>
+      <small className="pixiCameraHint">Kółko: zoom pod kursorem · środkowy przycisk: przesuń</small>
     </div>
   );
 }
@@ -155,7 +162,7 @@ function PixiBoardScene({
   width,
   onCellClick,
   onSelectedUnitChange,
-}: BoardRendererProps & { camera: CameraState; height: number; width: number }) {
+}: BoardRendererProps & { camera: BoardCamera; height: number; width: number }) {
   const [hoveredCellKey, setHoveredCellKey] = useState<string>();
   const { cellSize } = calculateSquareBoardLayout({
     columns: viewModel.width,
@@ -174,15 +181,6 @@ function PixiBoardScene({
       <pixiContainer x={-boardWidth / 2} y={-boardHeight / 2}>
         <TerrainLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
         <TerritoryLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
-        <ObjectLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
-        <UnitLayer
-          cellSize={cellSize}
-          interactionDisabled={interactionDisabled}
-          selectedUnitId={selectedUnitId}
-          stride={stride}
-          viewModel={viewModel}
-          onSelectedUnitChange={onSelectedUnitChange}
-        />
         <InteractionLayer
           cellSize={cellSize}
           hoveredCellKey={hoveredCellKey}
@@ -192,6 +190,15 @@ function PixiBoardScene({
           viewModel={viewModel}
           onCellClick={onCellClick}
           onHoveredCellChange={setHoveredCellKey}
+        />
+        <ObjectLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
+        <UnitLayer
+          cellSize={cellSize}
+          interactionDisabled={interactionDisabled}
+          selectedUnitId={selectedUnitId}
+          stride={stride}
+          viewModel={viewModel}
+          onSelectedUnitChange={onSelectedUnitChange}
         />
         <CombatEffect cellSize={cellSize} event={visualEvent} stride={stride} />
       </pixiContainer>
@@ -206,7 +213,7 @@ function CameraWorld({
   visualEvent,
   width,
 }: {
-  camera: CameraState;
+  camera: BoardCamera;
   children: React.ReactNode;
   height: number;
   visualEvent?: BattlefieldVisualEvent;
@@ -229,7 +236,7 @@ function CameraWorld({
     container.scale.set(camera.zoom);
   });
 
-  return <pixiContainer isRenderGroup ref={containerRef}>{children}</pixiContainer>;
+  return <pixiContainer ref={containerRef}>{children}</pixiContainer>;
 }
 
 function TerrainLayer({
@@ -354,7 +361,7 @@ function UnitLayer({
   const radius = Math.max(14, Math.min(25, cellSize * 0.28));
 
   return (
-    <pixiContainer isRenderGroup>
+    <pixiContainer>
       {tokens.map(({ token, x, y }) => (
         <AnimatedUnitToken
           interactionDisabled={interactionDisabled}
@@ -422,7 +429,7 @@ function AnimatedUnitToken({
       cursor={interactionDisabled ? "default" : "pointer"}
       eventMode={interactionDisabled ? "none" : "static"}
       hitArea={new Rectangle(-radius - 5, -radius - 5, radius * 2 + 10, radius * 2 + 18)}
-      onPointerDown={(event: FederatedPointerEvent) => {
+      onPointerTap={(event: FederatedPointerEvent) => {
         event.stopPropagation();
         onSelectedUnitChange(token.unitId);
       }}
@@ -515,7 +522,7 @@ function InteractionLayer({
             eventMode={interactionDisabled ? "none" : "static"}
             hitArea={new Rectangle(0, 0, cellSize, cellSize)}
             key={key}
-            onPointerDown={() => onCellClick(x, y)}
+            onPointerTap={() => onCellClick(x, y)}
             onPointerOut={() => onHoveredCellChange(undefined)}
             onPointerOver={() => onHoveredCellChange(key)}
             x={x * stride}
