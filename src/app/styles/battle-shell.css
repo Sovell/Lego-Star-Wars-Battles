@@ -69,7 +69,7 @@
 .battleShellPreparation {
   grid-template-areas:
     "tools stage inspector"
-    "tools stage inspector";
+    "tools utility inspector";
   grid-template-columns: var(--battle-tool-width) minmax(0, 1fr) var(--battle-inspector-width);
   grid-template-rows: minmax(0, 1fr) auto;
 }
@@ -77,9 +77,10 @@
 .battleShellPlaying {
   grid-template-areas:
     "stage inspector"
+    "utility inspector"
     "actions inspector";
   grid-template-columns: minmax(0, 1fr) var(--battle-inspector-width);
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
 }
 
 .setupToolRail {
@@ -248,27 +249,23 @@
   padding: 0;
 }
 
+.battleUtilityRail {
+  align-items: center;
+  background: #11161d;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  gap: 8px;
+  grid-area: utility;
+  min-height: 44px;
+  min-width: 0;
+  padding: 4px 8px;
+  position: relative;
+}
+
 .battleLogDrawer {
-  bottom: calc(var(--battle-action-height) + 10px);
-  left: 12px;
-  max-width: min(920px, calc(100% - var(--battle-inspector-width) - 36px));
-  position: absolute;
+  flex: 0 0 auto;
+  position: relative;
   z-index: 8;
-}
-
-.battleShellPlaying .battleLogDrawer {
-  bottom: auto;
-  top: 12px;
-}
-
-.battleShellPlaying .battleDrawerPanel {
-  margin-bottom: 0;
-  margin-top: 6px;
-}
-
-.battleShellPreparation .battleLogDrawer {
-  bottom: 12px;
-  left: calc(var(--battle-tool-width) + 12px);
 }
 
 .battleDrawerToggle {
@@ -288,8 +285,89 @@
   border-radius: 7px;
   box-shadow: 0 18px 52px rgba(0, 0, 0, 0.58);
   height: min(420px, 55dvh);
-  margin-bottom: 6px;
   overflow: hidden;
+  bottom: calc(100% + 6px);
+  left: 0;
+  position: absolute;
+  width: min(920px, calc(100vw - var(--battle-inspector-width) - 52px));
+}
+
+.battleShellPreparation .battleDrawerPanel {
+  width: min(920px, calc(100vw - var(--battle-inspector-width) - var(--battle-tool-width) - 52px));
+}
+
+.battleNotifications {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.battleNotification {
+  align-items: center;
+  background: #171e27;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  display: grid;
+  flex: 0 1 430px;
+  gap: 8px;
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+  min-height: 34px;
+  min-width: 230px;
+  overflow: hidden;
+  padding: 3px 5px 3px 0;
+}
+
+.battleNotificationMarker {
+  align-self: stretch;
+  background: #76869a;
+  border-radius: 4px;
+}
+
+.battleNotification.success .battleNotificationMarker {
+  background: #3fc783;
+}
+
+.battleNotification.danger .battleNotificationMarker {
+  background: #f05b69;
+}
+
+.battleNotification > div {
+  display: grid;
+  min-width: 0;
+}
+
+.battleNotification strong,
+.battleNotification small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battleNotification strong {
+  color: #edf3fa;
+  font-size: 0.72rem;
+}
+
+.battleNotification small {
+  color: #9facbb;
+  font-size: 0.62rem;
+}
+
+.battleNotification button {
+  background: transparent;
+  border: 0;
+  color: #8e9bab;
+  font-size: 1rem;
+  min-height: 26px;
+  min-width: 26px;
+  padding: 0;
+}
+
+.battleNotification button:hover {
+  color: #ffffff;
 }
 
 .battleDrawerContent {
@@ -325,6 +403,10 @@
   .setupToolRail,
   .battleInspectorContent {
     padding: 8px;
+  }
+
+  .battleNotification:not(:last-child) {
+    display: none;
   }
 }
 

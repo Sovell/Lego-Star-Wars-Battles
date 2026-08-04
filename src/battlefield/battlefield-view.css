@@ -49,6 +49,51 @@
   width: 100%;
 }
 
+.pixiCameraControls {
+  align-items: center;
+  background: rgba(8, 12, 18, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  bottom: 12px;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  position: absolute;
+  right: 12px;
+  z-index: 4;
+}
+
+.pixiCameraControls button {
+  background: #1b2530;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #e8f1fa;
+  font-size: 1rem;
+  min-height: 28px;
+  min-width: 30px;
+  padding: 2px 7px;
+}
+
+.pixiCameraControls .pixiCameraReset {
+  color: #b9c8d8;
+  font-size: 0.66rem;
+  font-weight: 800;
+  min-width: 48px;
+}
+
+.pixiCameraHint {
+  background: rgba(8, 12, 18, 0.76);
+  border-radius: 4px;
+  bottom: 15px;
+  color: #8495a7;
+  font-size: 0.6rem;
+  left: 12px;
+  padding: 5px 7px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+}
+
 .pixiMapLoading {
   align-items: center;
   background: #11161d;

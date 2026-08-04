@@ -7,6 +7,7 @@ export function BattleShell({
   battlefield,
   drawer,
   inspector,
+  notifications,
   overlay,
   phase,
   setupTools,
@@ -15,6 +16,7 @@ export function BattleShell({
   battlefield: ReactNode;
   drawer: ReactNode;
   inspector: ReactNode;
+  notifications?: ReactNode;
   overlay?: ReactNode;
   phase: GamePhase;
   setupTools?: ReactNode;
@@ -32,7 +34,10 @@ export function BattleShell({
       </section>
       {inspector}
       {actionBar}
-      {drawer}
+      <section className="battleUtilityRail">
+        {drawer}
+        {notifications}
+      </section>
     </section>
   );
 }

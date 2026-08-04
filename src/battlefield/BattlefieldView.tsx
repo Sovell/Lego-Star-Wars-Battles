@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { MissionState, ScenarioDefinition } from "../core/scenario/scenario-types";
 import type { AbilityDefinition, Battle, OrderType } from "../types";
+import type { BattlefieldVisualEvent } from "./battlefield-visual-events";
 import { createBoardInteractionModel } from "./board-interaction-model";
 import { createBoardViewModel } from "./board-view-model";
 import {
@@ -32,6 +33,7 @@ export function BattlefieldView({
   selectingAbilityPosition,
   selectingMovePosition,
   targetUnitId,
+  visualEvent,
   onCellClick,
   onSelectedUnitChange,
 }: {
@@ -50,10 +52,11 @@ export function BattlefieldView({
   selectingAbilityPosition: boolean;
   selectingMovePosition: boolean;
   targetUnitId?: string;
+  visualEvent?: BattlefieldVisualEvent;
   onCellClick: (x: number, y: number) => void;
   onSelectedUnitChange: (unitId: string) => void;
 }) {
-  const [renderer, setRenderer] = useState<BoardRendererMode>("dom");
+  const [renderer, setRenderer] = useState<BoardRendererMode>("pixi");
   const activeRenderer = resolveBoardRendererMode(enableRendererSwitch, renderer);
   const viewModel = useMemo(
     () => createBoardViewModel(battle, mission),
@@ -95,6 +98,7 @@ export function BattlefieldView({
     interactionDisabled,
     interactionModel,
     selectedUnitId,
+    visualEvent,
     viewModel,
     onCellClick,
     onSelectedUnitChange,

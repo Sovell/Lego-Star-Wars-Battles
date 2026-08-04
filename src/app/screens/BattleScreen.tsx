@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { abilities } from "../../data";
 import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
@@ -6,6 +6,12 @@ import { PanelTitle } from "../components/PanelTitle";
 import { BattleActionBar } from "../battle/BattleActionBar";
 import { BattleInspector } from "../battle/BattleInspector";
 import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
+import {
+  BattleNotifications,
+  createObjectAttackNotification,
+  createUnitAttackNotification,
+  type BattleNotification,
+} from "../battle/BattleNotifications";
 import { BattleShell } from "../battle/BattleShell";
 import { SetupToolRail, type SetupToolMode } from "../battle/SetupToolRail";
 import { createInitialBattleSnapshot } from "../scenario-draft";
@@ -28,15 +34,21 @@ import type { MissionState, ScenarioDefinition } from "../../core/scenario/scena
 import { terrainPresets } from "../../core/terrain-presets";
 import type {
   Army,
+  AttackResult,
   Battle,
   BattlefieldObjectType,
   CombatLogEntry,
   OrderType,
+  ObjectAttackResult,
   TerrainTile,
   TerrainType,
   UnitInstance,
 } from "../../types";
 import { BattlefieldView } from "../../battlefield/BattlefieldView";
+import {
+  createBattlefieldVisualEvent,
+  type BattlefieldVisualEvent,
+} from "../../battlefield/battlefield-visual-events";
 import { getUnitInitials } from "../../presentation/unit-presentation";
 
 type PendingAdvance = {
@@ -141,6 +153,10 @@ export function BattleScreen({
   const [selectingMovePosition, setSelectingMovePosition] = useState(false);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifications, setNotifications] = useState<BattleNotification[]>([]);
+  const notificationId = useRef(0);
+  const [battlefieldVisualEvent, setBattlefieldVisualEvent] = useState<BattlefieldVisualEvent>();
+  const battlefieldVisualEventId = useRef(0);
   const [mapMode, setMapMode] = useState<SetupToolMode>("units");
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
   const [selectedObjectType, setSelectedObjectType] = useState<
@@ -178,6 +194,74 @@ export function BattleScreen({
     battle.armies.length >= 2 &&
     battle.armies.every((army) => army.units.length > 0);
 
+  useEffect(() => {
+    if (notifications.length === 0) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setNotifications((current) => current.slice(1));
+    }, 5500);
+
+    return () => window.clearTimeout(timeout);
+  }, [notifications]);
+
+  function showCombatNotification(
+    result: {
+      attackResult?: AttackResult;
+      objectAttackResult?: ObjectAttackResult;
+    },
+    sourceBattle: Battle,
+  ) {
+    const attackResult = result.attackResult;
+    const objectAttackResult = result.objectAttackResult;
+    if (!attackResult && !objectAttackResult) {
+      return;
+    }
+
+    notificationId.current += 1;
+    const units = sourceBattle.armies.flatMap((army) => army.units);
+    const attackerId = attackResult?.attackerId ?? objectAttackResult!.attackerId;
+    const attacker = units.find((unit) => unit.id === attackerId);
+    const attackerName = attacker ? getTemplate(attacker).name : "Atakujący";
+    const defender = attackResult
+      ? units.find((unit) => unit.id === attackResult.defenderId)
+      : undefined;
+    const resultNotification = attackResult
+      ? createUnitAttackNotification(
+          notificationId.current,
+          attackResult,
+          attackerName,
+          defender ? getTemplate(defender).name : "Cel",
+        )
+      : createObjectAttackNotification(
+          notificationId.current,
+          objectAttackResult!,
+          attackerName,
+          sourceBattle.board.objects?.find(
+            (object) => object.id === objectAttackResult!.objectId,
+          )?.name ?? "Obiekt",
+        );
+
+    setNotifications((current) => [...current, resultNotification].slice(-2));
+  }
+
+  function showBattlefieldVisualEvent(
+    result: {
+      attackResult?: AttackResult;
+      objectAttackResult?: ObjectAttackResult;
+    },
+    sourceBattle: Battle,
+  ) {
+    battlefieldVisualEventId.current += 1;
+    const event = createBattlefieldVisualEvent(
+      battlefieldVisualEventId.current,
+      sourceBattle,
+      result,
+    );
+    if (event) setBattlefieldVisualEvent(event);
+  }
+
   function executeMissionAction(action: BattleAction) {
     const result = applyMissionAction(
       { battle, mission },
@@ -185,6 +269,8 @@ export function BattleScreen({
       action,
     );
 
+    showCombatNotification(result, battle);
+    showBattlefieldVisualEvent(result, battle);
     onBattleChange(result.battle);
     onMissionChange(result.mission);
     result.missionEvents.forEach((event) => onAddLog(event.message));
@@ -294,11 +380,14 @@ export function BattleScreen({
         }
 
         onAddLog(`Bot atakujacy: ${decision.reason}`);
+        const botBattleBeforeAction = finalBattle;
         const botResult = applyMissionAction(
           { battle: finalBattle, mission: finalMission },
           scenario,
           decision.action,
         );
+        showCombatNotification(botResult, botBattleBeforeAction);
+        showBattlefieldVisualEvent(botResult, botBattleBeforeAction);
         finalBattle = botResult.battle;
         finalMission = botResult.mission;
         onAddLog(botResult.log);
@@ -820,6 +909,7 @@ export function BattleScreen({
           selectedOrder={selectedOrder}
           selectedUnitId={selectedUnitId}
           selectedWeaponId={activeWeaponId}
+          visualEvent={battlefieldVisualEvent}
           selectingAbilityPosition={selectingAbilityPosition}
           selectingMovePosition={selectingMovePosition}
           targetUnitId={targetUnitId}
@@ -850,6 +940,14 @@ export function BattleScreen({
             <BattleSummary battle={battle} />
           ) : null}
         </>
+      )}
+      notifications={(
+        <BattleNotifications
+          notifications={notifications}
+          onDismiss={(id) => setNotifications((current) =>
+            current.filter((notification) => notification.id !== id)
+          )}
+        />
       )}
       drawer={(
         <BattleLogDrawer
