@@ -366,7 +366,14 @@ export function BattleScreen({
       mission.attackerArmyId &&
       drawResult.battle.activeActivation?.armyId === mission.attackerArmyId
     ) {
-      for (let botStep = 0; botStep < 2 && finalBattle.activeActivation; botStep += 1) {
+      const maxBotSteps = 8;
+      let botReportedFailure = false;
+      for (
+        let botStep = 0;
+        botStep < maxBotSteps &&
+        finalBattle.activeActivation?.armyId === mission.attackerArmyId;
+        botStep += 1
+      ) {
         const decision = chooseAttackerBotAction(
           finalBattle,
           scenario,
@@ -376,6 +383,7 @@ export function BattleScreen({
 
         if (!decision) {
           onAddLog("Bot atakujacy nie znalazl legalnej akcji. Token pozostaje aktywny.");
+          botReportedFailure = true;
           break;
         }
 
@@ -388,10 +396,26 @@ export function BattleScreen({
         );
         showCombatNotification(botResult, botBattleBeforeAction);
         showBattlefieldVisualEvent(botResult, botBattleBeforeAction);
+        const botMadeProgress = botResult.battle !== finalBattle;
         finalBattle = botResult.battle;
         finalMission = botResult.mission;
         onAddLog(botResult.log);
         botResult.missionEvents.forEach((event) => onAddLog(event.message));
+
+        if (!botMadeProgress) {
+          onAddLog(
+            "Bot atakujący nie wykonał akcji. Aktywacja została zatrzymana, aby uniknąć pętli.",
+          );
+          botReportedFailure = true;
+          break;
+        }
+      }
+
+      if (
+        !botReportedFailure &&
+        finalBattle.activeActivation?.armyId === mission.attackerArmyId
+      ) {
+        onAddLog("Bot atakujący nie zakończył aktywacji w limicie bezpieczeństwa.");
       }
     }
 

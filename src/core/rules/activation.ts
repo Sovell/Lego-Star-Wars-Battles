@@ -95,7 +95,7 @@ export function validateUnitActivation(battle: Battle, unitId: string): string |
   }
 
   if (unit.armyId !== token.armyId) {
-    return `Ten token nalezy do armii ${activeArmy.playerName}. Wybierz jednostke tej armii.`;
+    return `Ten token należy do armii ${activeArmy.playerName}. Wybierz jednostkę tej armii.`;
   }
 
   const pendingAdvanceUnit = activeArmy.units.find(

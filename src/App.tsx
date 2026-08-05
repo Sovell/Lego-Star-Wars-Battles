@@ -80,7 +80,14 @@ export function App() {
   const visibleBattle = gamePhase === "Preparation" ? preparationBattle : battle;
 
   function addLog(message: string) {
-    setLogs((current) => [createLog(visibleBattle.turn, message), ...current].slice(0, 12));
+    setLogs((current) => {
+      const latest = current[0];
+      if (latest?.turn === visibleBattle.turn && latest.message === message) {
+        return current;
+      }
+
+      return [createLog(visibleBattle.turn, message), ...current].slice(0, 12);
+    });
   }
 
   function loadArmies(
