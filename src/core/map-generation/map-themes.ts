@@ -2,6 +2,7 @@ import type { MapTheme, MapThemeId } from "./map-generation-types";
 
 export const desertOutpostTheme: MapTheme = {
   id: "desert-outpost",
+  version: 1,
   name: "Desert Outpost",
   description: "A dry frontier battlefield with scattered rocks, ruins, and fortified positions.",
   presentation: {
@@ -15,6 +16,10 @@ export const desertOutpostTheme: MapTheme = {
   },
   generation: {
     defaultTerrainDensity: 0.34,
+    clusterSize: {
+      minimum: 2,
+      maximum: 5,
+    },
     terrainWeights: [
       { terrainType: "DifficultTerrain", weight: 4 },
       { terrainType: "LightCover", weight: 3 },

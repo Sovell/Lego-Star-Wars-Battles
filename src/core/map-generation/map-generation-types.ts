@@ -9,6 +9,7 @@ export type MapTerrainWeight = {
 
 export type MapTheme = {
   id: MapThemeId;
+  version: number;
   name: string;
   description: string;
   presentation: {
@@ -22,6 +23,10 @@ export type MapTheme = {
   };
   generation: {
     defaultTerrainDensity: number;
+    clusterSize: {
+      minimum: number;
+      maximum: number;
+    };
     terrainWeights: MapTerrainWeight[];
   };
 };
@@ -40,6 +45,7 @@ export type MapGenerationRecipe = {
   height: number;
   seed: number;
   themeId: MapThemeId;
+  themeVersion: number;
   terrainDensity: number;
 };
 
