@@ -47,6 +47,26 @@ describe("defender bot", () => {
     expect(decision?.reason).toContain("celu");
   });
 
+  it("never scores the protected object as an attack candidate", () => {
+    let battle = readyDefenderBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 2, y: 2 } });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseDefenderBotAction(
+      battle,
+      protectGeneratorScenario,
+      defenderArmyId,
+    );
+
+    expect(decision?.action.type).not.toBe("AttackObject");
+  });
+
   it("rallies a suppressed unit when there is no immediate threat", () => {
     let battle = readyDefenderBattle();
     battle = patchUnit(battle, "rep_unit_1", { suppression: 2 });

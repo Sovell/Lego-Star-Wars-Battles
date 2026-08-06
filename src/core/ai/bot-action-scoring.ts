@@ -5,14 +5,12 @@ import { distance, type GridPosition } from "../rules/geometry";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
 import { findUnit, getTemplate } from "../rules/state";
 import { getDefenseBonus } from "../rules/terrain";
-import type { BotDoctrine } from "./bot-doctrine";
+import type { BotStrategyContext } from "./bot-strategy-context";
 
-export type BotActionScoringContext = {
-  battle: Battle;
-  doctrine: BotDoctrine;
-  movementTarget?: GridPosition;
-  objectiveObjectId?: string;
-};
+export type BotActionScoringContext = Pick<
+  BotStrategyContext,
+  "battle" | "doctrine" | "movementTarget" | "objectiveObjectId"
+>;
 
 export type ScoredBotAction<TAction extends LegalUnitAction = LegalUnitAction> = {
   action: TAction;
@@ -82,6 +80,7 @@ function scoreUnitAttack(
 
   const damagePotential = estimateMaximumDamage(weapon);
   return (
+    doctrine.attackBaseScore +
     damagePotential * doctrine.damagePotentialWeight +
     (damagePotential >= defender.currentHp ? doctrine.lethalBonus : 0) +
     getTemplate(defender).cost * doctrine.targetValueWeight -
@@ -97,13 +96,22 @@ function scoreObjectAttack(
   const attacker = findUnit(battle, action.attackerId);
   const target = battle.board.objects?.find((object) => object.id === action.objectId);
   const weapon = getWeapon(attacker, action.weaponId);
-  if (!attacker || !target || !weapon) return Number.NEGATIVE_INFINITY;
+  if (
+    !attacker ||
+    !target ||
+    !weapon ||
+    !objectiveObjectId ||
+    target.id !== objectiveObjectId
+  ) {
+    return Number.NEGATIVE_INFINITY;
+  }
 
   const damagePotential = estimateMaximumDamage(weapon);
   return (
     damagePotential * doctrine.damagePotentialWeight +
     (damagePotential >= target.currentHp ? doctrine.lethalBonus : 0) +
-    (target.id === objectiveObjectId ? doctrine.objectiveAttackBonus : 0) -
+    doctrine.attackBaseScore +
+    doctrine.objectiveAttackBonus -
     target.currentHp * doctrine.remainingHpPenaltyWeight
   );
 }
@@ -144,6 +152,8 @@ function scoreMovement(
   if (progress <= 0) return Number.NEGATIVE_INFINITY;
 
   return (
+    doctrine.movementBaseScore +
+    (action.type === "AdvanceUnit" ? doctrine.advanceActionBonus : 0) +
     progress * doctrine.movementProgressWeight -
     targetDistance * doctrine.remainingDistancePenaltyWeight +
     getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight
@@ -159,7 +169,8 @@ function scoreDeployment(
     y: Math.floor((battle.board.height - 1) / 2),
   };
   return (
-    -distance(action.targetPosition, destination) * doctrine.deploymentDistancePenaltyWeight +
+    doctrine.deploymentBaseScore -
+    distance(action.targetPosition, destination) * doctrine.deploymentDistancePenaltyWeight +
     getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight
   );
 }

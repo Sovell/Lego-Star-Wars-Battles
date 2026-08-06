@@ -86,6 +86,33 @@ describe("attacker bot", () => {
     });
   });
 
+  it("ranks the scenario objective above an offensive ability", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      templateId: "darth_maul",
+      position: { x: 4, y: 2 },
+    });
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 4, y: 3 } });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      protectGeneratorScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toMatchObject({
+      type: "AttackObject",
+      objectId: battle.board.objects?.[0].id,
+    });
+  });
+
   it("moves closer to the scenario objective when it cannot attack", () => {
     let battle = readyAttackerBattle();
     battle = patchUnit(battle, "sep_unit_1", { position: { x: 7, y: 4 } });
