@@ -1,10 +1,34 @@
-import type { Board, TerrainType } from "../../types";
+import type { ScenarioDefinition } from "../scenario/scenario-types";
+import type { BattlefieldObjectType, Board, TerrainType } from "../../types";
 
 export type MapThemeId = "desert-outpost";
 
 export type MapTerrainWeight = {
   terrainType: TerrainType;
   weight: number;
+};
+
+export type MapObjectWeight = {
+  objectType: Extract<
+    BattlefieldObjectType,
+    "LightFortification" | "HeavyFortification"
+  >;
+  weight: number;
+};
+
+export type MapObjectPlacement = "defender-side" | "center" | "distributed";
+
+export type MapScenarioObjectRequirement = {
+  objectType: BattlefieldObjectType;
+  count: number;
+  placement: MapObjectPlacement;
+};
+
+export type MapScenarioRequirements = {
+  scenarioId?: string;
+  defenderArmySlot?: number;
+  deploymentZones: ScenarioDefinition["deploymentZones"];
+  requiredObjects: MapScenarioObjectRequirement[];
 };
 
 export type MapTheme = {
@@ -28,6 +52,12 @@ export type MapTheme = {
       maximum: number;
     };
     terrainWeights: MapTerrainWeight[];
+    objectBudget: {
+      minimum: number;
+      maximum: number;
+      minimumSpacing: number;
+      objectWeights: MapObjectWeight[];
+    };
   };
 };
 
@@ -37,16 +67,20 @@ export type MapGenerationConfig = {
   seed: number;
   themeId: MapThemeId;
   terrainDensity?: number;
+  scenario?: ScenarioDefinition;
+  defenderArmySlot?: number;
 };
 
 export type MapGenerationRecipe = {
-  generatorVersion: 1;
+  generatorVersion: 2;
   width: number;
   height: number;
   seed: number;
   themeId: MapThemeId;
   themeVersion: number;
   terrainDensity: number;
+  scenarioId?: string;
+  defenderArmySlot?: number;
 };
 
 export type GeneratedMap = {

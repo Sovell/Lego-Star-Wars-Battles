@@ -55,6 +55,7 @@ export const battlefieldObjectPresets: BattlefieldObjectPreset[] = [
 export function createBattlefieldObject(
   type: BattlefieldObjectType,
   position: GridPosition,
+  id = `${type.toLowerCase()}-${crypto.randomUUID()}`,
 ): BattlefieldObject {
   const preset = battlefieldObjectPresets.find((candidate) => candidate.type === type);
   if (!preset) {
@@ -63,7 +64,7 @@ export function createBattlefieldObject(
 
   return {
     ...preset,
-    id: `${type.toLowerCase()}-${crypto.randomUUID()}`,
+    id,
     position,
     currentHp: preset.maxHp,
     status: "Active",

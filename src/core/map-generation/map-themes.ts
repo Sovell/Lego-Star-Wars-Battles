@@ -2,7 +2,7 @@ import type { MapTheme, MapThemeId } from "./map-generation-types";
 
 export const desertOutpostTheme: MapTheme = {
   id: "desert-outpost",
-  version: 1,
+  version: 2,
   name: "Desert Outpost",
   description: "A dry frontier battlefield with scattered rocks, ruins, and fortified positions.",
   presentation: {
@@ -26,6 +26,15 @@ export const desertOutpostTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 2 },
       { terrainType: "Building", weight: 1 },
     ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 3 },
+        { objectType: "HeavyFortification", weight: 1 },
+      ],
+    },
   },
 };
 

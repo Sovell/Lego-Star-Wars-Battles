@@ -60,17 +60,17 @@ describe("map generator foundation", () => {
     )).toBe(true);
     expect(result.board.tiles.every((tile) => tile.movementCost >= 1)).toBe(true);
     expect(result.recipe).toEqual({
-      generatorVersion: 1,
+      generatorVersion: 2,
       width: 4,
       height: 3,
       seed: 42,
       themeId: "desert-outpost",
-      themeVersion: 1,
+      themeVersion: 2,
       terrainDensity: 1,
     });
   });
 
-  it("can generate an empty mechanical layer over the themed ground", () => {
+  it("can leave the terrain layer empty while still placing themed objects", () => {
     const result = generateMap({
       width: 8,
       height: 8,
@@ -80,7 +80,8 @@ describe("map generator foundation", () => {
     });
 
     expect(result.board.tiles).toEqual([]);
-    expect(result.board.objects).toEqual([]);
+    expect(result.board.objects?.length).toBeGreaterThanOrEqual(3);
+    expect(result.board.objects?.length).toBeLessThanOrEqual(5);
     expect(validateMapConnectivity(result.board)).toEqual({
       horizontal: true,
       vertical: true,

@@ -5,12 +5,16 @@ import type {
   GeneratedMap,
   MapGenerationConfig,
   MapGenerationRecipe,
+  MapScenarioRequirements,
   MapTerrainWeight,
 } from "./map-generation-types";
+import { placeMapObjects } from "./map-object-placement";
 import { getMapTheme } from "./map-themes";
+import { getMapScenarioRequirements } from "./scenario-map-requirements";
 
 export function generateMap(config: MapGenerationConfig): GeneratedMap {
-  const recipe = createRecipe(config);
+  const requirements = getMapScenarioRequirements(config.scenario, config.defenderArmySlot);
+  const recipe = createRecipe(config, requirements);
   const theme = getMapTheme(recipe.themeId);
   const random = createSeededRandomSource(recipe.seed);
   const corridorCells = createCrossMapCorridors(recipe.width, recipe.height, random);
@@ -27,19 +31,31 @@ export function generateMap(config: MapGenerationConfig): GeneratedMap {
     terrainWeights: theme.generation.terrainWeights,
     random,
   });
+  const objects = placeMapObjects({
+    width: recipe.width,
+    height: recipe.height,
+    terrainTiles: tiles,
+    corridorCells,
+    requirements,
+    theme,
+    random,
+  });
 
   return {
     board: {
       width: recipe.width,
       height: recipe.height,
       tiles,
-      objects: [],
+      objects,
     },
     recipe,
   };
 }
 
-function createRecipe(config: MapGenerationConfig): MapGenerationRecipe {
+function createRecipe(
+  config: MapGenerationConfig,
+  requirements: MapScenarioRequirements,
+): MapGenerationRecipe {
   assertPositiveInteger(config.width, "Map width");
   assertPositiveInteger(config.height, "Map height");
   if (!Number.isInteger(config.seed)) {
@@ -53,13 +69,17 @@ function createRecipe(config: MapGenerationConfig): MapGenerationRecipe {
   }
 
   return {
-    generatorVersion: 1,
+    generatorVersion: 2,
     width: config.width,
     height: config.height,
     seed: config.seed,
     themeId: config.themeId,
     themeVersion: theme.version,
     terrainDensity,
+    ...(requirements.scenarioId ? { scenarioId: requirements.scenarioId } : {}),
+    ...(requirements.defenderArmySlot !== undefined
+      ? { defenderArmySlot: requirements.defenderArmySlot }
+      : {}),
   };
 }
 
