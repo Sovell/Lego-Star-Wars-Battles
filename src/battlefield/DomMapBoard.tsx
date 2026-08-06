@@ -8,6 +8,7 @@ import { getBoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
 
 export function DomMapBoard({
+  deploymentZoneCells,
   interactionDisabled,
   interactionModel,
   selectedUnitId,
@@ -36,6 +37,8 @@ export function DomMapBoard({
           <button
             aria-label={`Pole ${x}, ${y}: ${getInteractionLabel(cellInteraction)}`}
             className={`mapCell ${tile?.terrainType ?? "Open"} interaction-${cellInteraction} ${
+              deploymentZoneCells?.has(key) ? "deploymentZoneCell" : ""
+            } ${
               territoryFaction === "Republic"
                 ? "territoryRepublic"
                 : territoryFaction === "Separatists"

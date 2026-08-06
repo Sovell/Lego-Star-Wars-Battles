@@ -106,6 +106,37 @@ describe("scenario engine", () => {
     expect(result.mission.attackerArmyId).toBe("army_republic");
   });
 
+  it("does not defeat the defender team while an allied army is still standing", () => {
+    const battle = createBattle();
+    const ally = structuredClone(battle.armies[0]);
+    ally.id = "army_republic_allies";
+    ally.units = ally.units.map((unit, index) => ({
+      ...unit,
+      id: `rep_ally_${index}`,
+      armyId: ally.id,
+    }));
+    battle.armies.push(ally);
+    battle.armies[0].units = battle.armies[0].units.map((unit) => ({
+      ...unit,
+      status: "Destroyed",
+      position: null,
+    }));
+    const mission = createMissionState(
+      survivalTestScenario,
+      battle.armies,
+      "army_republic",
+    );
+
+    const result = applyScenarioEvents(
+      mission,
+      survivalTestScenario,
+      [{ type: "ArmyEliminated", armyId: "army_republic" }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Active");
+  });
+
   it("counts a round when the defenders control the designated point", () => {
     const battle = createBattle();
     battle.board.objects = [createBattlefieldObject("DefensePoint", { x: 1, y: 2 })];

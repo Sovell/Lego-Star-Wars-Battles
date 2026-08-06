@@ -1051,9 +1051,41 @@ select {
 .composerLayout {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
   margin: 0 auto;
-  max-width: 1440px;
+  max-width: 1640px;
+}
+
+.composerArmyArea {
+  display: grid;
+  gap: 12px;
+}
+
+.composerArmyToolbar {
+  align-items: center;
+  background: rgba(22, 25, 31, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.composerArmyGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.composerArmyHeaderActions {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.composerArmyHeaderActions .dangerButton {
+  min-height: 32px;
+  padding: 4px 9px;
 }
 
 .composerColumn,
@@ -2196,6 +2228,7 @@ select {
   }
 
   .composerControls,
+  .composerArmyGrid,
   .templateRow,
   .glossaryItem,
   .ruleMetaGrid,

@@ -5,18 +5,21 @@ import type {
   WeaponProfile,
 } from "../../types";
 import type { BattleAction } from "../battle-actions";
-import { distance, lineOfSight, type GridPosition } from "../rules/geometry";
+import { areArmiesAllied, areArmiesEnemies } from "../army-relations";
+import {
+  getLegalUnitActions,
+  type LegalAttackAction,
+  type LegalUnitAction,
+} from "../legal-actions";
+import { distance, type GridPosition } from "../rules/geometry";
 import { getTemplate } from "../rules/state";
 import { getDefenseBonus } from "../rules/terrain";
 import { isPositionFree } from "../rules/occupancy";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
-import { getLegalReserveEntryCells } from "../rules/deployment";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
+import type { BotDecision } from "./bot-controller";
 
-export type BotDecision = {
-  action: BattleAction;
-  reason: string;
-};
+export type { BotDecision } from "./bot-controller";
 
 type UnitAttackOption = {
   action: Extract<BattleAction, { type: "Attack" }>;
@@ -60,11 +63,23 @@ export function chooseAttackerBotAction(
   }
 
   const objective = getAttackObjective(battle, scenario);
-  const abilityDecision = chooseOffensiveAbility(battle, attackers, attackerArmyId);
+  const legalActions = attackers.flatMap((attacker) =>
+    getLegalUnitActions(battle, scenario, attacker.id)
+  );
+  const legalAttacks = legalActions.filter(
+    (action): action is LegalAttackAction =>
+      action.type === "Attack" || action.type === "AttackObject",
+  );
+  const abilityDecision = chooseOffensiveAbility(
+    battle,
+    attackers,
+    attackerArmyId,
+    legalActions,
+  );
   if (abilityDecision) {
     return abilityDecision;
   }
-  const objectAttack = chooseBestObjectAttack(battle, attackers, objective);
+  const objectAttack = chooseBestObjectAttack(battle, legalAttacks, objective);
   if (objectAttack) {
     return {
       action: objectAttack.action,
@@ -72,7 +87,7 @@ export function chooseAttackerBotAction(
     };
   }
 
-  const unitAttack = chooseBestUnitAttack(battle, attackers, attackerArmyId);
+  const unitAttack = chooseBestUnitAttack(battle, legalAttacks);
   if (unitAttack) {
     const lethal = estimateMaximumDamage(unitAttack.weapon) >= unitAttack.defender.currentHp;
     return {
@@ -84,12 +99,15 @@ export function chooseAttackerBotAction(
   }
 
   if (pendingAdvanceUnit) {
+    const finishAdvance = legalActions.find(
+      (action): action is Extract<BattleAction, { type: "ApplyOrder" }> =>
+        action.type === "ApplyOrder" &&
+        action.unitId === pendingAdvanceUnit.id &&
+        action.order === "Advance",
+    );
+    if (!finishAdvance) return undefined;
     return {
-      action: {
-        type: "ApplyOrder",
-        unitId: pendingAdvanceUnit.id,
-        order: "Advance",
-      },
+      action: finishAdvance,
       reason: `${getTemplate(pendingAdvanceUnit).name} kończy Advance bez dostępnego celu.`,
     };
   }
@@ -99,8 +117,8 @@ export function chooseAttackerBotAction(
     findNearestEnemyPosition(battle, attackers, attackerArmyId);
   const reserveDeployment = chooseBestReserveDeployment(
     battle,
-    scenario,
     attackers,
+    legalActions,
     movementTarget,
   );
   if (reserveDeployment) {
@@ -114,7 +132,7 @@ export function chooseAttackerBotAction(
     };
   }
   if (movementTarget) {
-    const movement = chooseBestMovement(battle, attackers, movementTarget);
+    const movement = chooseBestMovement(battle, attackers, legalActions, movementTarget);
     if (movement) {
       return {
         action: {
@@ -129,18 +147,25 @@ export function chooseAttackerBotAction(
     }
   }
 
-  const rallyUnit = attackers
-    .filter((unit) => unit.suppression > 0)
-    .sort((left, right) => right.suppression - left.suppression)[0];
-  const unit = rallyUnit ?? attackers[0];
+  const legalOrders = legalActions.filter(
+    (action): action is Extract<BattleAction, { type: "ApplyOrder" }> =>
+      action.type === "ApplyOrder",
+  );
+  const rallyAction = legalOrders
+    .filter((action) => action.order === "Rally")
+    .sort((left, right) => {
+      const leftSuppression = attackers.find((unit) => unit.id === left.unitId)?.suppression ?? 0;
+      const rightSuppression = attackers.find((unit) => unit.id === right.unitId)?.suppression ?? 0;
+      return rightSuppression - leftSuppression;
+    })[0];
+  const orderAction = rallyAction ?? legalOrders.find((action) => action.order === "Overwatch");
+  if (!orderAction) return undefined;
+  const unit = attackers.find((candidate) => candidate.id === orderAction.unitId);
+  if (!unit) return undefined;
 
   return {
-    action: {
-      type: "ApplyOrder",
-      unitId: unit.id,
-      order: rallyUnit ? "Rally" : "Overwatch",
-    },
-    reason: rallyUnit
+    action: orderAction,
+    reason: orderAction.order === "Rally"
       ? `${getTemplate(unit).name} porzadkuje szyki i usuwa suppression.`
       : `${getTemplate(unit).name} nie ma legalnego celu ani lepszej pozycji i pozostaje w gotowosci.`,
   };
@@ -148,94 +173,69 @@ export function chooseAttackerBotAction(
 
 function chooseBestObjectAttack(
   battle: Battle,
-  attackers: UnitInstance[],
+  legalAttacks: LegalAttackAction[],
   objective: BattlefieldObject | undefined,
 ): ObjectAttackOption | undefined {
   if (!objective?.destructible || objective.status !== "Active") {
     return undefined;
   }
 
-  return attackers
-    .flatMap((attacker) => {
-      if (!attacker.position) {
-        return [];
-      }
-
-      return getTemplate(attacker).weapons.flatMap<ObjectAttackOption>((weapon) => {
-        if (
-          distance(attacker.position!, objective.position) > weapon.range ||
-          !lineOfSight(battle, attacker.position!, objective.position)
-        ) {
-          return [];
-        }
-
-        const lethalBonus = estimateMaximumDamage(weapon) >= objective.currentHp ? 10_000 : 0;
-        return [{
-          action: {
-            type: "AttackObject",
-            attackerId: attacker.id,
-            objectId: objective.id,
-            weaponId: weapon.id,
-          },
-          attacker,
-          target: objective,
-          weapon,
-          score: 100_000 + lethalBonus + estimateExpectedDamage(weapon),
-        }];
-      });
+  return legalAttacks
+    .filter((action): action is Extract<BattleAction, { type: "AttackObject" }> =>
+      action.type === "AttackObject" && action.objectId === objective.id
+    )
+    .flatMap<ObjectAttackOption>((action) => {
+      const attacker = battle.armies
+        .flatMap((army) => army.units)
+        .find((unit) => unit.id === action.attackerId);
+      const weapon = attacker
+        ? getTemplate(attacker).weapons.find((candidate) => candidate.id === action.weaponId)
+        : undefined;
+      if (!attacker || !weapon) return [];
+      const lethalBonus = estimateMaximumDamage(weapon) >= objective.currentHp ? 10_000 : 0;
+      return [{
+        action,
+        attacker,
+        target: objective,
+        weapon,
+        score: 100_000 + lethalBonus + estimateExpectedDamage(weapon),
+      }];
     })
     .sort((left, right) => right.score - left.score)[0];
 }
 
 function chooseBestUnitAttack(
   battle: Battle,
-  attackers: UnitInstance[],
-  attackerArmyId: string,
+  legalAttacks: LegalAttackAction[],
 ): UnitAttackOption | undefined {
-  const defenders = battle.armies
-    .filter((army) => army.id !== attackerArmyId)
-    .flatMap((army) => army.units)
-    .filter((unit) => unit.status !== "Destroyed" && unit.position);
-
-  return attackers
-    .flatMap((attacker) => {
-      if (!attacker.position) {
-        return [];
-      }
-
-      return defenders.flatMap((defender) =>
-        getTemplate(attacker).weapons.flatMap<UnitAttackOption>((weapon) => {
-          if (
-            !defender.position ||
-            distance(attacker.position!, defender.position) > weapon.range ||
-            !lineOfSight(battle, attacker.position!, defender.position)
-          ) {
-            return [];
-          }
-
-          const maximumDamage = estimateMaximumDamage(weapon);
-          const lethalBonus = maximumDamage >= defender.currentHp ? 10_000 : 0;
-          const targetValue = getTemplate(defender).cost;
-          const coverPenalty = getDefenseBonus(battle, defender) * 25;
-          return [{
-            action: {
-              type: "Attack",
-              attackerId: attacker.id,
-              defenderId: defender.id,
-              weaponId: weapon.id,
-            },
-            attacker,
-            defender,
-            weapon,
-            score:
-              lethalBonus +
-              estimateExpectedDamage(weapon) * 100 +
-              targetValue -
-              coverPenalty -
-              defender.currentHp,
-          }];
-        }),
-      );
+  const units = battle.armies.flatMap((army) => army.units);
+  return legalAttacks
+    .filter((action): action is Extract<BattleAction, { type: "Attack" }> =>
+      action.type === "Attack"
+    )
+    .flatMap<UnitAttackOption>((action) => {
+      const attacker = units.find((unit) => unit.id === action.attackerId);
+      const defender = units.find((unit) => unit.id === action.defenderId);
+      const weapon = attacker
+        ? getTemplate(attacker).weapons.find((candidate) => candidate.id === action.weaponId)
+        : undefined;
+      if (!attacker || !defender || !weapon) return [];
+      const maximumDamage = estimateMaximumDamage(weapon);
+      const lethalBonus = maximumDamage >= defender.currentHp ? 10_000 : 0;
+      const targetValue = getTemplate(defender).cost;
+      const coverPenalty = getDefenseBonus(battle, defender) * 25;
+      return [{
+        action,
+        attacker,
+        defender,
+        weapon,
+        score:
+          lethalBonus +
+          estimateExpectedDamage(weapon) * 100 +
+          targetValue -
+          coverPenalty -
+          defender.currentHp,
+      }];
     })
     .sort((left, right) => right.score - left.score)[0];
 }
@@ -243,33 +243,18 @@ function chooseBestUnitAttack(
 function chooseBestMovement(
   battle: Battle,
   attackers: UnitInstance[],
+  legalActions: LegalUnitAction[],
   target: GridPosition,
 ): { unit: UnitInstance; position: GridPosition; score: number } | undefined {
   return attackers
     .filter((unit) => unit.position)
     .flatMap((unit) => {
-      const template = getTemplate(unit);
       const currentDistance = distance(unit.position!, target);
-      const positions: GridPosition[] = [];
-
-      for (let y = 0; y < battle.board.height; y += 1) {
-        for (let x = 0; x < battle.board.width; x += 1) {
-          const position = { x, y };
-          const terrain = battle.board.tiles.find((tile) => tile.x === x && tile.y === y);
-          const movementCost = Math.max(1, terrain?.movementCost ?? 1);
-          const maximumDistance = Math.max(1, Math.floor(template.movement / movementCost));
-          const movementDistance = distance(unit.position!, position);
-
-          if (movementDistance <= maximumDistance) {
-            if (!isPositionFree(battle, position, unit.id)) {
-              continue;
-            }
-            positions.push(position);
-          }
-        }
-      }
-
-      return positions
+      return legalActions
+        .filter((action): action is Extract<BattleAction, { type: "AdvanceUnit" }> =>
+          action.type === "AdvanceUnit" && action.unitId === unit.id
+        )
+        .map((action) => action.targetPosition)
         .filter((position) => distance(position, target) < currentDistance)
         .map((position) => {
           const terrain = battle.board.tiles.find(
@@ -290,8 +275,8 @@ function chooseBestMovement(
 
 function chooseBestReserveDeployment(
   battle: Battle,
-  scenario: ScenarioDefinition,
   attackers: UnitInstance[],
+  legalActions: LegalUnitAction[],
   target?: GridPosition,
 ): { unit: UnitInstance; position: GridPosition; score: number } | undefined {
   const fallbackTarget = {
@@ -303,11 +288,15 @@ function chooseBestReserveDeployment(
   return attackers
     .filter((unit) => !unit.position)
     .flatMap((unit) =>
-      getLegalReserveEntryCells(battle, scenario, unit.id).map((position) => ({
-        unit,
-        position,
-        score: -distance(position, deploymentTarget),
-      })),
+      legalActions
+        .filter((action): action is Extract<BattleAction, { type: "DeployUnit" }> =>
+          action.type === "DeployUnit" && action.unitId === unit.id
+        )
+        .map((action) => ({
+          unit,
+          position: action.targetPosition,
+          score: -distance(action.targetPosition, deploymentTarget),
+        })),
     )
     .sort((left, right) => right.score - left.score)[0];
 }
@@ -316,9 +305,10 @@ function chooseOffensiveAbility(
   battle: Battle,
   attackers: UnitInstance[],
   attackerArmyId: string,
+  legalActions: LegalUnitAction[],
 ): BotDecision | undefined {
   const enemies = battle.armies
-    .filter((army) => army.id !== attackerArmyId)
+    .filter((army) => areArmiesEnemies(battle, army.id, attackerArmyId))
     .flatMap((army) => army.units)
     .filter((unit) => unit.status !== "Destroyed" && unit.position);
 
@@ -337,25 +327,23 @@ function chooseOffensiveAbility(
       ) {
         continue;
       }
-      const range = ability.effect.type === "bonus_move_then_melee_attack"
-        ? (ability.effect.value ?? 0) + 1
-        : ability.range ?? 1;
-      const target = enemies
-        .filter(
-          (enemy) =>
-            enemy.position &&
-            distance(attacker.position!, enemy.position) <= range,
+      const option = legalActions
+        .filter((action): action is Extract<BattleAction, { type: "UseAbility" }> =>
+          action.type === "UseAbility" &&
+          action.unitId === attacker.id &&
+          action.abilityId === ability.id
         )
-        .sort((left, right) => left.currentHp - right.currentHp)[0];
-      if (target) {
+        .flatMap((action) => {
+          const target = action.targetUnitId
+            ? enemies.find((enemy) => enemy.id === action.targetUnitId)
+            : undefined;
+          return target ? [{ action, target }] : [];
+        })
+        .sort((left, right) => left.target.currentHp - right.target.currentHp)[0];
+      if (option) {
         return {
-          action: {
-            type: "UseAbility",
-            unitId: attacker.id,
-            abilityId: ability.id,
-            targetUnitId: target.id,
-          },
-          reason: `${getTemplate(attacker).name} wykorzystuje zdolność ${ability.name} przeciw ${getTemplate(target).name}.`,
+          action: option.action,
+          reason: `${getTemplate(attacker).name} wykorzystuje zdolność ${ability.name} przeciw ${getTemplate(option.target).name}.`,
         };
       }
     }
@@ -379,7 +367,7 @@ function findTerritoryTarget(
   for (let y = 0; y < battle.board.height; y += 1) {
     for (let x = 0; x < battle.board.width; x += 1) {
       if (
-        mission?.territoryOwners?.[`${x},${y}`] !== attackerArmyId &&
+        !isTerritoryOwnedByTeam(battle, mission, { x, y }, attackerArmyId) &&
         isPositionFree(battle, { x, y })
       ) {
         candidates.push({ x, y });
@@ -434,7 +422,7 @@ function findNearestEnemyPosition(
 ): GridPosition | undefined {
   const attackerPositions = attackers.flatMap((unit) => unit.position ? [unit.position] : []);
   const enemies = battle.armies
-    .filter((army) => army.id !== attackerArmyId)
+    .filter((army) => areArmiesEnemies(battle, army.id, attackerArmyId))
     .flatMap((army) => army.units)
     .filter((unit) => unit.status !== "Destroyed")
     .flatMap((unit) => unit.position ? [unit.position] : []);
@@ -452,4 +440,16 @@ function estimateMaximumDamage(weapon: WeaponProfile): number {
 
 function estimateExpectedDamage(weapon: WeaponProfile): number {
   return weapon.attacks * weapon.damage * 0.5;
+}
+
+function isTerritoryOwnedByTeam(
+  battle: Battle,
+  mission: MissionState | undefined,
+  position: GridPosition,
+  armyId: string,
+): boolean {
+  const ownerArmyId = mission?.territoryOwners?.[`${position.x},${position.y}`];
+  return ownerArmyId
+    ? areArmiesAllied(battle, ownerArmyId, armyId)
+    : false;
 }

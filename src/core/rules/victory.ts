@@ -1,4 +1,5 @@
 import type { Battle } from "../../types";
+import { getArmyTeamId } from "../army-relations";
 
 export function getStandingArmies(battle: Battle): string[] {
   return battle.armies
@@ -8,9 +9,14 @@ export function getStandingArmies(battle: Battle): string[] {
 
 export function getVictoryState(battle: Battle): { finished: boolean; winnerArmyId?: string } {
   const standingArmies = getStandingArmies(battle);
+  const standingTeams = new Set(
+    battle.armies
+      .filter((army) => standingArmies.includes(army.id))
+      .map(getArmyTeamId),
+  );
 
   return {
-    finished: standingArmies.length <= 1,
+    finished: standingTeams.size <= 1,
     winnerArmyId: standingArmies[0],
   };
 }

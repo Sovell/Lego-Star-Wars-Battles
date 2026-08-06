@@ -153,6 +153,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
 
 function PixiBoardScene({
   camera,
+  deploymentZoneCells,
   height,
   interactionDisabled,
   interactionModel,
@@ -180,6 +181,12 @@ function PixiBoardScene({
     <CameraWorld camera={camera} height={height} visualEvent={visualEvent} width={width}>
       <pixiContainer x={-boardWidth / 2} y={-boardHeight / 2}>
         <TerrainLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
+        <DeploymentZoneLayer
+          cellSize={cellSize}
+          cells={deploymentZoneCells}
+          stride={stride}
+          viewModel={viewModel}
+        />
         <TerritoryLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
         <InteractionLayer
           cellSize={cellSize}
@@ -203,6 +210,36 @@ function PixiBoardScene({
         <CombatEffect cellSize={cellSize} event={visualEvent} stride={stride} />
       </pixiContainer>
     </CameraWorld>
+  );
+}
+
+function DeploymentZoneLayer({
+  cellSize,
+  cells,
+  stride,
+  viewModel,
+}: LayerProps & { cells?: ReadonlySet<string> }) {
+  if (!cells?.size) return null;
+
+  return (
+    <pixiContainer eventMode="none">
+      {viewModel.positions.map(({ x, y }) => {
+        const key = boardPositionKey(x, y);
+        if (!cells.has(key)) return null;
+        return (
+          <pixiGraphics
+            draw={(graphics) => {
+              graphics.clear().roundRect(2, 2, cellSize - 4, cellSize - 4, 5)
+                .fill({ color: 0x64d8ff, alpha: 0.2 })
+                .stroke({ color: 0x64d8ff, alpha: 0.95, width: 3 });
+            }}
+            key={key}
+            x={x * stride}
+            y={y * stride}
+          />
+        );
+      })}
+    </pixiContainer>
   );
 }
 

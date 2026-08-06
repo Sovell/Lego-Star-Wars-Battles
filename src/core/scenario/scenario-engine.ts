@@ -1,5 +1,6 @@
 import type { BattleEvent } from "../battle-actions";
 import type { Army, Battle } from "../../types";
+import { areArmiesAllied, areArmiesEnemies, getArmyTeamId } from "../army-relations";
 import type { MissionEvent, MissionState, ScenarioDefinition } from "./scenario-types";
 
 export type ScenarioEngineResult = {
@@ -15,7 +16,9 @@ export function createMissionState(
   const defenderArmyId = armies.some((army) => army.id === requestedDefenderArmyId)
     ? requestedDefenderArmyId
     : armies[0]?.id;
-  const attackerArmyId = armies.find((army) => army.id !== defenderArmyId)?.id;
+  const attackerArmyId = armies.find((army) =>
+    defenderArmyId && areArmiesEnemies({ armies }, army.id, defenderArmyId)
+  )?.id;
 
   return {
     scenarioId: scenario.id,
@@ -56,7 +59,20 @@ export function applyScenarioEvents(
     ? defenderArmyId
     : undefined;
   const defeatTriggered = defeatedArmyId !== undefined && battleEvents.some(
-    (event) => event.type === "ArmyEliminated" && event.armyId === defeatedArmyId,
+    (event) => event.type === "ArmyEliminated" && (
+      battle
+        ? areArmiesAllied(battle, event.armyId, defeatedArmyId) && (() => {
+            const defenderTeam = battle.armies.filter((army) =>
+              areArmiesAllied(battle, army.id, defeatedArmyId)
+            );
+            return defenderTeam.length === 1
+              ? event.armyId === defeatedArmyId
+              : defenderTeam.every((army) =>
+                  army.units.every((unit) => unit.status === "Destroyed")
+                );
+          })()
+        : event.armyId === defeatedArmyId
+    ),
   );
 
   if (defeatTriggered) {
@@ -150,10 +166,10 @@ export function applyScenarioEvents(
         unit.position.y === defensePoint.position.y,
       );
     const defenderPresent = unitsOnPoint.some(
-      (unit) => unit.armyId === defenderArmyId,
+      (unit) => defenderArmyId && areArmiesAllied(battle!, unit.armyId, defenderArmyId),
     );
     const enemyPresent = unitsOnPoint.some(
-      (unit) => unit.armyId !== defenderArmyId,
+      (unit) => !defenderArmyId || areArmiesEnemies(battle!, unit.armyId, defenderArmyId),
     );
 
     if (!defenderPresent || enemyPresent) {
@@ -239,12 +255,18 @@ function applyTerritoryRound(
     (left, right) =>
       (territoryScores[right.id] ?? 0) - (territoryScores[left.id] ?? 0),
   );
-  const leader = rankedArmies[0];
-  const runnerUp = rankedArmies[1];
+  const teamScores = new Map<string | number, number>();
+  for (const army of battle?.armies ?? []) {
+    const teamId = getArmyTeamId(army);
+    teamScores.set(teamId, (teamScores.get(teamId) ?? 0) + (territoryScores[army.id] ?? 0));
+  }
+  const rankedTeams = [...teamScores.entries()].sort((left, right) => right[1] - left[1]);
+  const leader = rankedTeams[0];
+  const runnerUp = rankedTeams[1];
   const tied =
     leader &&
     runnerUp &&
-    (territoryScores[leader.id] ?? 0) === (territoryScores[runnerUp.id] ?? 0);
+    leader[1] === runnerUp[1];
 
   if (roundsCompleted < requiredRounds || tied || !leader) {
     return {
@@ -266,7 +288,13 @@ function applyTerritoryRound(
     };
   }
 
-  const status = leader.id === defenderArmyId ? "Victory" : "Defeat";
+  const leadingArmy = (battle?.armies ?? []).find(
+    (army) => getArmyTeamId(army) === leader[0],
+  );
+  const status = leadingArmy && defenderArmyId &&
+      areArmiesAllied(battle!, leadingArmy.id, defenderArmyId)
+    ? "Victory"
+    : "Defeat";
   return {
     mission: {
       ...mission,
@@ -278,7 +306,7 @@ function applyTerritoryRound(
     events: [{
       type: "MissionCompleted",
       status,
-      message: `${leader.faction} wygrywa kontrolę terytorium wynikiem ${territoryScores[leader.id] ?? 0} pkt.`,
+      message: `Drużyna ${String(leader[0])} wygrywa kontrolę terytorium wynikiem ${leader[1]} pkt.`,
     }],
   };
 }

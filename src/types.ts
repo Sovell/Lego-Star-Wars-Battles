@@ -43,6 +43,10 @@ export type UnitTemplate = {
 
 export type UnitStatus = "Ready" | "Activated" | "Destroyed" | "Pinned";
 
+export type TeamId = 1 | 2;
+
+export type ArmyControl = "Human" | "Bot";
+
 export type UnitInstance = {
   id: string;
   templateId: string;
@@ -65,6 +69,8 @@ export type Army = {
   id: string;
   playerName: string;
   faction: FactionId;
+  teamId?: TeamId;
+  control?: ArmyControl;
   taskForces?: ArmyTaskForceSelection[];
   units: UnitInstance[];
 };

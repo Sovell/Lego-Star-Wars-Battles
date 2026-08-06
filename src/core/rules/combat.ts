@@ -1,4 +1,5 @@
 import type { AttackResult, Battle, UnitInstance } from "../../types";
+import { areArmiesAllied } from "../army-relations";
 import { validateUnitActivation } from "./activation";
 import { getAttackDiceBonus, getDamageBonus, getNumericAbilityEffect } from "./abilities";
 import { distance, lineOfSight } from "./geometry";
@@ -30,8 +31,8 @@ export function resolveAttack(
     return { battle, log: "Wybierz atakujacego i cel." };
   }
 
-  if (attacker.armyId === defender.armyId) {
-    return { battle, log: "Cel musi nalezec do przeciwnej armii." };
+  if (areArmiesAllied(battle, attacker.armyId, defender.armyId)) {
+    return { battle, log: "Cel musi nalezec do przeciwnej druzyny." };
   }
 
   if (defender.status === "Destroyed") {

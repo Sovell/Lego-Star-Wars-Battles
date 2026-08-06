@@ -12,6 +12,7 @@ export function resolveBoardRendererMode(
 }
 
 export type BoardRendererProps = {
+  deploymentZoneCells?: ReadonlySet<string>;
   interactionDisabled: boolean;
   interactionModel: BoardInteractionModel;
   selectedUnitId: string;

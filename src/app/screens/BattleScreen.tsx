@@ -14,11 +14,21 @@ import {
 } from "../battle/BattleNotifications";
 import { BattleShell } from "../battle/BattleShell";
 import { SetupToolRail, type SetupToolMode } from "../battle/SetupToolRail";
-import { createInitialBattleSnapshot } from "../scenario-draft";
+import {
+  alignDeploymentZones,
+  createInitialBattleSnapshot,
+  toggleDeploymentZoneCell,
+} from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
 import { chooseAttackerBotAction } from "../../core/ai/attacker-bot";
+import { runBotActivation } from "../../core/ai/bot-controller";
+import { chooseDefenderBotAction } from "../../core/ai/defender-bot";
+import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
 import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
 import type { BattleAction } from "../../core/battle-actions";
+import { getLegalAbilityActions } from "../../core/legal-actions/get-legal-ability-actions";
+import { getLegalAttackActions } from "../../core/legal-actions/get-legal-attack-actions";
+import { getLegalOrderActions } from "../../core/legal-actions/get-legal-order-actions";
 import {
   battlefieldObjectPresets,
 } from "../../core/battlefield-objects";
@@ -66,7 +76,6 @@ const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
 export function BattleScreen({
   activeArmyId,
   armyJson,
-  attackerBotEnabled,
   battle,
   initialBattle,
   gamePhase,
@@ -83,7 +92,7 @@ export function BattleScreen({
   onActiveArmyChange,
   onAddLog,
   onArmyJsonChange,
-  onAttackerBotEnabledChange,
+  onArmyConfigChange,
   onBattleChange,
   onInitialBattleChange,
   onGamePhaseChange,
@@ -91,6 +100,7 @@ export function BattleScreen({
   onLoadArmies,
   onLogsChange,
   onBattlefieldObjectPlace,
+  onDeploymentZonesChange,
   onDefenderArmyChange,
   onMissionChange,
   onMissionRestart,
@@ -105,7 +115,6 @@ export function BattleScreen({
 }: {
   activeArmyId?: string;
   armyJson: string;
-  attackerBotEnabled: boolean;
   battle: Battle;
   initialBattle?: Battle;
   gamePhase: GamePhase;
@@ -122,7 +131,10 @@ export function BattleScreen({
   onActiveArmyChange: (armyId: string | undefined) => void;
   onAddLog: (message: string) => void;
   onArmyJsonChange: (json: string) => void;
-  onAttackerBotEnabledChange: (enabled: boolean) => void;
+  onArmyConfigChange: (
+    armyId: string,
+    patch: Partial<Pick<Army, "teamId" | "control">>,
+  ) => void;
   onBattleChange: (battle: Battle) => void;
   onInitialBattleChange: (battle: Battle) => void;
   onGamePhaseChange: (phase: GamePhase) => void;
@@ -133,6 +145,7 @@ export function BattleScreen({
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
   ) => void;
+  onDeploymentZonesChange: (zones: ScenarioDefinition["deploymentZones"]) => void;
   onDefenderArmyChange: (armyId: string) => void;
   onMissionChange: (mission: MissionState) => void;
   onMissionRestart: () => void;
@@ -158,6 +171,9 @@ export function BattleScreen({
   const [battlefieldVisualEvent, setBattlefieldVisualEvent] = useState<BattlefieldVisualEvent>();
   const battlefieldVisualEventId = useRef(0);
   const [mapMode, setMapMode] = useState<SetupToolMode>("units");
+  const [selectedDeploymentArmyId, setSelectedDeploymentArmyId] = useState(
+    battle.armies[0]?.id ?? "",
+  );
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>("LightCover");
   const [selectedObjectType, setSelectedObjectType] = useState<
     BattlefieldObjectType | "Remove"
@@ -168,6 +184,18 @@ export function BattleScreen({
   const selectedArmy = selectedUnit
     ? battle.armies.find((army) => army.id === selectedUnit.armyId)
     : undefined;
+  const legalOrderActions = useMemo(
+    () => selectedUnit ? getLegalOrderActions(battle, selectedUnit.id) : [],
+    [battle, selectedUnit],
+  );
+  const selectedLegalOrderAction = legalOrderActions.find(
+    (action) => action.order === selectedOrder,
+  );
+  const orderRequiresImmediateAction =
+    selectedOrder === "Rally" ||
+    selectedOrder === "Overwatch" ||
+    (selectedOrder === "Advance" &&
+      Boolean(selectedUnit?.activeEffects?.includes("advance_pending")));
   const selectedTerrainPreset =
     terrainPresets.find((terrain) => terrain.terrainType === selectedTerrain) ?? terrainPresets[0];
   const availableWeapons = selectedTemplate?.weapons ?? [];
@@ -176,23 +204,73 @@ export function BattleScreen({
     : [];
   const selectedAbility = activeAbilities.find((ability) => ability.id === selectedAbilityId)
     ?? activeAbilities[0];
+  const legalAbilityActions = useMemo(
+    () => selectedUnit && selectedAbility
+      ? getLegalAbilityActions(battle, selectedUnit.id, selectedAbility.id)
+      : [],
+    [battle, selectedAbility, selectedUnit],
+  );
+  const legalAbilityTargetIds = new Set(
+    legalAbilityActions.flatMap((action) =>
+      action.targetUnitId ? [action.targetUnitId] : []
+    ),
+  );
+  const availableAbilityTargets = allUnits.filter((unit) =>
+    legalAbilityTargetIds.has(unit.id)
+  );
+  const abilityNeedsPosition = legalAbilityActions.some((action) => action.targetPosition);
+  const selectedLegalAbilityAction = legalAbilityActions.find((action) =>
+    (action.targetUnitId ?? "") === abilityTargetUnitId &&
+    positionsEqual(action.targetPosition, abilityTargetPosition)
+  );
   const activeWeaponId = availableWeapons.some((weapon) => weapon.id === selectedWeaponId)
     ? selectedWeaponId
     : availableWeapons[0]?.id || "";
+  const legalAttackActions = useMemo(
+    () => selectedUnit
+      ? getLegalAttackActions(battle, selectedUnit.id)
+        .filter((action) => action.weaponId === activeWeaponId)
+      : [],
+    [activeWeaponId, battle, selectedUnit],
+  );
+  const legalTargetIds = new Set(
+    legalAttackActions.map((action) =>
+      action.type === "Attack" ? action.defenderId : `object:${action.objectId}`
+    ),
+  );
   const availableTargets = allUnits.filter(
-    (unit) => unit.armyId !== selectedUnit?.armyId && unit.status !== "Destroyed",
+    (unit) => legalTargetIds.has(unit.id),
   );
   const availableObjectTargets = (battle.board.objects ?? []).filter(
-    (object) => object.destructible && object.status === "Active",
+    (object) => legalTargetIds.has(`object:${object.id}`),
   );
+  const targetIsLegal = legalTargetIds.has(targetUnitId);
   const remainingActivations = getRemainingActivationCount(battle);
   const livingUnits = allUnits.filter((unit) => unit.status !== "Destroyed").length;
   const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active" && gamePhase === "Playing";
   const preparationActive = gamePhase === "Preparation";
+  const selectedDeploymentArmySlot = battle.armies.findIndex(
+    (army) => army.id === selectedDeploymentArmyId,
+  );
+  const selectedDeploymentZone = scenario.deploymentZones.find(
+    (zone) => zone.armySlot === selectedDeploymentArmySlot,
+  );
   const canStartScenario =
     battle.armies.length >= 2 &&
+    battle.armies.length <= 4 &&
+    battle.armies.every((_, armySlot) =>
+      Boolean(scenario.deploymentZones.find(
+        (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
+      ))
+    ) &&
     battle.armies.every((army) => army.units.length > 0);
+
+  useEffect(() => {
+    if (!battle.armies.some((army) => army.id === selectedDeploymentArmyId)) {
+      setSelectedDeploymentArmyId(battle.armies[0]?.id ?? "");
+    }
+  }, [battle.armies, selectedDeploymentArmyId]);
 
   useEffect(() => {
     if (notifications.length === 0) {
@@ -284,6 +362,17 @@ export function BattleScreen({
       return;
     }
 
+    if (mapMode === "deployment") {
+      if (!preparationActive || selectedDeploymentArmySlot < 0) return;
+      onDeploymentZonesChange(toggleDeploymentZoneCell(
+        scenario.deploymentZones,
+        battle.armies.length,
+        selectedDeploymentArmySlot,
+        { x, y },
+      ));
+      return;
+    }
+
     if (mapMode === "terrain") {
       if (!preparationActive) return;
       onTerrainPaint({ ...selectedTerrainPreset, x, y });
@@ -361,62 +450,43 @@ export function BattleScreen({
     );
     drawResult.missionEvents.forEach((event) => onAddLog(event.message));
 
-    if (
-      attackerBotEnabled &&
-      mission.attackerArmyId &&
-      drawResult.battle.activeActivation?.armyId === mission.attackerArmyId
-    ) {
-      const maxBotSteps = 8;
-      let botReportedFailure = false;
-      for (
-        let botStep = 0;
-        botStep < maxBotSteps &&
-        finalBattle.activeActivation?.armyId === mission.attackerArmyId;
-        botStep += 1
-      ) {
-        const decision = chooseAttackerBotAction(
-          finalBattle,
-          scenario,
-          mission.attackerArmyId,
-          finalMission,
+    const botArmy = finalBattle.armies.find(
+      (army) => army.id === finalBattle.activeActivation?.armyId,
+    );
+    if (botArmy && getArmyControl(botArmy) === "Bot") {
+      const usesDefenderStrategy = mission.defenderArmyId
+        ? areArmiesAllied(finalBattle, botArmy.id, mission.defenderArmyId)
+        : false;
+      const botActivation = runBotActivation({
+        session: { battle: finalBattle, mission: finalMission },
+        scenario,
+        armyId: botArmy.id,
+        chooseAction: usesDefenderStrategy
+          ? chooseDefenderBotAction
+          : chooseAttackerBotAction,
+      });
+      const botLabel = `Bot ${botArmy.playerName}`;
+
+      botActivation.steps.forEach(({ decision, battleBeforeAction, result }) => {
+        onAddLog(`${botLabel}: ${decision.reason}`);
+        showCombatNotification(result, battleBeforeAction);
+        showBattlefieldVisualEvent(result, battleBeforeAction);
+        onAddLog(result.log);
+        result.missionEvents.forEach((event) => onAddLog(event.message));
+      });
+
+      if (botActivation.stopReason === "no-legal-action") {
+        onAddLog(`${botLabel} nie znalazł legalnej akcji. Token pozostaje aktywny.`);
+      } else if (botActivation.stopReason === "action-rejected") {
+        onAddLog(
+          `${botLabel} nie wykonał akcji. Aktywacja została zatrzymana, aby uniknąć pętli.`,
         );
-
-        if (!decision) {
-          onAddLog("Bot atakujacy nie znalazl legalnej akcji. Token pozostaje aktywny.");
-          botReportedFailure = true;
-          break;
-        }
-
-        onAddLog(`Bot atakujacy: ${decision.reason}`);
-        const botBattleBeforeAction = finalBattle;
-        const botResult = applyMissionAction(
-          { battle: finalBattle, mission: finalMission },
-          scenario,
-          decision.action,
-        );
-        showCombatNotification(botResult, botBattleBeforeAction);
-        showBattlefieldVisualEvent(botResult, botBattleBeforeAction);
-        const botMadeProgress = botResult.battle !== finalBattle;
-        finalBattle = botResult.battle;
-        finalMission = botResult.mission;
-        onAddLog(botResult.log);
-        botResult.missionEvents.forEach((event) => onAddLog(event.message));
-
-        if (!botMadeProgress) {
-          onAddLog(
-            "Bot atakujący nie wykonał akcji. Aktywacja została zatrzymana, aby uniknąć pętli.",
-          );
-          botReportedFailure = true;
-          break;
-        }
+      } else if (botActivation.stopReason === "step-limit") {
+        onAddLog(`${botLabel} nie zakończył aktywacji w limicie bezpieczeństwa.`);
       }
 
-      if (
-        !botReportedFailure &&
-        finalBattle.activeActivation?.armyId === mission.attackerArmyId
-      ) {
-        onAddLog("Bot atakujący nie zakończył aktywacji w limicie bezpieczeństwa.");
-      }
+      finalBattle = botActivation.battle;
+      finalMission = botActivation.mission;
     }
 
     onBattleChange(finalBattle);
@@ -446,26 +516,23 @@ export function BattleScreen({
       return;
     }
 
-    const result = executeMissionAction({
-      type: "ApplyOrder",
-      unitId: selectedUnitId,
-      order: selectedOrder,
-    });
+    if (!selectedLegalOrderAction) {
+      onAddLog("Ten rozkaz nie jest legalny dla wybranej jednostki.");
+      setIntelTab("logs");
+      setDrawerOpen(true);
+      return;
+    }
+    const result = executeMissionAction(selectedLegalOrderAction);
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
   }
 
   function handleUseAbility() {
-    if (!selectedUnit || !selectedAbility) {
+    if (!selectedUnit || !selectedAbility || !selectedLegalAbilityAction) {
+      onAddLog("Wybierz legalny cel zdolności.");
       return;
     }
-    const result = executeMissionAction({
-      type: "UseAbility",
-      unitId: selectedUnit.id,
-      abilityId: selectedAbility.id,
-      ...(abilityTargetUnitId ? { targetUnitId: abilityTargetUnitId } : {}),
-      ...(abilityTargetPosition ? { targetPosition: abilityTargetPosition } : {}),
-    });
+    const result = executeMissionAction(selectedLegalAbilityAction);
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
     setAbilityTargetPosition(undefined);
@@ -473,22 +540,16 @@ export function BattleScreen({
   }
 
   function handleAttack() {
-    const objectId = targetUnitId.startsWith("object:")
-      ? targetUnitId.slice("object:".length)
-      : undefined;
-    const result = executeMissionAction(objectId
-      ? {
-          type: "AttackObject",
-          attackerId: selectedUnitId,
-          objectId,
-          weaponId: activeWeaponId,
-        }
-      : {
-          type: "Attack",
-          attackerId: selectedUnitId,
-          defenderId: targetUnitId,
-          weaponId: activeWeaponId,
-        });
+    const legalAttack = legalAttackActions.find((action) =>
+      action.type === "Attack"
+        ? action.defenderId === targetUnitId
+        : `object:${action.objectId}` === targetUnitId
+    );
+    if (!legalAttack) {
+      onAddLog("Wybrany cel nie jest legalny dla tej jednostki i broni.");
+      return;
+    }
+    const result = executeMissionAction(legalAttack);
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
 
@@ -531,8 +592,8 @@ export function BattleScreen({
     try {
       setPendingAdvance(null);
       const parsed = JSON.parse(armyJson) as Army[];
-      if (!Array.isArray(parsed) || parsed.length < 2) {
-        throw new Error("JSON musi zawierac tablice co najmniej dwoch armii.");
+      if (!Array.isArray(parsed) || parsed.length < 2 || parsed.length > 4) {
+        throw new Error("JSON musi zawierać od dwóch do czterech armii.");
       }
 
       onLoadArmies(parsed, "Wczytano armie i przebudowano worek aktywacji.");
@@ -572,6 +633,10 @@ export function BattleScreen({
     const missionWithRoles = {
       ...createMissionState(scenario, loadedBattle.armies, loadedMission?.defenderArmyId),
       ...loadedMission,
+      deploymentZones: alignDeploymentZones(
+        loadedMission?.deploymentZones ?? scenario.deploymentZones,
+        loadedBattle.armies.length,
+      ),
     };
     onBattleChange(structuredClone(loadedBattle));
     onInitialBattleChange(
@@ -628,7 +693,7 @@ export function BattleScreen({
                 </span>
               </div>
             </>
-          ) : (
+          ) : mapMode === "objects" ? (
             <>
               <select
                 value={selectedObjectType}
@@ -651,6 +716,40 @@ export function BattleScreen({
                 <span>Osłony dodają obronę jednostkom na tym samym polu.</span>
               </div>
             </>
+          ) : (
+            <>
+              <select
+                value={selectedDeploymentArmyId}
+                onChange={(event) => setSelectedDeploymentArmyId(event.target.value)}
+              >
+                {battle.armies.map((army, armySlot) => (
+                  <option key={army.id} value={army.id}>
+                    Armia {String.fromCharCode(65 + armySlot)} · {army.playerName}
+                  </option>
+                ))}
+              </select>
+              <div className="mapReadout deploymentZoneReadout">
+                <strong>Strefa wejścia</strong>
+                <span>
+                  Zaznaczone pola: {selectedDeploymentZone?.cells.length ?? 0}
+                </span>
+                <span>Kliknij pole, aby je dodać lub usunąć.</span>
+                <span>Jedno pole może należeć tylko do jednej armii.</span>
+              </div>
+              <button
+                className="secondaryButton"
+                disabled={!selectedDeploymentZone?.cells.length}
+                onClick={() => onDeploymentZonesChange(
+                  scenario.deploymentZones.map((zone) =>
+                    zone.armySlot === selectedDeploymentArmySlot
+                      ? { ...zone, cells: [] }
+                      : zone
+                  ),
+                )}
+              >
+                Wyczyść strefę
+              </button>
+            </>
           )}
         </SetupToolRail>
       ) : undefined}
@@ -658,14 +757,13 @@ export function BattleScreen({
         <BattleInspector phase={gamePhase}>
           <MissionPanel
             armies={battle.armies}
-            attackerBotEnabled={attackerBotEnabled}
             canStart={canStartScenario}
             gamePhase={gamePhase}
             mission={mission}
             scenario={scenario}
             scenarios={scenarioOptions}
             onScenarioChange={onScenarioChange}
-            onAttackerBotEnabledChange={onAttackerBotEnabledChange}
+            onArmyConfigChange={onArmyConfigChange}
             onDefenderArmyChange={onDefenderArmyChange}
             onRoundTargetChange={(rounds) =>
               onMissionChange({
@@ -781,7 +879,11 @@ export function BattleScreen({
             </label>
             <button
               className="secondaryButton"
-              disabled={!selectedUnitId || !activeArmyId}
+              disabled={
+                !selectedUnitId ||
+                !activeArmyId ||
+                (orderRequiresImmediateAction && !selectedLegalOrderAction)
+              }
               onClick={handleOrder}
             >
               {!selectedUnit?.position &&
@@ -840,7 +942,7 @@ export function BattleScreen({
             </label>
             <button
               className="dangerButton"
-              disabled={!selectedUnitId || !targetUnitId || !activeArmyId || !activeWeaponId}
+              disabled={!selectedUnitId || !activeArmyId || !activeWeaponId || !targetIsLegal}
               onClick={handleAttack}
             >
               Atakuj
@@ -854,7 +956,9 @@ export function BattleScreen({
                     value={selectedAbility?.id ?? ""}
                     onChange={(event) => {
                       setSelectedAbilityId(event.target.value);
+                      setAbilityTargetUnitId("");
                       setAbilityTargetPosition(undefined);
+                      setSelectingAbilityPosition(false);
                     }}
                   >
                     {activeAbilities.map((ability) => (
@@ -869,12 +973,7 @@ export function BattleScreen({
                     onChange={(event) => setAbilityTargetUnitId(event.target.value)}
                   >
                     <option value="">Brak celu jednostkowego</option>
-                    {allUnits
-                      .filter(
-                        (unit) =>
-                          unit.id !== selectedUnitId && unit.status !== "Destroyed",
-                      )
-                      .map((unit) => (
+                    {availableAbilityTargets.map((unit) => (
                         <option key={unit.id} value={unit.id}>
                           {getTemplate(unit).name}
                         </option>
@@ -882,6 +981,7 @@ export function BattleScreen({
                   </select>
                   <button
                     className="secondaryButton"
+                    disabled={!abilityNeedsPosition}
                     onClick={() => setSelectingAbilityPosition((current) => !current)}
                   >
                     {selectingAbilityPosition
@@ -895,7 +995,7 @@ export function BattleScreen({
                     disabled={
                       !activeArmyId ||
                       !selectedAbility ||
-                      (selectedUnit?.abilityCooldowns?.[selectedAbility.id] ?? 0) > 0
+                      !selectedLegalAbilityAction
                     }
                     onClick={handleUseAbility}
                   >
@@ -924,6 +1024,11 @@ export function BattleScreen({
           abilityTargetPosition={abilityTargetPosition}
           abilityTargetUnitId={abilityTargetUnitId}
           battle={battle}
+          deploymentZoneCells={
+            preparationActive && mapMode === "deployment"
+              ? selectedDeploymentZone?.cells
+              : undefined
+          }
           enableRendererSwitch={debugMode}
           interactionDisabled={gamePhase === "Playing" && !missionActive}
           mission={mission}
@@ -1297,6 +1402,14 @@ function Stat({ label, value }: { label: string; value: number }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function positionsEqual(
+  left?: { x: number; y: number },
+  right?: { x: number; y: number },
+): boolean {
+  if (!left || !right) return left === right;
+  return left.x === right.x && left.y === right.y;
 }
 
 function getVictoryLog(battle: Battle): string {

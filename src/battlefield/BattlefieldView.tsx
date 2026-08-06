@@ -19,6 +19,7 @@ const PixiMapBoard = lazy(async () => {
 
 export function BattlefieldView({
   battle,
+  deploymentZoneCells,
   enableRendererSwitch = false,
   interactionDisabled,
   mission,
@@ -38,6 +39,7 @@ export function BattlefieldView({
   onSelectedUnitChange,
 }: {
   battle: Battle;
+  deploymentZoneCells?: Array<{ x: number; y: number }>;
   enableRendererSwitch?: boolean;
   interactionDisabled: boolean;
   mission: MissionState;
@@ -95,6 +97,9 @@ export function BattlefieldView({
     ],
   );
   const rendererProps: BoardRendererProps = {
+    deploymentZoneCells: new Set(
+      deploymentZoneCells?.map((cell) => `${cell.x},${cell.y}`) ?? [],
+    ),
     interactionDisabled,
     interactionModel,
     selectedUnitId,

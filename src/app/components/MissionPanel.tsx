@@ -1,32 +1,34 @@
 import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
-import type { Army } from "../../types";
+import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
+import type { Army, ArmyControl, TeamId } from "../../types";
 import { PanelTitle } from "./PanelTitle";
 import "./MissionPanel.css";
 
 export function MissionPanel({
   armies,
-  attackerBotEnabled,
   canStart,
   gamePhase,
   mission,
   scenario,
   scenarios,
   onScenarioChange,
-  onAttackerBotEnabledChange,
+  onArmyConfigChange,
   onDefenderArmyChange,
   onRoundTargetChange,
   onRestart,
   onStart,
 }: {
   armies: Army[];
-  attackerBotEnabled: boolean;
   canStart: boolean;
   gamePhase: "Preparation" | "Playing";
   mission: MissionState;
   scenario: ScenarioDefinition;
   scenarios: ScenarioDefinition[];
   onScenarioChange: (scenarioId: string) => void;
-  onAttackerBotEnabledChange: (enabled: boolean) => void;
+  onArmyConfigChange: (
+    armyId: string,
+    patch: Partial<Pick<Army, "teamId" | "control">>,
+  ) => void;
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
   onRestart: () => void;
@@ -35,7 +37,9 @@ export function MissionPanel({
   const requiredRounds = mission.roundTarget ?? scenario.victoryCondition.rounds;
   const defender = armies.find((army) => army.id === mission.defenderArmyId) ?? armies[0];
   const attacker = armies.find((army) => army.id === mission.attackerArmyId)
-    ?? armies.find((army) => army.id !== defender?.id);
+    ?? armies.find((army) =>
+      defender && !areArmiesAllied({ armies }, army.id, defender.id)
+    );
   const statusLabel = mission.status === "Active"
     ? gamePhase === "Preparation" ? "przygotowanie" : "w toku"
     : mission.status === "Victory"
@@ -66,18 +70,14 @@ export function MissionPanel({
           <span>Obrońca: <strong>{defender?.faction ?? "Brak"}</strong></span>
           <span>Atakujący: <strong>{attacker?.faction ?? "Brak"}</strong></span>
         </div>
-        <label className="missionBotToggle">
-          <input
-            checked={attackerBotEnabled}
-            disabled={!attacker || mission.status !== "Active"}
-            type="checkbox"
-            onChange={(event) => onAttackerBotEnabledChange(event.target.checked)}
-          />
-          <span>
-            <strong>Bot armii atakującej</strong>
-            <small>{attackerBotEnabled ? "Aktywny" : "Wyłączony"}</small>
-          </span>
-        </label>
+        <ArmySideConfiguration
+          armies={armies}
+          defenderArmyId={mission.defenderArmyId}
+          deploymentZones={scenario.deploymentZones}
+          teamEditingDisabled
+          controlEditingDisabled={mission.status !== "Active"}
+          onArmyConfigChange={onArmyConfigChange}
+        />
         <button className="secondaryButton" onClick={onRestart}>
           Zakończ i przejdź do kreatora
         </button>
@@ -120,20 +120,14 @@ export function MissionPanel({
           <strong>{attacker ? `${attacker.faction} — ${attacker.playerName}` : "Brak"}</strong>
         </div>
       </div>
-      <label className="missionBotToggle">
-        <input
-          checked={attackerBotEnabled}
-          disabled={mission.status !== "Active" || !attacker}
-          type="checkbox"
-          onChange={(event) => onAttackerBotEnabledChange(event.target.checked)}
-        />
-        <span>
-          <strong>Bot armii atakujacej</strong>
-          <small>
-            Po wylosowaniu jej tokenu bot automatycznie wybierze ruch albo atak.
-          </small>
-        </span>
-      </label>
+      <ArmySideConfiguration
+        armies={armies}
+        defenderArmyId={mission.defenderArmyId}
+        deploymentZones={scenario.deploymentZones}
+        controlEditingDisabled={false}
+        teamEditingDisabled={false}
+        onArmyConfigChange={onArmyConfigChange}
+      />
       <h3>{scenario.name}</h3>
       <p>{scenario.description}</p>
       <label className="missionSelector">
@@ -179,7 +173,7 @@ export function MissionPanel({
           </button>
           {!canStart ? (
             <small className="missionStartHint">
-              Wczytaj co najmniej dwie armie zawierające jednostki.
+              Przygotuj 2–4 armie z jednostkami i zaznacz strefę wejścia dla każdej z nich.
             </small>
           ) : null}
         </>
@@ -189,5 +183,74 @@ export function MissionPanel({
         </button>
       )}
     </section>
+  );
+}
+
+function ArmySideConfiguration({
+  armies,
+  defenderArmyId,
+  deploymentZones,
+  controlEditingDisabled,
+  teamEditingDisabled,
+  onArmyConfigChange,
+}: {
+  armies: Army[];
+  defenderArmyId?: string;
+  deploymentZones: ScenarioDefinition["deploymentZones"];
+  controlEditingDisabled: boolean;
+  teamEditingDisabled: boolean;
+  onArmyConfigChange: (
+    armyId: string,
+    patch: Partial<Pick<Army, "teamId" | "control">>,
+  ) => void;
+}) {
+  return (
+    <div className="missionSideConfig">
+      <h3>Drużyny i sterowanie</h3>
+      {armies.map((army, index) => {
+        const teamId = army.teamId ?? (index === 0 ? 1 : 2);
+        const defenderSide = defenderArmyId
+          ? areArmiesAllied({ armies }, army.id, defenderArmyId)
+          : index === 0;
+
+        return (
+          <div className="missionSideRow" key={army.id}>
+            <div>
+              <strong>{army.playerName}</strong>
+              <small>
+                {army.faction} · {defenderSide ? "obrona" : "atak"} · strefa:{" "}
+                {deploymentZones.find((zone) => zone.armySlot === index)?.cells.length ?? 0} pól
+              </small>
+            </div>
+            <label>
+              Drużyna
+              <select
+                disabled={teamEditingDisabled}
+                value={teamId}
+                onChange={(event) => onArmyConfigChange(army.id, {
+                  teamId: Number(event.target.value) as TeamId,
+                })}
+              >
+                <option value={1}>Team 1</option>
+                <option value={2}>Team 2</option>
+              </select>
+            </label>
+            <label>
+              Sterowanie
+              <select
+                disabled={controlEditingDisabled}
+                value={getArmyControl(army)}
+                onChange={(event) => onArmyConfigChange(army.id, {
+                  control: event.target.value as ArmyControl,
+                })}
+              >
+                <option value="Human">Gracz</option>
+                <option value="Bot">Bot</option>
+              </select>
+            </label>
+          </div>
+        );
+      })}
+    </div>
   );
 }

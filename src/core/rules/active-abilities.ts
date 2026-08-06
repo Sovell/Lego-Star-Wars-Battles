@@ -1,5 +1,6 @@
 import { abilities, taskForces } from "../../data";
 import type { AbilityDefinition, Battle, UnitInstance } from "../../types";
+import { areArmiesAllied } from "../army-relations";
 import type { DiceRoller } from "../random";
 import { createBattlefieldObject } from "../battlefield-objects";
 import { distance, isOnBoard, type GridPosition } from "./geometry";
@@ -378,7 +379,7 @@ function getValidTarget(
     !source.position ||
     !target?.position ||
     target.status === "Destroyed" ||
-    (allegiance === "friendly") !== (target.armyId === source.armyId) ||
+    (allegiance === "friendly") !== areArmiesAllied(battle, target.armyId, source.armyId) ||
     distance(source.position, target.position) > (ability.range ?? 1)
   ) {
     return undefined;
