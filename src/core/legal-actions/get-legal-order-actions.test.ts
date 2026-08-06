@@ -38,6 +38,19 @@ describe("getLegalOrderActions", () => {
     ]);
   });
 
+  it("offers only Rally to a pinned unit", () => {
+    const battle = createReadyBattle();
+    const source = battle.armies[0].units[0];
+    source.status = "Pinned";
+    source.suppression = 3;
+
+    expect(getLegalOrderActions(battle, source.id)).toEqual([{
+      type: "ApplyOrder",
+      unitId: source.id,
+      order: "Rally",
+    }]);
+  });
+
   it("allows only finishing an Advance while it is pending", () => {
     const battle = createReadyBattle();
     const source = battle.armies[0].units[0];

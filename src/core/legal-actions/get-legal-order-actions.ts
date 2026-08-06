@@ -18,7 +18,9 @@ export function getLegalOrderActions(
   const unit = findUnit(battle, unitId);
   if (!unit) return [];
 
-  const candidates: LegalOrderAction[] = unit.activeEffects?.includes("advance_pending")
+  const candidates: LegalOrderAction[] = unit.status === "Pinned"
+    ? [{ type: "ApplyOrder", unitId, order: "Rally" }]
+    : unit.activeEffects?.includes("advance_pending")
     ? [{ type: "ApplyOrder", unitId, order: "Advance" }]
     : [
         ...(unit.suppression > 0

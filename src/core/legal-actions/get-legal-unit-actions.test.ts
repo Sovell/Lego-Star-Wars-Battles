@@ -85,4 +85,21 @@ describe("getLegalUnitActions", () => {
       blockedUnit.id,
     )).toEqual([]);
   });
+
+  it("returns only Rally for a pinned unit", () => {
+    const battle = createReadyBattle();
+    const source = battle.armies[0].units[0];
+    source.status = "Pinned";
+    source.suppression = 3;
+
+    expect(getLegalUnitActions(
+      battle,
+      survivalTestScenario,
+      source.id,
+    )).toEqual([{
+      type: "ApplyOrder",
+      unitId: source.id,
+      order: "Rally",
+    }]);
+  });
 });

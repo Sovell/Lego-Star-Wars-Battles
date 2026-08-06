@@ -36,6 +36,10 @@ export function getLegalUnitActions(
   const unit = findUnit(battle, unitId);
   if (!unit) return [];
 
+  if (unit.status === "Pinned") {
+    return getLegalOrderActions(battle, unitId);
+  }
+
   const positionOrders: PositionOrder[] = unit.position
     ? ["Move", "Advance"]
     : ["Move"];

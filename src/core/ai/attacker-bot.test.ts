@@ -178,6 +178,26 @@ describe("attacker bot", () => {
       chooseAttackerBotAction(battle, survivalTestScenario, attackerArmyId),
     ).toBeUndefined();
   });
+
+  it("cannot continue the assault while pinned", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      status: "Pinned",
+      suppression: 3,
+    });
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      survivalTestScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toEqual({
+      type: "ApplyOrder",
+      unitId: "sep_unit_1",
+      order: "Rally",
+    });
+  });
 });
 
 function readyAttackerBattle(): Battle {
