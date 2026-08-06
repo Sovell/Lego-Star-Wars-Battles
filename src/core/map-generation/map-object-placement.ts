@@ -78,6 +78,7 @@ export function placeMapObjects({
       objects,
       corridorCells,
       minimumSpacing: budget.minimumSpacing,
+      requirePassableTerrain: false,
     });
     if (candidates.length === 0) break;
     const objectType = selectWeightedObject(budget.objectWeights, random);
@@ -96,6 +97,7 @@ function listCandidates({
   objects,
   corridorCells,
   minimumSpacing,
+  requirePassableTerrain = true,
 }: {
   width: number;
   height: number;
@@ -104,6 +106,7 @@ function listCandidates({
   objects: BattlefieldObject[];
   corridorCells?: ReadonlySet<string>;
   minimumSpacing: number;
+  requirePassableTerrain?: boolean;
 }): Position[] {
   const candidates: Position[] = [];
   for (let y = 0; y < height; y += 1) {
@@ -114,7 +117,9 @@ function listCandidates({
       if (
         deploymentCells.has(key) ||
         corridorCells?.has(key) ||
-        (terrain && (terrain.movementCost > 1 || terrain.blocksLineOfSight)) ||
+        (requirePassableTerrain && terrain && (
+          terrain.movementCost > 1 || terrain.blocksLineOfSight
+        )) ||
         objects.some((object) => distance(object.position, position) < minimumSpacing)
       ) {
         continue;

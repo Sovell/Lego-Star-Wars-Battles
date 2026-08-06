@@ -60,13 +60,15 @@ describe("map generator foundation", () => {
     )).toBe(true);
     expect(result.board.tiles.every((tile) => tile.movementCost >= 1)).toBe(true);
     expect(result.recipe).toEqual({
-      generatorVersion: 2,
+      generatorVersion: 3,
       width: 4,
       height: 3,
       seed: 42,
       themeId: "desert-outpost",
       themeVersion: 2,
       terrainDensity: 1,
+      deploymentDepth: 2,
+      armyLayout: [],
     });
   });
 

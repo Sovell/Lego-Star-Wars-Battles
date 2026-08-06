@@ -73,6 +73,43 @@ describe("scenario-aware map generation", () => {
     expect(result.recipe.defenderArmySlot).toBe(1);
   });
 
+  it("uses generated army zones when placing the selected defender objective", () => {
+    const result = generateMap({
+      width: 8,
+      height: 8,
+      seed: 1138,
+      themeId: "desert-outpost",
+      scenario: defendPointScenario,
+      defenderArmySlot: 1,
+      armies: [
+        { id: "attacker", teamId: 2 },
+        { id: "defender", teamId: 1 },
+        { id: "ally", teamId: 1 },
+      ],
+    });
+    const defensePoint = objectsOfType(result.board.objects, "DefensePoint")[0];
+    const defenderZone = result.deploymentZones.find(({ armySlot }) => armySlot === 1)!;
+    const allyZone = result.deploymentZones.find(({ armySlot }) => armySlot === 2)!;
+
+    expect(uniqueXs(defenderZone.cells)).toEqual([0, 1]);
+    expect(uniqueXs(allyZone.cells)).toEqual([0, 1]);
+    expect(distanceToDeploymentZone(defensePoint, defenderZone.cells)).toBe(1);
+    expect(result.recipe.armyLayout).toEqual([
+      { armyId: "attacker", teamId: 2 },
+      { armyId: "defender", teamId: 1 },
+      { armyId: "ally", teamId: 1 },
+    ]);
+    const deploymentKeys = new Set(
+      result.deploymentZones.flatMap((zone) =>
+        zone.cells.map(({ x, y }) => `${x},${y}`)
+      ),
+    );
+    expect(result.board.tiles.every(({ x, y }) => !deploymentKeys.has(`${x},${y}`))).toBe(true);
+    expect(result.board.objects?.every(({ position }) =>
+      !deploymentKeys.has(`${position.x},${position.y}`)
+    )).toBe(true);
+  });
+
   it("rejects a defender slot outside the supported four armies", () => {
     expect(() => generateMap({
       width: 8,
@@ -156,4 +193,8 @@ function pairDistances(objects: BattlefieldObject[]): number[] {
 
 function distance(first: { x: number; y: number }, second: { x: number; y: number }): number {
   return Math.max(Math.abs(first.x - second.x), Math.abs(first.y - second.y));
+}
+
+function uniqueXs(cells: Array<{ x: number; y: number }>): number[] {
+  return [...new Set(cells.map(({ x }) => x))].sort((left, right) => left - right);
 }

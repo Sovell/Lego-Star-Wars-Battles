@@ -8,25 +8,52 @@ import type {
   MapScenarioRequirements,
   MapTerrainWeight,
 } from "./map-generation-types";
+import { createMapArmyLayout, generateDeploymentZones } from "./deployment-zone-generator";
 import { placeMapObjects } from "./map-object-placement";
 import { getMapTheme } from "./map-themes";
 import { getMapScenarioRequirements } from "./scenario-map-requirements";
 
 export function generateMap(config: MapGenerationConfig): GeneratedMap {
-  const requirements = getMapScenarioRequirements(config.scenario, config.defenderArmySlot);
-  const recipe = createRecipe(config, requirements);
+  const scenarioRequirements = getMapScenarioRequirements(
+    config.scenario,
+    config.defenderArmySlot,
+  );
+  const recipe = createRecipe(config, scenarioRequirements);
+  const generatedDeploymentZones = generateDeploymentZones({
+    width: recipe.width,
+    height: recipe.height,
+    armies: config.armies,
+    defenderArmySlot: scenarioRequirements.defenderArmySlot,
+    depth: recipe.deploymentDepth,
+  });
+  const requirements = {
+    ...scenarioRequirements,
+    deploymentZones: normalizeDeploymentZones(
+      generatedDeploymentZones.length > 0
+        ? generatedDeploymentZones
+        : scenarioRequirements.deploymentZones,
+      recipe.width,
+      recipe.height,
+    ),
+  };
   const theme = getMapTheme(recipe.themeId);
   const random = createSeededRandomSource(recipe.seed);
   const corridorCells = createCrossMapCorridors(recipe.width, recipe.height, random);
+  const reservedTerrainCells = new Set([
+    ...corridorCells,
+    ...requirements.deploymentZones.flatMap((zone) =>
+      zone.cells.map(({ x, y }) => `${x},${y}`)
+    ),
+  ]);
   const targetTileCount = Math.min(
     Math.round(recipe.width * recipe.height * recipe.terrainDensity),
-    recipe.width * recipe.height - corridorCells.size,
+    recipe.width * recipe.height - reservedTerrainCells.size,
   );
   const tiles = createTerrainClusters({
     width: recipe.width,
     height: recipe.height,
     targetTileCount,
-    corridorCells,
+    corridorCells: reservedTerrainCells,
     clusterSize: theme.generation.clusterSize,
     terrainWeights: theme.generation.terrainWeights,
     random,
@@ -40,14 +67,19 @@ export function generateMap(config: MapGenerationConfig): GeneratedMap {
     theme,
     random,
   });
+  const objectCells = new Set(
+    objects.map(({ position }) => `${position.x},${position.y}`),
+  );
+  const finalTiles = tiles.filter(({ x, y }) => !objectCells.has(`${x},${y}`));
 
   return {
     board: {
       width: recipe.width,
       height: recipe.height,
-      tiles,
+      tiles: finalTiles,
       objects,
     },
+    deploymentZones: structuredClone(requirements.deploymentZones),
     recipe,
   };
 }
@@ -69,7 +101,7 @@ function createRecipe(
   }
 
   return {
-    generatorVersion: 2,
+    generatorVersion: 3,
     width: config.width,
     height: config.height,
     seed: config.seed,
@@ -80,7 +112,22 @@ function createRecipe(
     ...(requirements.defenderArmySlot !== undefined
       ? { defenderArmySlot: requirements.defenderArmySlot }
       : {}),
+    deploymentDepth: config.deploymentDepth ?? 2,
+    armyLayout: createMapArmyLayout(config.armies),
   };
+}
+
+function normalizeDeploymentZones(
+  zones: MapScenarioRequirements["deploymentZones"],
+  width: number,
+  height: number,
+): MapScenarioRequirements["deploymentZones"] {
+  return zones.map((zone) => ({
+    ...zone,
+    cells: zone.cells.filter(({ x, y }) =>
+      x >= 0 && y >= 0 && x < width && y < height
+    ),
+  }));
 }
 
 function createTerrainClusters({

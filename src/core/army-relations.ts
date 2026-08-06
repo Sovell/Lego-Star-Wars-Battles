@@ -4,7 +4,7 @@ export function getArmyControl(army: Army): ArmyControl {
   return army.control ?? "Human";
 }
 
-export function getArmyTeamId(army: Army): TeamId | string {
+export function getArmyTeamId(army: Pick<Army, "id" | "teamId">): TeamId | string {
   return army.teamId ?? army.id;
 }
 

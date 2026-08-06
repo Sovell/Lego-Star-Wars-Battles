@@ -1,5 +1,5 @@
 import type { ScenarioDefinition } from "../scenario/scenario-types";
-import type { BattlefieldObjectType, Board, TerrainType } from "../../types";
+import type { Army, BattlefieldObjectType, Board, TeamId, TerrainType } from "../../types";
 
 export type MapThemeId = "desert-outpost";
 
@@ -29,6 +29,13 @@ export type MapScenarioRequirements = {
   defenderArmySlot?: number;
   deploymentZones: ScenarioDefinition["deploymentZones"];
   requiredObjects: MapScenarioObjectRequirement[];
+};
+
+export type MapGenerationArmy = Pick<Army, "id" | "teamId">;
+
+export type MapGenerationArmyLayout = {
+  armyId: string;
+  teamId: TeamId | string;
 };
 
 export type MapTheme = {
@@ -69,10 +76,12 @@ export type MapGenerationConfig = {
   terrainDensity?: number;
   scenario?: ScenarioDefinition;
   defenderArmySlot?: number;
+  armies?: MapGenerationArmy[];
+  deploymentDepth?: number;
 };
 
 export type MapGenerationRecipe = {
-  generatorVersion: 2;
+  generatorVersion: 3;
   width: number;
   height: number;
   seed: number;
@@ -81,9 +90,12 @@ export type MapGenerationRecipe = {
   terrainDensity: number;
   scenarioId?: string;
   defenderArmySlot?: number;
+  deploymentDepth: number;
+  armyLayout: MapGenerationArmyLayout[];
 };
 
 export type GeneratedMap = {
   board: Board;
+  deploymentZones: ScenarioDefinition["deploymentZones"];
   recipe: MapGenerationRecipe;
 };
