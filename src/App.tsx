@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { abilities, taskForces, unitTemplates } from "./data";
 import { createNewGameBattle } from "./app/new-game-state";
 import {
@@ -30,6 +30,12 @@ import { createMissionState } from "./core/scenario/scenario-engine";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import type { SavedBattle } from "./core/persistence/save-types";
+import {
+  clearActiveSessionRecovery,
+  loadActiveSessionRecovery,
+  saveActiveSessionRecovery,
+  type RecoverableAppView,
+} from "./app/active-session-recovery";
 import type {
   Army,
   ArmyControl,
@@ -44,7 +50,7 @@ import type {
   UnitTemplate,
 } from "./types";
 
-type AppView = "home" | "setup" | "battle" | "composer" | "rules";
+type AppView = RecoverableAppView;
 type AppTitle = Record<AppView, string>;
 type DraftCounts = Record<string, number>;
 type ComposerArmyDraft = {
@@ -67,27 +73,46 @@ const appTitles: AppTitle = {
 };
 
 export function App() {
-  const [view, setView] = useState<AppView>("home");
-  const [battle, setBattle] = useState<Battle>(() => createNewGameBattle());
-  const [battleStartSnapshot, setBattleStartSnapshot] = useState<Battle>();
+  const [recoveredSession] = useState(() => loadActiveSessionRecovery());
+  const [view, setView] = useState<AppView>(() => recoveredSession?.view ?? "home");
+  const [battle, setBattle] = useState<Battle>(() =>
+    recoveredSession?.battle ?? createNewGameBattle()
+  );
+  const [battleStartSnapshot, setBattleStartSnapshot] = useState<Battle | undefined>(
+    () => recoveredSession?.battleStartSnapshot,
+  );
   const [scenarioDraft, setScenarioDraft] = useState(() =>
-    createScenarioDraft(survivalTestScenario.id),
+    recoveredSession?.scenarioDraft ?? createScenarioDraft(survivalTestScenario.id),
   );
   const [mission, setMission] = useState<MissionState>(() =>
-    createMissionState(survivalTestScenario, []),
+    recoveredSession?.mission ?? createMissionState(survivalTestScenario, []),
   );
-  const [logs, setLogs] = useState<CombatLogEntry[]>([
-    createLog(1, "Nowa rozgrywka jest gotowa do przygotowania."),
-  ]);
-  const [activeArmyId, setActiveArmyId] = useState<string | undefined>();
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [targetUnitId, setTargetUnitId] = useState<string>("");
-  const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
-  const [selectedOrder, setSelectedOrder] = useState<OrderType>("Move");
-  const [armyJson, setArmyJson] = useState<string>("[]");
+  const [logs, setLogs] = useState<CombatLogEntry[]>(() =>
+    recoveredSession?.logs ?? [createLog(1, "Nowa rozgrywka jest gotowa do przygotowania.")]
+  );
+  const [activeArmyId, setActiveArmyId] = useState<string | undefined>(
+    () => recoveredSession?.activeArmyId,
+  );
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(
+    () => recoveredSession?.selectedUnitId ?? "",
+  );
+  const [targetUnitId, setTargetUnitId] = useState<string>(
+    () => recoveredSession?.targetUnitId ?? "",
+  );
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string>(
+    () => recoveredSession?.selectedWeaponId ?? "",
+  );
+  const [selectedOrder, setSelectedOrder] = useState<OrderType>(
+    () => recoveredSession?.selectedOrder ?? "Move",
+  );
+  const [armyJson, setArmyJson] = useState<string>(
+    () => recoveredSession?.armyJson ?? "[]",
+  );
   const [importError, setImportError] = useState<string>("");
-  const [debugMode, setDebugMode] = useState<boolean>(false);
-  const [gamePhase, setGamePhase] = useState<GamePhase>("Preparation");
+  const [debugMode, setDebugMode] = useState<boolean>(() => recoveredSession?.debugMode ?? false);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(
+    () => recoveredSession?.gamePhase ?? "Preparation",
+  );
   const baseScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
   const configuredDeploymentZones = gamePhase === "Preparation"
@@ -104,6 +129,44 @@ export function App() {
     [scenarioDraft],
   );
   const visibleBattle = gamePhase === "Preparation" ? preparationBattle : battle;
+
+  useEffect(() => {
+    if (gamePhase !== "Playing") {
+      clearActiveSessionRecovery();
+      return;
+    }
+    saveActiveSessionRecovery({
+      view,
+      gamePhase,
+      battle,
+      battleStartSnapshot,
+      scenarioDraft,
+      mission,
+      logs,
+      activeArmyId,
+      selectedUnitId,
+      targetUnitId,
+      selectedWeaponId,
+      selectedOrder,
+      armyJson,
+      debugMode,
+    });
+  }, [
+    activeArmyId,
+    armyJson,
+    battle,
+    battleStartSnapshot,
+    debugMode,
+    gamePhase,
+    logs,
+    mission,
+    scenarioDraft,
+    selectedOrder,
+    selectedUnitId,
+    selectedWeaponId,
+    targetUnitId,
+    view,
+  ]);
 
   function addLog(message: string) {
     setLogs((current) => {
