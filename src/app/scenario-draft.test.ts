@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { createBattlefieldObject } from "../core/battlefield-objects";
 import { starterArmies } from "../data";
 import {
+  alignDeploymentZones,
   createInitialBattleSnapshot,
   createScenarioDraft,
   prepareComposerDraft,
+  remapDeploymentZonesByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
+  toggleDeploymentZoneCell,
 } from "./scenario-draft";
 
 describe("scenario draft flow", () => {
@@ -94,5 +97,50 @@ describe("scenario draft flow", () => {
     expect(fromSetup.board).not.toBe(current.board);
     expect(fromMenu.board.objects).toEqual([]);
     expect(fromMenu.scenarioId).toBe("survival_test");
+  });
+
+  it("aligns deployment zones with up to four army slots", () => {
+    const zones = alignDeploymentZones([{
+      id: "first-zone",
+      armySlot: 0,
+      cells: [{ x: 0, y: 0 }],
+    }], 4);
+
+    expect(zones).toHaveLength(4);
+    expect(zones.map((zone) => zone.armySlot)).toEqual([0, 1, 2, 3]);
+    expect(zones[0].cells).toEqual([{ x: 0, y: 0 }]);
+    expect(zones.slice(1).every((zone) => zone.cells.length === 0)).toBe(true);
+  });
+
+  it("moves a deployment cell between army zones and toggles it off", () => {
+    const initial = alignDeploymentZones([{
+      id: "first-zone",
+      armySlot: 0,
+      cells: [{ x: 1, y: 1 }],
+    }], 3);
+
+    const moved = toggleDeploymentZoneCell(initial, 3, 2, { x: 1, y: 1 });
+    expect(moved[0].cells).toEqual([]);
+    expect(moved[2].cells).toEqual([{ x: 1, y: 1 }]);
+
+    const removed = toggleDeploymentZoneCell(moved, 3, 2, { x: 1, y: 1 });
+    expect(removed.every((zone) => zone.cells.length === 0)).toBe(true);
+  });
+
+  it("keeps zones with their armies when a middle army is removed", () => {
+    const remapped = remapDeploymentZonesByArmy(
+      [
+        { id: "zone-a", armySlot: 0, cells: [{ x: 0, y: 0 }] },
+        { id: "zone-b", armySlot: 1, cells: [{ x: 1, y: 1 }] },
+        { id: "zone-c", armySlot: 2, cells: [{ x: 2, y: 2 }] },
+      ],
+      [{ id: "a" }, { id: "b" }, { id: "c" }],
+      [{ id: "a" }, { id: "c" }],
+    );
+
+    expect(remapped).toEqual([
+      { id: "army-slot-0-entry", armySlot: 0, cells: [{ x: 0, y: 0 }] },
+      { id: "army-slot-1-entry", armySlot: 1, cells: [{ x: 2, y: 2 }] },
+    ]);
   });
 });

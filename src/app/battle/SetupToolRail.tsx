@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type SetupToolMode = "units" | "terrain" | "objects";
+export type SetupToolMode = "units" | "terrain" | "objects" | "deployment";
 
 export function SetupToolRail({
   children,
@@ -16,7 +16,13 @@ export function SetupToolRail({
       <div className="setupToolRailHeader">
         <span>Przygotowanie</span>
         <strong>
-          {mode === "units" ? "Jednostki" : mode === "terrain" ? "Teren" : "Obiekty"}
+          {mode === "units"
+            ? "Jednostki"
+            : mode === "terrain"
+              ? "Teren"
+              : mode === "objects"
+                ? "Obiekty"
+                : "Strefy"}
         </strong>
       </div>
       <div className="segmented setupToolModes">
@@ -28,6 +34,9 @@ export function SetupToolRail({
         </button>
         <button className={mode === "objects" ? "active" : ""} onClick={() => onModeChange("objects")}>
           Obiekty
+        </button>
+        <button className={mode === "deployment" ? "active" : ""} onClick={() => onModeChange("deployment")}>
+          Strefy
         </button>
       </div>
       <div className="setupToolRailContent">{children}</div>

@@ -78,7 +78,15 @@ function isAwaitingActivation(unit: Army["units"][number]): boolean {
   return unit.status !== "Activated" && unit.status !== "Destroyed";
 }
 
-export function validateUnitActivation(battle: Battle, unitId: string): string | undefined {
+export type UnitActivationValidationOptions = {
+  allowPinned?: boolean;
+};
+
+export function validateUnitActivation(
+  battle: Battle,
+  unitId: string,
+  options: UnitActivationValidationOptions = {},
+): string | undefined {
   const token = battle.activeActivation;
   if (!token) {
     return "Najpierw wylosuj token aktywacji.";
@@ -109,6 +117,10 @@ export function validateUnitActivation(battle: Battle, unitId: string): string |
 
   if (unit.status === "Destroyed") {
     return "Zniszczona jednostka nie moze otrzymac rozkazu.";
+  }
+
+  if (unit.status === "Pinned" && !options.allowPinned) {
+    return "Przygwożdżona jednostka może wykonać wyłącznie Rally.";
   }
 
   if (unit.status === "Activated") {

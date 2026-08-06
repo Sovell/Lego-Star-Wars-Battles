@@ -7,7 +7,9 @@ export function applyOrder(
   unitId: string,
   order: OrderType,
 ): { battle: Battle; log: string } {
-  const validationError = validateUnitActivation(battle, unitId);
+  const validationError = validateUnitActivation(battle, unitId, {
+    allowPinned: order === "Rally",
+  });
   if (validationError) {
     return { battle, log: validationError };
   }

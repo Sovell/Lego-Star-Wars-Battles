@@ -1,5 +1,6 @@
 import { createBattle } from "../core/battle-state";
 import { getTemplate } from "../core/rules/state";
+import type { DeploymentZone } from "../core/scenario/scenario-types";
 import type { Army, Battle, Board, UnitInstance } from "../types";
 import { createEmptyBoard } from "./new-game-state";
 
@@ -8,6 +9,7 @@ export type ScenarioDraft = {
   board: Board;
   scenarioId: string;
   defenderArmyId?: string;
+  deploymentZones: DeploymentZone[];
   roundTarget?: number;
 };
 
@@ -21,6 +23,7 @@ export function createScenarioDraft(
     scenarioId,
     armies: structuredClone(input.armies ?? []),
     board: structuredClone(input.board ?? createEmptyBoard()),
+    deploymentZones: structuredClone(input.deploymentZones ?? []),
     ...(input.defenderArmyId ? { defenderArmyId: input.defenderArmyId } : {}),
     ...(input.roundTarget ? { roundTarget: input.roundTarget } : {}),
   };
@@ -74,6 +77,7 @@ export function restartDraftFromBattle(
   scenarioId: string,
   defenderArmyId?: string,
   roundTarget?: number,
+  deploymentZones: DeploymentZone[] = [],
 ): ScenarioDraft {
   const resetBattle = createInitialBattleSnapshot(initialBattle);
 
@@ -81,7 +85,66 @@ export function restartDraftFromBattle(
     armies: resetBattle.armies,
     board: resetBattle.board,
     defenderArmyId,
+    deploymentZones,
     roundTarget,
+  });
+}
+
+export function alignDeploymentZones(
+  zones: DeploymentZone[],
+  armyCount: number,
+): DeploymentZone[] {
+  return Array.from({ length: armyCount }, (_, armySlot) => {
+    const existing = zones.find((zone) => zone.armySlot === armySlot);
+    return existing
+      ? structuredClone(existing)
+      : {
+          id: `army-slot-${armySlot}-entry`,
+          armySlot,
+          cells: [],
+        };
+  });
+}
+
+export function toggleDeploymentZoneCell(
+  zones: DeploymentZone[],
+  armyCount: number,
+  selectedArmySlot: number,
+  position: { x: number; y: number },
+): DeploymentZone[] {
+  const aligned = alignDeploymentZones(zones, armyCount);
+  const selectedContainsCell = aligned
+    .find((zone) => zone.armySlot === selectedArmySlot)
+    ?.cells.some((cell) => cell.x === position.x && cell.y === position.y);
+
+  return aligned.map((zone) => {
+    const cellsWithoutPosition = zone.cells.filter(
+      (cell) => cell.x !== position.x || cell.y !== position.y,
+    );
+    return {
+      ...zone,
+      cells: zone.armySlot === selectedArmySlot && !selectedContainsCell
+        ? [...cellsWithoutPosition, position]
+        : cellsWithoutPosition,
+    };
+  });
+}
+
+export function remapDeploymentZonesByArmy(
+  zones: DeploymentZone[],
+  previousArmies: Array<Pick<Army, "id">>,
+  nextArmies: Array<Pick<Army, "id">>,
+): DeploymentZone[] {
+  return nextArmies.map((army, nextArmySlot) => {
+    const previousArmySlot = previousArmies.findIndex(
+      (previousArmy) => previousArmy.id === army.id,
+    );
+    const previousZone = zones.find((zone) => zone.armySlot === previousArmySlot);
+    return {
+      id: `army-slot-${nextArmySlot}-entry`,
+      armySlot: nextArmySlot,
+      cells: structuredClone(previousZone?.cells ?? []),
+    };
   });
 }
 

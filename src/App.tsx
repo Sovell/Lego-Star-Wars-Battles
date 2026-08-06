@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { abilities, taskForces, unitTemplates } from "./data";
 import { createNewGameBattle } from "./app/new-game-state";
 import {
+  alignDeploymentZones,
   createInitialBattleSnapshot,
   createPreparationBattle,
   createScenarioDraft,
   prepareComposerDraft,
+  remapDeploymentZonesByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
 } from "./app/scenario-draft";
@@ -14,6 +16,10 @@ import { RulesView } from "./app/screens/RulesView";
 import { MainMenu } from "./app/screens/MainMenu";
 import { BattleScreen } from "./app/screens/BattleScreen";
 import type { GamePhase } from "./app/types/game-phase";
+import {
+  areArmiesEnemies,
+  withDefaultArmyConfiguration,
+} from "./core/army-relations";
 import {
   createLog,
   getArmyCost,
@@ -24,21 +30,39 @@ import { createMissionState } from "./core/scenario/scenario-engine";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import type { SavedBattle } from "./core/persistence/save-types";
+import {
+  clearActiveSessionRecovery,
+  loadActiveSessionRecovery,
+  saveActiveSessionRecovery,
+  type RecoverableAppView,
+} from "./app/active-session-recovery";
 import type {
   Army,
+  ArmyControl,
   Battle,
   BattlefieldObjectType,
   CombatLogEntry,
   FactionId,
   OrderType,
   TerrainTile,
+  TeamId,
   UnitInstance,
   UnitTemplate,
 } from "./types";
 
-type AppView = "home" | "setup" | "battle" | "composer" | "rules";
+type AppView = RecoverableAppView;
 type AppTitle = Record<AppView, string>;
 type DraftCounts = Record<string, number>;
+type ComposerArmyDraft = {
+  id: string;
+  playerName: string;
+  faction: FactionId;
+  counts: DraftCounts;
+  teamId: TeamId;
+  control: ArmyControl;
+};
+const minimumArmyCount = 2;
+const maximumArmyCount = 4;
 const composerFactions: FactionId[] = ["Republic", "Separatists"];
 const appTitles: AppTitle = {
   home: "Menu główne",
@@ -49,35 +73,100 @@ const appTitles: AppTitle = {
 };
 
 export function App() {
-  const [view, setView] = useState<AppView>("home");
-  const [battle, setBattle] = useState<Battle>(() => createNewGameBattle());
-  const [battleStartSnapshot, setBattleStartSnapshot] = useState<Battle>();
+  const [recoveredSession] = useState(() => loadActiveSessionRecovery());
+  const [view, setView] = useState<AppView>(() => recoveredSession?.view ?? "home");
+  const [battle, setBattle] = useState<Battle>(() =>
+    recoveredSession?.battle ?? createNewGameBattle()
+  );
+  const [battleStartSnapshot, setBattleStartSnapshot] = useState<Battle | undefined>(
+    () => recoveredSession?.battleStartSnapshot,
+  );
   const [scenarioDraft, setScenarioDraft] = useState(() =>
-    createScenarioDraft(survivalTestScenario.id),
+    recoveredSession?.scenarioDraft ?? createScenarioDraft(survivalTestScenario.id),
   );
   const [mission, setMission] = useState<MissionState>(() =>
-    createMissionState(survivalTestScenario, []),
+    recoveredSession?.mission ?? createMissionState(survivalTestScenario, []),
   );
-  const [logs, setLogs] = useState<CombatLogEntry[]>([
-    createLog(1, "Nowa rozgrywka jest gotowa do przygotowania."),
-  ]);
-  const [activeArmyId, setActiveArmyId] = useState<string | undefined>();
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [targetUnitId, setTargetUnitId] = useState<string>("");
-  const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
-  const [selectedOrder, setSelectedOrder] = useState<OrderType>("Move");
-  const [armyJson, setArmyJson] = useState<string>("[]");
+  const [logs, setLogs] = useState<CombatLogEntry[]>(() =>
+    recoveredSession?.logs ?? [createLog(1, "Nowa rozgrywka jest gotowa do przygotowania.")]
+  );
+  const [activeArmyId, setActiveArmyId] = useState<string | undefined>(
+    () => recoveredSession?.activeArmyId,
+  );
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(
+    () => recoveredSession?.selectedUnitId ?? "",
+  );
+  const [targetUnitId, setTargetUnitId] = useState<string>(
+    () => recoveredSession?.targetUnitId ?? "",
+  );
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string>(
+    () => recoveredSession?.selectedWeaponId ?? "",
+  );
+  const [selectedOrder, setSelectedOrder] = useState<OrderType>(
+    () => recoveredSession?.selectedOrder ?? "Move",
+  );
+  const [armyJson, setArmyJson] = useState<string>(
+    () => recoveredSession?.armyJson ?? "[]",
+  );
   const [importError, setImportError] = useState<string>("");
-  const [debugMode, setDebugMode] = useState<boolean>(false);
-  const [attackerBotEnabled, setAttackerBotEnabled] = useState<boolean>(true);
-  const [gamePhase, setGamePhase] = useState<GamePhase>("Preparation");
-  const activeScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
+  const [debugMode, setDebugMode] = useState<boolean>(() => recoveredSession?.debugMode ?? false);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(
+    () => recoveredSession?.gamePhase ?? "Preparation",
+  );
+  const baseScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
+  const configuredDeploymentZones = gamePhase === "Preparation"
+    ? scenarioDraft.deploymentZones
+    : mission.deploymentZones;
+  const activeScenario: ScenarioDefinition = {
+    ...baseScenario,
+    deploymentZones: configuredDeploymentZones?.length
+      ? configuredDeploymentZones
+      : baseScenario.deploymentZones,
+  };
   const preparationBattle = useMemo(
     () => createPreparationBattle(scenarioDraft),
     [scenarioDraft],
   );
   const visibleBattle = gamePhase === "Preparation" ? preparationBattle : battle;
+
+  useEffect(() => {
+    if (gamePhase !== "Playing") {
+      clearActiveSessionRecovery();
+      return;
+    }
+    saveActiveSessionRecovery({
+      view,
+      gamePhase,
+      battle,
+      battleStartSnapshot,
+      scenarioDraft,
+      mission,
+      logs,
+      activeArmyId,
+      selectedUnitId,
+      targetUnitId,
+      selectedWeaponId,
+      selectedOrder,
+      armyJson,
+      debugMode,
+    });
+  }, [
+    activeArmyId,
+    armyJson,
+    battle,
+    battleStartSnapshot,
+    debugMode,
+    gamePhase,
+    logs,
+    mission,
+    scenarioDraft,
+    selectedOrder,
+    selectedUnitId,
+    selectedWeaponId,
+    targetUnitId,
+    view,
+  ]);
 
   function addLog(message: string) {
     setLogs((current) => {
@@ -96,12 +185,26 @@ export function App() {
     scenario: ScenarioDefinition = activeScenario,
     defenderArmyId?: string,
   ) {
-    const nextArmies = structuredClone(armies);
+    const nextArmies = withDefaultArmyConfiguration(
+      structuredClone(armies),
+      defenderArmyId,
+    );
     const roundTarget = scenario.id === scenarioDraft.scenarioId
       ? scenarioDraft.roundTarget
       : undefined;
+    const keepsCurrentScenario = scenario.id === scenarioDraft.scenarioId;
+    const deploymentZones = keepsCurrentScenario && scenarioDraft.armies.length > 0
+      ? remapDeploymentZonesByArmy(
+          scenarioDraft.deploymentZones.length
+            ? scenarioDraft.deploymentZones
+            : scenario.deploymentZones,
+          scenarioDraft.armies,
+          nextArmies,
+        )
+      : alignDeploymentZones(scenario.deploymentZones, nextArmies.length);
     const nextMission = {
       ...createMissionState(scenario, nextArmies, defenderArmyId),
+      deploymentZones,
       ...(roundTarget ? { roundTarget } : {}),
     };
     const nextDraft = {
@@ -109,6 +212,7 @@ export function App() {
       armies: nextArmies,
       scenarioId: scenario.id,
       defenderArmyId: nextMission.defenderArmyId,
+      deploymentZones,
       roundTarget,
     };
     setScenarioDraft(nextDraft);
@@ -116,7 +220,7 @@ export function App() {
     setActiveArmyId(undefined);
     setSelectedUnitId("");
     setTargetUnitId("");
-    setArmyJson(JSON.stringify(armies, null, 2));
+    setArmyJson(JSON.stringify(nextArmies, null, 2));
     setImportError("");
     setLogs([createLog(1, logMessage)]);
     setGamePhase("Preparation");
@@ -156,7 +260,9 @@ export function App() {
 
   function handleDefenderArmyChange(defenderArmyId: string) {
     const defender = scenarioDraft.armies.find((army) => army.id === defenderArmyId);
-    const attacker = scenarioDraft.armies.find((army) => army.id !== defenderArmyId);
+    const attacker = scenarioDraft.armies.find((army) =>
+      areArmiesEnemies({ armies: scenarioDraft.armies }, army.id, defenderArmyId)
+    );
     if (!defender || !attacker) {
       return;
     }
@@ -201,6 +307,37 @@ export function App() {
         ...army,
         units: army.units.map((unit) => (unit.id === unitId ? { ...unit, ...patch } : unit)),
       })),
+    }));
+  }
+
+  function handleArmyConfigChange(
+    armyId: string,
+    patch: Partial<Pick<Army, "teamId" | "control">>,
+  ) {
+    const updateArmies = (armies: Army[]) => armies.map((army) =>
+      army.id === armyId ? { ...army, ...patch } : army
+    );
+
+    if (gamePhase === "Preparation") {
+      setScenarioDraft((current) => ({
+        ...current,
+        armies: updateArmies(current.armies),
+      }));
+      setMission((current) => {
+        const nextArmies = updateArmies(scenarioDraft.armies);
+        const attackerArmyId = current.defenderArmyId
+          ? nextArmies.find((army) =>
+              areArmiesEnemies({ armies: nextArmies }, army.id, current.defenderArmyId!)
+            )?.id
+          : undefined;
+        return { ...current, attackerArmyId };
+      });
+      return;
+    }
+
+    setBattle((current) => ({
+      ...current,
+      armies: updateArmies(current.armies),
     }));
   }
 
@@ -255,6 +392,11 @@ export function App() {
   function handleStartScenario() {
     if (
       scenarioDraft.armies.length < 2 ||
+      scenarioDraft.armies.length > maximumArmyCount ||
+      alignDeploymentZones(
+        scenarioDraft.deploymentZones,
+        scenarioDraft.armies.length,
+      ).some((zone) => zone.cells.length === 0) ||
       scenarioDraft.armies.some((army) => army.units.length === 0)
     ) {
       return;
@@ -267,6 +409,7 @@ export function App() {
         nextBattle.armies,
         scenarioDraft.defenderArmyId,
       ),
+      deploymentZones: structuredClone(activeScenario.deploymentZones),
       ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
     };
 
@@ -283,29 +426,49 @@ export function App() {
   }
 
   function handleLoadSavedBattle(savedBattle: SavedBattle) {
-    const loadedMission = {
-      ...createMissionState(
-        scenarios.find((scenario) => scenario.id === savedBattle.mission?.scenarioId)
-          ?? survivalTestScenario,
+    const loadedScenario = scenarios.find(
+      (scenario) => scenario.id === savedBattle.mission?.scenarioId,
+    ) ?? survivalTestScenario;
+    const loadedBattle = {
+      ...savedBattle.battle,
+      armies: withDefaultArmyConfiguration(
         savedBattle.battle.armies,
         savedBattle.mission?.defenderArmyId,
       ),
-      ...savedBattle.mission,
     };
-    setBattle(savedBattle.battle);
+    const loadedMission = {
+      ...createMissionState(
+        loadedScenario,
+        loadedBattle.armies,
+        savedBattle.mission?.defenderArmyId,
+      ),
+      ...savedBattle.mission,
+      deploymentZones: alignDeploymentZones(
+        savedBattle.mission?.deploymentZones ?? loadedScenario.deploymentZones,
+        loadedBattle.armies.length,
+      ),
+    };
+    setBattle(loadedBattle);
     const initialBattle = savedBattle.initialBattle
-      ? structuredClone(savedBattle.initialBattle)
-      : createInitialBattleSnapshot(savedBattle.battle);
+      ? {
+          ...structuredClone(savedBattle.initialBattle),
+          armies: withDefaultArmyConfiguration(
+            savedBattle.initialBattle.armies,
+            loadedMission.defenderArmyId,
+          ),
+        }
+      : createInitialBattleSnapshot(loadedBattle);
     setBattleStartSnapshot(initialBattle);
     setScenarioDraft(restartDraftFromBattle(
       initialBattle,
       loadedMission.scenarioId,
       loadedMission.defenderArmyId,
       loadedMission.roundTarget,
+      loadedMission.deploymentZones,
     ));
     setMission(loadedMission);
     setLogs(savedBattle.logs);
-    setActiveArmyId(savedBattle.battle.activeActivation?.armyId);
+    setActiveArmyId(loadedBattle.activeActivation?.armyId);
     setSelectedUnitId("");
     setTargetUnitId("");
     setSelectedWeaponId("");
@@ -320,9 +483,23 @@ export function App() {
         ...current,
         scenarioId: nextMission.scenarioId,
         defenderArmyId: nextMission.defenderArmyId,
+        deploymentZones: nextMission.deploymentZones ?? current.deploymentZones,
         roundTarget: nextMission.roundTarget,
       }));
     }
+  }
+
+  function handleDeploymentZonesChange(
+    deploymentZones: ScenarioDefinition["deploymentZones"],
+  ) {
+    setScenarioDraft((current) => ({
+      ...current,
+      deploymentZones: structuredClone(deploymentZones),
+    }));
+    setMission((current) => ({
+      ...current,
+      deploymentZones: structuredClone(deploymentZones),
+    }));
   }
 
   function handleMissionRestart() {
@@ -332,11 +509,13 @@ export function App() {
       activeScenario.id,
       mission.defenderArmyId,
       mission.roundTarget,
+      mission.deploymentZones,
     );
     setScenarioDraft(nextDraft);
     setBattle(structuredClone(initialBattle));
     setMission({
       ...createMissionState(activeScenario, nextDraft.armies, nextDraft.defenderArmyId),
+      deploymentZones: structuredClone(nextDraft.deploymentZones),
       ...(nextDraft.roundTarget ? { roundTarget: nextDraft.roundTarget } : {}),
     });
     setActiveArmyId(undefined);
@@ -428,7 +607,6 @@ export function App() {
         <BattleScreen
           activeArmyId={activeArmyId}
           armyJson={armyJson}
-          attackerBotEnabled={attackerBotEnabled}
           battle={visibleBattle}
           initialBattle={battleStartSnapshot}
           gamePhase={gamePhase}
@@ -445,7 +623,7 @@ export function App() {
           onActiveArmyChange={setActiveArmyId}
           onAddLog={addLog}
           onArmyJsonChange={setArmyJson}
-          onAttackerBotEnabledChange={setAttackerBotEnabled}
+          onArmyConfigChange={handleArmyConfigChange}
           onBattleChange={setBattle}
           onInitialBattleChange={setBattleStartSnapshot}
           onGamePhaseChange={setGamePhase}
@@ -454,6 +632,7 @@ export function App() {
           onLogsChange={setLogs}
           onMissionChange={handleMissionChange}
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
+          onDeploymentZonesChange={handleDeploymentZonesChange}
           onDefenderArmyChange={handleDefenderArmyChange}
           onScenarioChange={handleScenarioChange}
           onMissionRestart={handleMissionRestart}
@@ -491,46 +670,84 @@ function ArmyComposerView({
   currentArmies: Army[];
   onLoadArmies: (armies: Army[]) => void;
 }) {
-  const [leftName, setLeftName] = useState(currentArmies[0]?.playerName ?? "Gracz 1");
-  const [leftFaction, setLeftFaction] = useState<FactionId>(currentArmies[0]?.faction ?? "Republic");
-  const [leftCounts, setLeftCounts] = useState<DraftCounts>(() => countsFromArmy(currentArmies[0]));
-  const [rightName, setRightName] = useState(currentArmies[1]?.playerName ?? "Gracz 2");
-  const [rightFaction, setRightFaction] = useState<FactionId>(
-    currentArmies[1]?.faction ?? "Separatists",
+  const [drafts, setDrafts] = useState<ComposerArmyDraft[]>(() =>
+    createComposerArmyDrafts(currentArmies)
   );
-  const [rightCounts, setRightCounts] = useState<DraftCounts>(() => countsFromArmy(currentArmies[1]));
 
   const armies = useMemo(
-    () => [
-      buildArmyFromDraft("army_player_1", leftName, leftFaction, leftCounts, 1),
-      buildArmyFromDraft("army_player_2", rightName, rightFaction, rightCounts, 2),
-    ],
-    [leftCounts, leftFaction, leftName, rightCounts, rightFaction, rightName],
+    () => drafts.map((draft, index) => buildArmyFromDraft(
+      draft.id,
+      draft.playerName,
+      draft.faction,
+      draft.counts,
+      index + 1,
+      draft.teamId,
+      draft.control,
+    )),
+    [drafts],
   );
   const generatedJson = JSON.stringify(armies, null, 2);
 
+  function patchDraft(index: number, patch: Partial<ComposerArmyDraft>) {
+    setDrafts((current) => current.map((draft, draftIndex) =>
+      draftIndex === index ? { ...draft, ...patch } : draft
+    ));
+  }
+
+  function addArmy() {
+    setDrafts((current) => current.length >= maximumArmyCount
+      ? current
+      : [...current, createEmptyComposerArmyDraft(
+          current.length,
+          nextAvailableArmyId(current),
+        )]
+    );
+  }
+
+  function removeArmy(index: number) {
+    setDrafts((current) => current.length <= minimumArmyCount
+      ? current
+      : current.filter((_, draftIndex) => draftIndex !== index)
+    );
+  }
+
   return (
     <section className="composerLayout">
-      <ComposerColumn
-        counts={leftCounts}
-        faction={leftFaction}
-        playerName={leftName}
-        sideLabel="Armia A"
-        onCountsChange={setLeftCounts}
-        onFactionChange={setLeftFaction}
-        onPlayerNameChange={setLeftName}
-      />
-      <ComposerColumn
-        counts={rightCounts}
-        faction={rightFaction}
-        playerName={rightName}
-        sideLabel="Armia B"
-        onCountsChange={setRightCounts}
-        onFactionChange={setRightFaction}
-        onPlayerNameChange={setRightName}
-      />
+      <div className="composerArmyArea">
+        <div className="composerArmyToolbar">
+          <div>
+            <p className="eyebrow">Uczestnicy</p>
+            <strong>{armies.length}/{maximumArmyCount} armii</strong>
+          </div>
+          <button
+            className="secondaryButton"
+            disabled={drafts.length >= maximumArmyCount}
+            onClick={addArmy}
+          >
+            Dodaj armię
+          </button>
+        </div>
+        <div className="composerArmyGrid">
+          {drafts.map((draft, index) => (
+            <ComposerColumn
+              counts={draft.counts}
+              faction={draft.faction}
+              key={draft.id}
+              playerName={draft.playerName}
+              sideLabel={`Armia ${String.fromCharCode(65 + index)}`}
+              onCountsChange={(counts) => patchDraft(index, { counts })}
+              onFactionChange={(faction) => patchDraft(index, { faction, counts: {} })}
+              onPlayerNameChange={(playerName) => patchDraft(index, { playerName })}
+              onRemove={drafts.length > minimumArmyCount ? () => removeArmy(index) : undefined}
+            />
+          ))}
+        </div>
+      </div>
       <aside className="composerSummary">
-        <PanelTitle title="Gotowa lista" detail={`${getArmyCost(armies[0])} / ${getArmyCost(armies[1])} pkt`} />
+        <PanelTitle
+          title="Gotowa lista"
+          detail={`${armies.length} armie · ${armies.reduce((total, army) => total + getArmyCost(army), 0)} pkt`}
+        />
         <ArmyPreview armies={armies} />
         <details className="jsonDetails">
           <summary>Eksport JSON</summary>
@@ -558,6 +775,7 @@ function ComposerColumn({
   onCountsChange,
   onFactionChange,
   onPlayerNameChange,
+  onRemove,
 }: {
   counts: DraftCounts;
   faction: FactionId;
@@ -566,6 +784,7 @@ function ComposerColumn({
   onCountsChange: (counts: DraftCounts) => void;
   onFactionChange: (faction: FactionId) => void;
   onPlayerNameChange: (name: string) => void;
+  onRemove?: () => void;
 }) {
   const templates = unitTemplates.filter((template) => template.faction === faction);
   const factionTaskForces = taskForces.filter((taskForce) => taskForce.faction === faction);
@@ -587,7 +806,12 @@ function ComposerColumn({
           <p className="eyebrow">{sideLabel}</p>
           <h2>{playerName}</h2>
         </div>
-        <strong>{cost} pkt</strong>
+        <div className="composerArmyHeaderActions">
+          <strong>{cost} pkt</strong>
+          {onRemove ? (
+            <button className="dangerButton" onClick={onRemove}>Usuń</button>
+          ) : null}
+        </div>
       </div>
       <div className="composerControls">
         <label>
@@ -719,12 +943,55 @@ function countsFromArmy(army?: Army): DraftCounts {
   return counts;
 }
 
+function createComposerArmyDrafts(currentArmies: Army[]): ComposerArmyDraft[] {
+  const drafts = currentArmies.slice(0, maximumArmyCount).map((army, index) => ({
+    id: army.id,
+    playerName: army.playerName,
+    faction: army.faction,
+    counts: countsFromArmy(army),
+    teamId: army.teamId ?? (index % 2 === 0 ? 1 : 2),
+    control: army.control ?? (index === 0 ? "Human" : "Bot"),
+  } satisfies ComposerArmyDraft));
+
+  while (drafts.length < minimumArmyCount) {
+    drafts.push(createEmptyComposerArmyDraft(
+      drafts.length,
+      nextAvailableArmyId(drafts),
+    ));
+  }
+  return drafts;
+}
+
+function createEmptyComposerArmyDraft(
+  index: number,
+  id = `army_player_${index + 1}`,
+): ComposerArmyDraft {
+  return {
+    id,
+    playerName: `Gracz ${index + 1}`,
+    faction: index % 2 === 0 ? "Republic" : "Separatists",
+    counts: {},
+    teamId: index % 2 === 0 ? 1 : 2,
+    control: index === 0 ? "Human" : "Bot",
+  };
+}
+
+function nextAvailableArmyId(drafts: Array<Pick<ComposerArmyDraft, "id">>): string {
+  for (let index = 1; index <= maximumArmyCount; index += 1) {
+    const id = `army_player_${index}`;
+    if (!drafts.some((draft) => draft.id === id)) return id;
+  }
+  return `army_player_${crypto.randomUUID()}`;
+}
+
 function buildArmyFromDraft(
   armyId: string,
   playerName: string,
   faction: FactionId,
   counts: DraftCounts,
   sideIndex: number,
+  teamId: TeamId,
+  control: ArmyControl,
 ): Army {
   let unitIndex = 1;
   const taskForceSelections = taskForces
@@ -763,6 +1030,8 @@ function buildArmyFromDraft(
     id: armyId,
     playerName: playerName.trim() || `Gracz ${sideIndex}`,
     faction,
+    teamId,
+    control,
     taskForces: taskForceSelections,
     units: [...taskForceUnits, ...standaloneUnits],
   };

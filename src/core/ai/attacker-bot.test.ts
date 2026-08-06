@@ -64,9 +64,61 @@ describe("attacker bot", () => {
     expect(decision?.reason).toContain("wyeliminowac");
   });
 
+  it("chooses an offensive ability from the shared legal action API", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      templateId: "darth_maul",
+      position: { x: 3, y: 2 },
+    });
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 2, y: 2 } });
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      survivalTestScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toMatchObject({
+      type: "UseAbility",
+      unitId: "sep_unit_1",
+      abilityId: "saber_throw",
+      targetUnitId: "rep_unit_1",
+    });
+  });
+
+  it("ranks the scenario objective above an offensive ability", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      templateId: "darth_maul",
+      position: { x: 4, y: 2 },
+    });
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 4, y: 3 } });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      protectGeneratorScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toMatchObject({
+      type: "AttackObject",
+      objectId: battle.board.objects?.[0].id,
+    });
+  });
+
   it("moves closer to the scenario objective when it cannot attack", () => {
     let battle = readyAttackerBattle();
-    battle = patchUnit(battle, "sep_unit_1", { position: { x: 7, y: 4 } });
+    battle = patchUnit(battle, "sep_unit_1", {
+      position: { x: 7, y: 4 },
+      suppression: 3,
+    });
     battle = {
       ...battle,
       board: {
@@ -125,6 +177,26 @@ describe("attacker bot", () => {
     expect(
       chooseAttackerBotAction(battle, survivalTestScenario, attackerArmyId),
     ).toBeUndefined();
+  });
+
+  it("cannot continue the assault while pinned", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      status: "Pinned",
+      suppression: 3,
+    });
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      survivalTestScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toEqual({
+      type: "ApplyOrder",
+      unitId: "sep_unit_1",
+      order: "Rally",
+    });
   });
 });
 

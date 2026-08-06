@@ -49,6 +49,7 @@ export type MissionState = {
   roundTarget?: number;
   defenderArmyId?: string;
   attackerArmyId?: string;
+  deploymentZones?: DeploymentZone[];
   territoryOwners?: Record<string, string>;
   territoryScores?: Record<string, number>;
 };

@@ -1,9 +1,8 @@
 import type { AbilityDefinition, Battle, OrderType } from "../types";
-import { useActiveAbility } from "../core/rules/active-abilities";
-import { resolveAttack } from "../core/rules/combat";
-import { getLegalReserveEntryCells } from "../core/rules/deployment";
-import { advanceUnit, moveUnit } from "../core/rules/movement";
-import { resolveObjectAttack } from "../core/rules/object-combat";
+import { validateUnitActivation } from "../core/rules/activation";
+import { getLegalAbilityActions } from "../core/legal-actions/get-legal-ability-actions";
+import { getLegalAttackActions } from "../core/legal-actions/get-legal-attack-actions";
+import { getLegalPositionActions } from "../core/legal-actions/get-legal-position-actions";
 import { findUnit } from "../core/rules/state";
 import type { ScenarioDefinition } from "../core/scenario/scenario-types";
 import { boardPositionKey, type BoardPosition } from "./board-view-model";
@@ -51,8 +50,6 @@ export type BoardInteractionInput = {
   targetUnitId?: string;
 };
 
-const deterministicRoll = () => 6;
-
 export function createBoardInteractionModel(
   input: BoardInteractionInput,
 ): BoardInteractionModel {
@@ -66,13 +63,20 @@ export function createBoardInteractionModel(
     input.selectingMovePosition &&
     (input.selectedOrder === "Move" || input.selectedOrder === "Advance")
   ) {
+    const positionActions = getLegalPositionActions(
+      input.battle,
+      input.scenario,
+      selectedUnit.id,
+      input.selectedOrder,
+    );
     if (!selectedUnit.position) {
+      const activationError = validateUnitActivation(input.battle, selectedUnit.id);
       const reserveEntryCells = toCellSet(
-        getLegalReserveEntryCells(input.battle, input.scenario, selectedUnit.id),
+        positionActions.map((action) => action.targetPosition),
       );
       return {
         mode: "reserve",
-        hint: "Niebieskie pola: legalne wejście jednostki z rezerwy.",
+        hint: activationError ?? "Niebieskie pola: legalne wejście jednostki z rezerwy.",
         legalCells: reserveEntryCells,
         reserveEntryCells,
         targetCells: new Set(),
@@ -81,12 +85,7 @@ export function createBoardInteractionModel(
     }
 
     const legalCells = toCellSet(
-      boardPositions(input.battle).filter((position) => {
-        const result = input.selectedOrder === "Advance"
-          ? advanceUnit(input.battle, selectedUnit.id, position)
-          : moveUnit(input.battle, selectedUnit.id, position);
-        return result.battle !== input.battle;
-      }),
+      positionActions.map((action) => action.targetPosition),
     );
     return {
       mode: "movement",
@@ -99,20 +98,16 @@ export function createBoardInteractionModel(
   }
 
   if (input.selectingAbilityPosition && input.selectedAbility) {
+    const legalAbilityActions = getLegalAbilityActions(
+      input.battle,
+      selectedUnit.id,
+      input.selectedAbility.id,
+    ).filter((action) =>
+      !input.abilityTargetUnitId || action.targetUnitId === input.abilityTargetUnitId
+    );
     const legalCells = toCellSet(
-      boardPositions(input.battle).filter((position) =>
-        useActiveAbility(
-          input.battle,
-          {
-            unitId: selectedUnit.id,
-            abilityId: input.selectedAbility!.id,
-            ...(input.abilityTargetUnitId
-              ? { targetUnitId: input.abilityTargetUnitId }
-              : {}),
-            targetPosition: position,
-          },
-          deterministicRoll,
-        ).battle !== input.battle,
+      legalAbilityActions.flatMap((action) =>
+        action.targetPosition ? [action.targetPosition] : []
       ),
     );
     return {
@@ -130,30 +125,14 @@ export function createBoardInteractionModel(
 
   if (input.selectedOrder === "Attack" && input.selectedWeaponId) {
     const targetCells = new Set<string>();
-    for (const army of input.battle.armies) {
-      for (const unit of army.units) {
-        const attack = resolveAttack(
-          input.battle,
-          selectedUnit.id,
-          unit.id,
-          input.selectedWeaponId,
-          deterministicRoll,
-        );
-        if (attack.result && unit.position) {
-          targetCells.add(boardPositionKey(unit.position.x, unit.position.y));
-        }
-      }
-    }
-    for (const object of input.battle.board.objects ?? []) {
-      const attack = resolveObjectAttack(
-        input.battle,
-        selectedUnit.id,
-        object.id,
-        input.selectedWeaponId,
-        deterministicRoll,
-      );
-      if (attack.result) {
-        targetCells.add(boardPositionKey(object.position.x, object.position.y));
+    const legalAttacks = getLegalAttackActions(input.battle, selectedUnit.id)
+      .filter((action) => action.weaponId === input.selectedWeaponId);
+    for (const action of legalAttacks) {
+      const position = action.type === "Attack"
+        ? findUnit(input.battle, action.defenderId)?.position
+        : input.battle.board.objects?.find((object) => object.id === action.objectId)?.position;
+      if (position) {
+        targetCells.add(boardPositionKey(position.x, position.y));
       }
     }
     const selectedTarget = input.targetUnitId
@@ -172,32 +151,29 @@ export function createBoardInteractionModel(
     };
   }
 
-  if (
-    input.selectedAbility &&
-    input.abilityTargetUnitId &&
-    requiresUnitTarget(input.selectedAbility)
-  ) {
+  if (input.selectedAbility) {
     const targetCells = new Set<string>();
-    for (const army of input.battle.armies) {
-      for (const unit of army.units) {
-        const result = useActiveAbility(
-          input.battle,
-          {
-            unitId: selectedUnit.id,
-            abilityId: input.selectedAbility.id,
-            targetUnitId: unit.id,
-            ...(input.abilityTargetPosition
-              ? { targetPosition: input.abilityTargetPosition }
-              : {}),
-          },
-          deterministicRoll,
-        );
-        if (result.battle !== input.battle && unit.position) {
-          targetCells.add(boardPositionKey(unit.position.x, unit.position.y));
-        }
+    const legalAbilityActions = getLegalAbilityActions(
+      input.battle,
+      selectedUnit.id,
+      input.selectedAbility.id,
+    ).filter((action) =>
+      !input.abilityTargetPosition ||
+      (action.targetPosition?.x === input.abilityTargetPosition.x &&
+        action.targetPosition.y === input.abilityTargetPosition.y)
+    );
+    for (const action of legalAbilityActions) {
+      const target = action.targetUnitId
+        ? findUnit(input.battle, action.targetUnitId)
+        : undefined;
+      if (target?.position) {
+        targetCells.add(boardPositionKey(target.position.x, target.position.y));
       }
     }
-    const selectedTarget = findUnit(input.battle, input.abilityTargetUnitId);
+    if (targetCells.size === 0) return empty;
+    const selectedTarget = input.abilityTargetUnitId
+      ? findUnit(input.battle, input.abilityTargetUnitId)
+      : undefined;
     return {
       mode: "ability-target",
       hint: "Fioletowe pola: legalne cele wybranej zdolności.",
@@ -256,17 +232,4 @@ function complementCells(battle: Battle, cells: ReadonlySet<string>): Set<string
   return toCellSet(
     boardPositions(battle).filter(({ x, y }) => !cells.has(boardPositionKey(x, y))),
   );
-}
-
-function requiresUnitTarget(ability: AbilityDefinition): boolean {
-  return [
-    "restore_hp",
-    "damage_and_push",
-    "direct_damage",
-    "bonus_move_then_melee_attack",
-    "move_after_attack",
-    "task_force_once_per_turn_movement_bonus",
-    "task_force_attack_bonus_against_damaged",
-    "task_force_attack_bonus_against_hero",
-  ].includes(ability.effect.type);
 }

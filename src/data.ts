@@ -1075,6 +1075,8 @@ export const starterArmies: Army[] = [
     id: "army_republic",
     playerName: "Gracz Republiki",
     faction: "Republic",
+    teamId: 1,
+    control: "Human",
     units: [
       {
         id: "rep_unit_1",
@@ -1112,6 +1114,8 @@ export const starterArmies: Army[] = [
     id: "army_separatists",
     playerName: "Gracz Separatystow",
     faction: "Separatists",
+    teamId: 2,
+    control: "Bot",
     units: [
       {
         id: "sep_unit_1",
