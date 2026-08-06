@@ -1,6 +1,6 @@
 import type { Battle } from "../../types";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
-import type { BotDecision } from "./bot-controller";
+import type { BotDecision, BotDecisionContext } from "./bot-controller";
 import { aggressiveBotDoctrine } from "./bot-doctrine";
 import { chooseDoctrineBotAction } from "./bot-strategy";
 
@@ -12,6 +12,7 @@ export function chooseAttackerBotAction(
   scenario: ScenarioDefinition,
   attackerArmyId: string,
   mission?: MissionState,
+  decisionContext?: BotDecisionContext,
 ): BotDecision | undefined {
   return chooseDoctrineBotAction(
     battle,
@@ -19,5 +20,6 @@ export function chooseAttackerBotAction(
     attackerArmyId,
     aggressiveBotDoctrine,
     mission,
+    decisionContext,
   );
 }

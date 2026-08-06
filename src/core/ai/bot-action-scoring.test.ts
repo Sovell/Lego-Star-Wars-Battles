@@ -53,6 +53,45 @@ describe("bot action scoring", () => {
 
     expect(best?.action).toMatchObject({ order: "Rally" });
   });
+
+  it("uses the seed only to resolve actions with equal scores", () => {
+    const battle = createBattle();
+    const actions = [
+      { type: "ApplyOrder" as const, unitId: "rep_unit_1", order: "Overwatch" as const },
+      { type: "ApplyOrder" as const, unitId: "rep_unit_2", order: "Overwatch" as const },
+    ];
+    const chooseUnit = (decisionSeed: string) => {
+      const action = chooseBestBotAction(actions, {
+        battle,
+        doctrine: defensiveBotDoctrine,
+        decisionSeed,
+      })?.action;
+      return action?.type === "ApplyOrder" ? action.unitId : undefined;
+    };
+
+    expect(chooseUnit("replay-seed")).toBe(chooseUnit("replay-seed"));
+    expect(new Set(
+      Array.from({ length: 32 }, (_, index) => chooseUnit(`seed-${index}`)),
+    )).toEqual(new Set(["rep_unit_1", "rep_unit_2"]));
+  });
+
+  it("never lets the seed override a higher action score", () => {
+    const battle = patchUnit(createBattle(), "rep_unit_1", { suppression: 2 });
+    const actions = [
+      { type: "ApplyOrder" as const, unitId: "rep_unit_1", order: "Overwatch" as const },
+      { type: "ApplyOrder" as const, unitId: "rep_unit_1", order: "Rally" as const },
+    ];
+
+    const choices = Array.from({ length: 32 }, (_, index) =>
+      chooseBestBotAction(actions, {
+        battle,
+        doctrine: defensiveBotDoctrine,
+        decisionSeed: `seed-${index}`,
+      })?.action.order
+    );
+
+    expect(new Set(choices)).toEqual(new Set(["Rally"]));
+  });
 });
 
 function patchUnit(

@@ -13,11 +13,17 @@ export type BotDecision = {
   reason: string;
 };
 
+export type BotDecisionContext = {
+  seed: string;
+  step: number;
+};
+
 export type BotActionSelector = (
   battle: Battle,
   scenario: ScenarioDefinition,
   armyId: string,
   mission: MissionState,
+  decisionContext: BotDecisionContext,
 ) => BotDecision | undefined;
 
 export type BotActivationStopReason =
@@ -29,6 +35,7 @@ export type BotActivationStopReason =
 
 export type BotActivationStep = {
   decision: BotDecision;
+  decisionContext: BotDecisionContext;
   battleBeforeAction: Battle;
   result: MissionActionResult;
 };
@@ -44,6 +51,7 @@ export type RunBotActivationOptions = {
   armyId: string;
   chooseAction: BotActionSelector;
   maxSteps?: number;
+  decisionSeed?: string | number;
   actionContext?: MissionActionContext;
 };
 
@@ -57,6 +65,7 @@ export function runBotActivation({
   armyId,
   chooseAction,
   maxSteps = 8,
+  decisionSeed,
   actionContext,
 }: RunBotActivationOptions): BotActivationResult {
   if (session.battle.activeActivation?.armyId !== armyId) {
@@ -70,6 +79,10 @@ export function runBotActivation({
   let currentSession = session;
   const steps: BotActivationStep[] = [];
   const safeStepLimit = Math.max(0, Math.floor(maxSteps));
+  const baseDecisionSeed = String(
+    decisionSeed ??
+      `${session.battle.id}:${session.battle.turn}:${session.battle.activeActivation.id}:${armyId}`,
+  );
 
   for (let step = 0; step < safeStepLimit; step += 1) {
     if (currentSession.battle.activeActivation?.armyId !== armyId) {
@@ -80,11 +93,16 @@ export function runBotActivation({
       };
     }
 
+    const decisionContext: BotDecisionContext = {
+      seed: `${baseDecisionSeed}:${step}`,
+      step,
+    };
     const decision = chooseAction(
       currentSession.battle,
       scenario,
       armyId,
       currentSession.mission,
+      decisionContext,
     );
     if (!decision) {
       return {
@@ -101,7 +119,7 @@ export function runBotActivation({
       decision.action,
       actionContext,
     );
-    steps.push({ decision, battleBeforeAction, result });
+    steps.push({ decision, decisionContext, battleBeforeAction, result });
     currentSession = { battle: result.battle, mission: result.mission };
 
     if (result.battle === battleBeforeAction) {

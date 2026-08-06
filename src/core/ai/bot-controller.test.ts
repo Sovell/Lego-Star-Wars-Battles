@@ -61,6 +61,7 @@ describe("bot controller", () => {
       session: createSession(battle),
       scenario: survivalTestScenario,
       armyId: attackerArmyId,
+      decisionSeed: "advance-replay",
       chooseAction,
     });
 
@@ -68,6 +69,10 @@ describe("bot controller", () => {
     expect(result.steps.map((step) => step.decision.action.type)).toEqual([
       "AdvanceUnit",
       "ApplyOrder",
+    ]);
+    expect(result.steps.map((step) => step.decisionContext)).toEqual([
+      { seed: "advance-replay:0", step: 0 },
+      { seed: "advance-replay:1", step: 1 },
     ]);
     expect(result.battle.activeActivation).toBeUndefined();
   });

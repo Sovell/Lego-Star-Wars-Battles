@@ -83,6 +83,33 @@ describe("defender bot", () => {
       order: "Rally",
     });
   });
+
+  it("stabilizes a heavily suppressed defensive line before repositioning", () => {
+    let battle = readyDefenderBattle();
+    battle = patchUnit(battle, "rep_unit_1", {
+      position: { x: 0, y: 0 },
+      suppression: 3,
+    });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseDefenderBotAction(
+      battle,
+      protectGeneratorScenario,
+      defenderArmyId,
+    );
+
+    expect(decision?.action).toEqual({
+      type: "ApplyOrder",
+      unitId: "rep_unit_1",
+      order: "Rally",
+    });
+  });
 });
 
 function readyDefenderBattle(): Battle {

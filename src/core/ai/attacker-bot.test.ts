@@ -115,7 +115,10 @@ describe("attacker bot", () => {
 
   it("moves closer to the scenario objective when it cannot attack", () => {
     let battle = readyAttackerBattle();
-    battle = patchUnit(battle, "sep_unit_1", { position: { x: 7, y: 4 } });
+    battle = patchUnit(battle, "sep_unit_1", {
+      position: { x: 7, y: 4 },
+      suppression: 3,
+    });
     battle = {
       ...battle,
       board: {

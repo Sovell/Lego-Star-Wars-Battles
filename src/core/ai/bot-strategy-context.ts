@@ -4,6 +4,7 @@ import { isPositionFree } from "../rules/occupancy";
 import { distance, type GridPosition } from "../rules/geometry";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 import type { BotDoctrine } from "./bot-doctrine";
+import type { BotDecisionContext } from "./bot-controller";
 
 export type BotStrategyContext = {
   battle: Battle;
@@ -16,6 +17,7 @@ export type BotStrategyContext = {
   objectiveName?: string;
   movementTarget?: GridPosition;
   objectiveObjectId?: string;
+  decisionSeed: string;
 };
 
 export function createBotStrategyContext(
@@ -24,6 +26,7 @@ export function createBotStrategyContext(
   armyId: string,
   doctrine: BotDoctrine,
   mission?: MissionState,
+  decisionContext?: BotDecisionContext,
 ): BotStrategyContext | undefined {
   if (battle.activeActivation?.armyId !== armyId) return undefined;
 
@@ -60,6 +63,8 @@ export function createBotStrategyContext(
       doctrine.objectivePolicy === "Assault" && objective?.destructible
         ? objective.id
         : undefined,
+    decisionSeed: decisionContext?.seed ??
+      `${battle.id}:${battle.turn}:${battle.activeActivation.id}:${armyId}`,
   };
 }
 

@@ -5,7 +5,7 @@ import { getUnitActiveAbilities } from "../rules/active-abilities";
 import { findUnit, getTemplate } from "../rules/state";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 import { chooseBestBotAction, estimateMaximumDamage } from "./bot-action-scoring";
-import type { BotDecision } from "./bot-controller";
+import type { BotDecision, BotDecisionContext } from "./bot-controller";
 import type { BotDoctrine } from "./bot-doctrine";
 import {
   createBotStrategyContext,
@@ -22,8 +22,16 @@ export function chooseDoctrineBotAction(
   armyId: string,
   doctrine: BotDoctrine,
   mission?: MissionState,
+  decisionContext?: BotDecisionContext,
 ): BotDecision | undefined {
-  const context = createBotStrategyContext(battle, scenario, armyId, doctrine, mission);
+  const context = createBotStrategyContext(
+    battle,
+    scenario,
+    armyId,
+    doctrine,
+    mission,
+    decisionContext,
+  );
   if (!context) return undefined;
 
   const actions = context.units.flatMap((unit) =>

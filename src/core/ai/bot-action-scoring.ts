@@ -10,7 +10,7 @@ import type { BotStrategyContext } from "./bot-strategy-context";
 export type BotActionScoringContext = Pick<
   BotStrategyContext,
   "battle" | "doctrine" | "movementTarget" | "objectiveObjectId"
->;
+> & { decisionSeed?: string };
 
 export type ScoredBotAction<TAction extends LegalUnitAction = LegalUnitAction> = {
   action: TAction;
@@ -53,9 +53,15 @@ export function rankBotActions<TAction extends LegalUnitAction>(
   return actions
     .map((action) => ({ action, score: scoreBotAction(action, context) }))
     .filter((option) => Number.isFinite(option.score))
-    .sort((left, right) =>
-      right.score - left.score || actionKey(left.action).localeCompare(actionKey(right.action))
-    );
+    .sort((left, right) => {
+      const scoreDifference = right.score - left.score;
+      if (scoreDifference !== 0) return scoreDifference;
+      const leftKey = actionKey(left.action);
+      const rightKey = actionKey(right.action);
+      return seededRank(context.decisionSeed, leftKey) -
+        seededRank(context.decisionSeed, rightKey) ||
+        leftKey.localeCompare(rightKey);
+    });
 }
 
 export function chooseBestBotAction<TAction extends LegalUnitAction>(
@@ -202,4 +208,15 @@ function getTileDefenseBonus(battle: Battle, position: GridPosition): number {
 
 function actionKey(action: LegalUnitAction): string {
   return JSON.stringify(action);
+}
+
+function seededRank(seed: string | undefined, key: string): number {
+  if (!seed) return 0;
+  let hash = 2_166_136_261;
+  const value = `${seed}:${key}`;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
 }

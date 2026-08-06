@@ -73,7 +73,7 @@ export const defensiveBotDoctrine: BotDoctrine = {
   deploymentBaseScore: 30_000,
   deploymentDistancePenaltyWeight: 25,
   rallyBaseScore: 1_500,
-  suppressionWeight: 250,
+  suppressionWeight: 10_000,
   overwatchScore: 500,
   finishAdvanceScore: 50,
 };
