@@ -1,14 +1,18 @@
-import type { Battle, BattlefieldObject, UnitInstance, WeaponProfile } from "../../types";
-import type { BattleAction } from "../battle-actions";
+import type { Battle, BattlefieldObject } from "../../types";
 import {
   getLegalUnitActions,
   type LegalAttackAction,
-  type LegalUnitAction,
+  type LegalOrderAction,
+  type LegalPositionAction,
 } from "../legal-actions";
-import { distance, type GridPosition } from "../rules/geometry";
-import { getTemplate } from "../rules/state";
+import { findUnit, getTemplate } from "../rules/state";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
+import {
+  chooseBestBotAction,
+  type BotActionScoringContext,
+} from "./bot-action-scoring";
 import type { BotDecision } from "./bot-controller";
+import { defensiveBotDoctrine } from "./bot-doctrine";
 
 /** Selects a legal action that prioritizes holding the scenario objective. */
 export function chooseDefenderBotAction(
@@ -28,23 +32,40 @@ export function chooseDefenderBotAction(
   const defenders = pendingAdvanceUnit ? [pendingAdvanceUnit] : availableDefenders;
   if (defenders.length === 0) return undefined;
 
+  const objective = getDefensiveObjective(battle, scenario, mission, defenderArmyId);
+  const scoringContext: BotActionScoringContext = {
+    battle,
+    doctrine: defensiveBotDoctrine,
+    movementTarget: objective?.position,
+  };
   const legalActions = defenders.flatMap((unit) =>
     getLegalUnitActions(battle, scenario, unit.id)
   );
-  const attack = chooseBestUnitAttack(battle, legalActions);
+
+  const attack = chooseBestBotAction(
+    legalActions.filter(
+      (action): action is Extract<LegalAttackAction, { type: "Attack" }> =>
+        action.type === "Attack"
+    ),
+    scoringContext,
+  );
   if (attack) {
-    return {
-      action: attack.action,
-      reason: `${getTemplate(attack.attacker).name} odpiera zagrożenie: ${getTemplate(attack.defender).name}.`,
-    };
+    const attacker = findUnit(battle, attack.action.attackerId);
+    const defender = findUnit(battle, attack.action.defenderId);
+    return attacker && defender
+      ? {
+          action: attack.action,
+          reason: `${getTemplate(attacker).name} odpiera zagrożenie: ${getTemplate(defender).name}.`,
+        }
+      : undefined;
   }
 
   if (pendingAdvanceUnit) {
     const finishAdvance = legalActions.find(
-      (action): action is Extract<BattleAction, { type: "ApplyOrder" }> =>
+      (action): action is LegalOrderAction =>
         action.type === "ApplyOrder" &&
         action.unitId === pendingAdvanceUnit.id &&
-        action.order === "Advance",
+        action.order === "Advance"
     );
     return finishAdvance
       ? {
@@ -54,125 +75,53 @@ export function chooseDefenderBotAction(
       : undefined;
   }
 
-  const objective = getDefensiveObjective(battle, scenario, mission, defenderArmyId);
-  const deployment = chooseReserveDeployment(battle, defenders, legalActions, objective?.position);
-  if (deployment) {
-    return {
-      action: deployment.action,
-      reason: `${getTemplate(deployment.unit).name} wchodzi z rezerwy, aby wzmocnić obronę.`,
-    };
-  }
-
-  if (objective) {
-    const movement = chooseDefensiveMovement(battle, defenders, legalActions, objective.position);
-    if (movement) {
-      return {
-        action: movement.action,
-        reason: `${getTemplate(movement.unit).name} zajmuje pozycję przy celu: ${objective.name}.`,
-      };
-    }
-  }
-
-  const legalOrders = legalActions.filter(
-    (action): action is Extract<BattleAction, { type: "ApplyOrder" }> =>
-      action.type === "ApplyOrder",
+  const deployment = chooseBestBotAction(
+    legalActions.filter(
+      (action): action is Extract<LegalPositionAction, { type: "DeployUnit" }> =>
+        action.type === "DeployUnit"
+    ),
+    scoringContext,
   );
-  const rally = legalOrders
-    .filter((action) => action.order === "Rally")
-    .sort((left, right) =>
-      getSuppression(defenders, right.unitId) - getSuppression(defenders, left.unitId)
-    )[0];
-  const order = rally ?? legalOrders.find((action) => action.order === "Overwatch");
-  const unit = order
-    ? defenders.find((candidate) => candidate.id === order.unitId)
-    : undefined;
-  if (!order || !unit) return undefined;
+  if (deployment) {
+    const unit = findUnit(battle, deployment.action.unitId);
+    return unit
+      ? {
+          action: deployment.action,
+          reason: `${getTemplate(unit).name} wchodzi z rezerwy, aby wzmocnić obronę.`,
+        }
+      : undefined;
+  }
 
+  const movement = chooseBestBotAction(
+    legalActions.filter(
+      (action): action is Extract<LegalPositionAction, { type: "AdvanceUnit" }> =>
+        action.type === "AdvanceUnit"
+    ),
+    scoringContext,
+  );
+  if (movement) {
+    const unit = findUnit(battle, movement.action.unitId);
+    return unit && objective
+      ? {
+          action: movement.action,
+          reason: `${getTemplate(unit).name} zajmuje pozycję przy celu: ${objective.name}.`,
+        }
+      : undefined;
+  }
+
+  const order = chooseBestBotAction(
+    legalActions.filter((action): action is LegalOrderAction => action.type === "ApplyOrder"),
+    scoringContext,
+  );
+  if (!order) return undefined;
+  const unit = findUnit(battle, order.action.unitId);
+  if (!unit) return undefined;
   return {
-    action: order,
-    reason: order.order === "Rally"
+    action: order.action,
+    reason: order.action.order === "Rally"
       ? `${getTemplate(unit).name} porządkuje linię obrony.`
       : `${getTemplate(unit).name} utrzymuje pozycję w trybie Overwatch.`,
   };
-}
-
-function chooseBestUnitAttack(
-  battle: Battle,
-  legalActions: LegalUnitAction[],
-): {
-  action: Extract<BattleAction, { type: "Attack" }>;
-  attacker: UnitInstance;
-  defender: UnitInstance;
-  score: number;
-} | undefined {
-  const units = battle.armies.flatMap((army) => army.units);
-  return legalActions
-    .filter((action): action is Extract<LegalAttackAction, { type: "Attack" }> =>
-      action.type === "Attack"
-    )
-    .flatMap((action) => {
-      const attacker = units.find((unit) => unit.id === action.attackerId);
-      const defender = units.find((unit) => unit.id === action.defenderId);
-      const weapon = attacker
-        ? getTemplate(attacker).weapons.find((candidate) => candidate.id === action.weaponId)
-        : undefined;
-      return attacker && defender && weapon
-        ? [{
-            action,
-            attacker,
-            defender,
-            score: scoreAttack(weapon, defender),
-          }]
-        : [];
-    })
-    .sort((left, right) => right.score - left.score)[0];
-}
-
-function chooseDefensiveMovement(
-  battle: Battle,
-  defenders: UnitInstance[],
-  legalActions: LegalUnitAction[],
-  target: GridPosition,
-): { action: Extract<BattleAction, { type: "AdvanceUnit" }>; unit: UnitInstance } | undefined {
-  return defenders
-    .filter((unit) => unit.position)
-    .flatMap((unit) => {
-      const currentDistance = distance(unit.position!, target);
-      return legalActions
-        .filter((action): action is Extract<BattleAction, { type: "AdvanceUnit" }> =>
-          action.type === "AdvanceUnit" && action.unitId === unit.id
-        )
-        .filter((action) => distance(action.targetPosition, target) < currentDistance)
-        .map((action) => ({ action, unit }));
-    })
-    .sort((left, right) =>
-      distance(left.action.targetPosition, target) - distance(right.action.targetPosition, target)
-    )[0];
-}
-
-function chooseReserveDeployment(
-  battle: Battle,
-  defenders: UnitInstance[],
-  legalActions: LegalUnitAction[],
-  target?: GridPosition,
-): { action: Extract<BattleAction, { type: "DeployUnit" }>; unit: UnitInstance } | undefined {
-  const destination = target ?? {
-    x: Math.floor((battle.board.width - 1) / 2),
-    y: Math.floor((battle.board.height - 1) / 2),
-  };
-  return defenders
-    .filter((unit) => !unit.position)
-    .flatMap((unit) =>
-      legalActions
-        .filter((action): action is Extract<BattleAction, { type: "DeployUnit" }> =>
-          action.type === "DeployUnit" && action.unitId === unit.id
-        )
-        .map((action) => ({ action, unit }))
-    )
-    .sort((left, right) =>
-      distance(left.action.targetPosition, destination) -
-      distance(right.action.targetPosition, destination)
-    )[0];
 }
 
 function getDefensiveObjective(
@@ -189,16 +138,8 @@ function getDefensiveObjective(
         ? "StrategicPoint"
         : undefined;
   return type
-    ? battle.board.objects?.find((object) => object.type === type && object.status === "Active")
+    ? battle.board.objects?.find(
+        (object) => object.type === type && object.status === "Active"
+      )
     : undefined;
-}
-
-function scoreAttack(weapon: WeaponProfile, defender: UnitInstance): number {
-  const maximumDamage = weapon.attacks * weapon.damage;
-  const lethalBonus = maximumDamage >= defender.currentHp ? 10_000 : 0;
-  return lethalBonus + maximumDamage * 100 - defender.currentHp;
-}
-
-function getSuppression(units: UnitInstance[], unitId: string): number {
-  return units.find((unit) => unit.id === unitId)?.suppression ?? 0;
 }
