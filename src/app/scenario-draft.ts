@@ -1,6 +1,11 @@
 import { createBattle } from "../core/battle-state";
+import {
+  generateMap,
+  type MapGenerationRecipe,
+  type MapThemeId,
+} from "../core/map-generation";
 import { getTemplate } from "../core/rules/state";
-import type { DeploymentZone } from "../core/scenario/scenario-types";
+import type { DeploymentZone, ScenarioDefinition } from "../core/scenario/scenario-types";
 import type { Army, Battle, Board, UnitInstance } from "../types";
 import { createEmptyBoard } from "./new-game-state";
 
@@ -11,6 +16,18 @@ export type ScenarioDraft = {
   defenderArmyId?: string;
   deploymentZones: DeploymentZone[];
   roundTarget?: number;
+  mapGeneration?: ScenarioMapGenerationState;
+};
+
+export type ScenarioMapGenerationState = {
+  themeId: MapThemeId;
+  seed: number;
+  lastRecipe?: MapGenerationRecipe;
+};
+
+export const defaultMapGenerationState: ScenarioMapGenerationState = {
+  themeId: "desert-outpost",
+  seed: 1138,
 };
 
 export type ComposerOrigin = "menu" | "setup";
@@ -24,9 +41,86 @@ export function createScenarioDraft(
     armies: structuredClone(input.armies ?? []),
     board: structuredClone(input.board ?? createEmptyBoard()),
     deploymentZones: structuredClone(input.deploymentZones ?? []),
+    mapGeneration: structuredClone(input.mapGeneration ?? defaultMapGenerationState),
     ...(input.defenderArmyId ? { defenderArmyId: input.defenderArmyId } : {}),
     ...(input.roundTarget ? { roundTarget: input.roundTarget } : {}),
   };
+}
+
+export function getScenarioMapGenerationState(
+  draft: Pick<ScenarioDraft, "mapGeneration">,
+): ScenarioMapGenerationState {
+  return structuredClone(draft.mapGeneration ?? defaultMapGenerationState);
+}
+
+export function updateScenarioMapGenerationState(
+  draft: ScenarioDraft,
+  patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
+): ScenarioDraft {
+  const current = getScenarioMapGenerationState(draft);
+  return {
+    ...draft,
+    mapGeneration: {
+      ...current,
+      ...patch,
+      ...(patch.seed === undefined ? {} : { seed: normalizeMapSeed(patch.seed) }),
+    },
+  };
+}
+
+export function markScenarioDraftMapEdited(draft: ScenarioDraft): ScenarioDraft {
+  const { lastRecipe: _lastRecipe, ...settings } = getScenarioMapGenerationState(draft);
+  return { ...draft, mapGeneration: settings };
+}
+
+export function hasManualScenarioMap(draft: ScenarioDraft): boolean {
+  const hasMapContent = draft.board.tiles.length > 0 ||
+    (draft.board.objects?.length ?? 0) > 0 ||
+    draft.deploymentZones.some((zone) => zone.cells.length > 0);
+  return hasMapContent && !draft.mapGeneration?.lastRecipe;
+}
+
+export function generateScenarioDraftMap(
+  draft: ScenarioDraft,
+  scenario: ScenarioDefinition,
+  useNextSeed = false,
+): ScenarioDraft {
+  if (draft.armies.length < 2 || draft.armies.length > 4) {
+    throw new Error("Map generation requires two to four configured armies.");
+  }
+  const settings = getScenarioMapGenerationState(draft);
+  const seed = useNextSeed ? nextMapSeed(settings.seed) : settings.seed;
+  const defenderArmySlot = draft.armies.findIndex(
+    (army) => army.id === draft.defenderArmyId,
+  );
+  const generated = generateMap({
+    width: draft.board.width,
+    height: draft.board.height,
+    seed,
+    themeId: settings.themeId,
+    scenario,
+    armies: draft.armies,
+    ...(defenderArmySlot >= 0 ? { defenderArmySlot } : {}),
+  });
+
+  return {
+    ...draft,
+    board: generated.board,
+    deploymentZones: generated.deploymentZones,
+    mapGeneration: {
+      themeId: settings.themeId,
+      seed,
+      lastRecipe: generated.recipe,
+    },
+  };
+}
+
+export function nextMapSeed(seed: number): number {
+  return (Math.imul(normalizeMapSeed(seed), 1664525) + 1013904223) >>> 0;
+}
+
+export function normalizeMapSeed(seed: number): number {
+  return Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : defaultMapGenerationState.seed;
 }
 
 export function prepareComposerDraft(

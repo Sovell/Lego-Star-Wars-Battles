@@ -5,14 +5,68 @@ import {
   alignDeploymentZones,
   createInitialBattleSnapshot,
   createScenarioDraft,
+  generateScenarioDraftMap,
+  getScenarioMapGenerationState,
+  hasManualScenarioMap,
+  markScenarioDraftMapEdited,
+  nextMapSeed,
   prepareComposerDraft,
   remapDeploymentZonesByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
   toggleDeploymentZoneCell,
 } from "./scenario-draft";
+import { defendPointScenario } from "../core/scenario/scenarios";
 
 describe("scenario draft flow", () => {
+  it("keeps stable generator settings in a new draft", () => {
+    const draft = createScenarioDraft("survival_test");
+
+    expect(getScenarioMapGenerationState(draft)).toEqual({
+      themeId: "desert-outpost",
+      seed: 1138,
+    });
+    expect(nextMapSeed(1138)).not.toBe(1138);
+  });
+
+  it("generates a scenario-aware board and zones without changing armies", () => {
+    const draft = createScenarioDraft(defendPointScenario.id, {
+      armies: starterArmies,
+      defenderArmyId: starterArmies[1].id,
+    });
+    const generated = generateScenarioDraftMap(draft, defendPointScenario);
+
+    expect(generated.armies).toEqual(draft.armies);
+    expect(generated.board.objects?.filter(({ type }) => type === "DefensePoint")).toHaveLength(1);
+    expect(generated.deploymentZones).toHaveLength(2);
+    expect(generated.mapGeneration?.lastRecipe).toMatchObject({
+      scenarioId: defendPointScenario.id,
+      defenderArmySlot: 1,
+      seed: 1138,
+    });
+    expect(hasManualScenarioMap(generated)).toBe(false);
+  });
+
+  it("marks a generated map as manually edited without losing its settings", () => {
+    const generated = generateScenarioDraftMap(createScenarioDraft(
+      defendPointScenario.id,
+      { armies: starterArmies },
+    ), defendPointScenario);
+    const edited = markScenarioDraftMapEdited(generated);
+
+    expect(edited.mapGeneration).toEqual({ themeId: "desert-outpost", seed: 1138 });
+    expect(hasManualScenarioMap(edited)).toBe(true);
+  });
+
+  it("uses a new deterministic seed when regenerating", () => {
+    const draft = createScenarioDraft(defendPointScenario.id, { armies: starterArmies });
+    const first = generateScenarioDraftMap(draft, defendPointScenario);
+    const second = generateScenarioDraftMap(first, defendPointScenario, true);
+
+    expect(second.mapGeneration?.seed).toBe(nextMapSeed(1138));
+    expect(second.board).not.toEqual(first.board);
+  });
+
   it("starts a battle from a full independent copy of the draft", () => {
     const draft = createScenarioDraft("survival_test", {
       armies: starterArmies,

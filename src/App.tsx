@@ -6,10 +6,16 @@ import {
   createInitialBattleSnapshot,
   createPreparationBattle,
   createScenarioDraft,
+  generateScenarioDraftMap,
+  getScenarioMapGenerationState,
+  hasManualScenarioMap,
+  markScenarioDraftMapEdited,
   prepareComposerDraft,
   remapDeploymentZonesByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
+  updateScenarioMapGenerationState,
+  type ScenarioMapGenerationState,
 } from "./app/scenario-draft";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
@@ -129,6 +135,8 @@ export function App() {
     [scenarioDraft],
   );
   const visibleBattle = gamePhase === "Preparation" ? preparationBattle : battle;
+  const mapGeneration = getScenarioMapGenerationState(scenarioDraft);
+  const mapHasManualChanges = hasManualScenarioMap(scenarioDraft);
 
   useEffect(() => {
     if (gamePhase !== "Playing") {
@@ -208,7 +216,7 @@ export function App() {
       ...(roundTarget ? { roundTarget } : {}),
     };
     const nextDraft = {
-      ...scenarioDraft,
+      ...markScenarioDraftMapEdited(scenarioDraft),
       armies: nextArmies,
       scenarioId: scenario.id,
       defenderArmyId: nextMission.defenderArmyId,
@@ -275,7 +283,7 @@ export function App() {
       attackerArmyId: attacker.id,
     }));
     setScenarioDraft((current) => ({
-      ...current,
+      ...markScenarioDraftMapEdited(current),
       defenderArmyId,
     }));
     setLogs((current) => [
@@ -320,7 +328,7 @@ export function App() {
 
     if (gamePhase === "Preparation") {
       setScenarioDraft((current) => ({
-        ...current,
+        ...markScenarioDraftMapEdited(current),
         armies: updateArmies(current.armies),
       }));
       setMission((current) => {
@@ -346,12 +354,13 @@ export function App() {
       return;
     }
     setScenarioDraft((current) => {
+      const editedDraft = markScenarioDraftMapEdited(current);
       const otherTiles = current.board.tiles.filter(
         (existingTile) => existingTile.x !== tile.x || existingTile.y !== tile.y,
       );
 
       return {
-        ...current,
+        ...editedDraft,
         board: {
           ...current.board,
           tiles: tile.terrainType === "Open" ? otherTiles : [...otherTiles, tile],
@@ -368,6 +377,7 @@ export function App() {
       return;
     }
     setScenarioDraft((current) => {
+      const editedDraft = markScenarioDraftMapEdited(current);
       const objects = current.board.objects ?? [];
       const remaining = objects.filter((object) => {
         const occupiesPosition =
@@ -380,7 +390,7 @@ export function App() {
       });
 
       return {
-        ...current,
+        ...editedDraft,
         board: {
           ...current.board,
           objects: type ? [...remaining, createBattlefieldObject(type, position)] : remaining,
@@ -493,13 +503,39 @@ export function App() {
     deploymentZones: ScenarioDefinition["deploymentZones"],
   ) {
     setScenarioDraft((current) => ({
-      ...current,
+      ...markScenarioDraftMapEdited(current),
       deploymentZones: structuredClone(deploymentZones),
     }));
     setMission((current) => ({
       ...current,
       deploymentZones: structuredClone(deploymentZones),
     }));
+  }
+
+  function handleMapGenerationSettingsChange(
+    patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
+  ) {
+    setScenarioDraft((current) => updateScenarioMapGenerationState(current, patch));
+  }
+
+  function handleGenerateMap(useNextSeed: boolean) {
+    const nextDraft = generateScenarioDraftMap(
+      scenarioDraft,
+      baseScenario,
+      useNextSeed,
+    );
+    setScenarioDraft(nextDraft);
+    setMission((current) => ({
+      ...current,
+      deploymentZones: structuredClone(nextDraft.deploymentZones),
+    }));
+    setLogs((current) => [
+      createLog(
+        1,
+        `Wygenerowano mapę ${nextDraft.mapGeneration?.themeId} (seed ${nextDraft.mapGeneration?.seed}).`,
+      ),
+      ...current,
+    ].slice(0, 12));
   }
 
   function handleMissionRestart() {
@@ -613,6 +649,8 @@ export function App() {
           debugMode={debugMode}
           importError={importError}
           logs={logs}
+          mapGeneration={mapGeneration}
+          mapHasManualChanges={mapHasManualChanges}
           mission={mission}
           scenario={activeScenario}
           scenarioOptions={scenarios}
@@ -630,6 +668,8 @@ export function App() {
           onImportError={setImportError}
           onLoadArmies={loadArmies}
           onLogsChange={setLogs}
+          onGenerateMap={handleGenerateMap}
+          onMapGenerationSettingsChange={handleMapGenerationSettingsChange}
           onMissionChange={handleMissionChange}
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
           onDeploymentZonesChange={handleDeploymentZonesChange}

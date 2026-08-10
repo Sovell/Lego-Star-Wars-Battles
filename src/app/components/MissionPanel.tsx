@@ -1,6 +1,8 @@
 import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
 import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
 import type { Army, ArmyControl, TeamId } from "../../types";
+import type { ScenarioMapGenerationState } from "../scenario-draft";
+import { MapGeneratorPanel } from "./MapGeneratorPanel";
 import { PanelTitle } from "./PanelTitle";
 import "./MissionPanel.css";
 
@@ -11,6 +13,12 @@ export function MissionPanel({
   mission,
   scenario,
   scenarios,
+  mapGeneration,
+  mapBoardHeight,
+  mapBoardWidth,
+  mapHasManualChanges,
+  onGenerateMap,
+  onMapGenerationSettingsChange,
   onScenarioChange,
   onArmyConfigChange,
   onDefenderArmyChange,
@@ -24,6 +32,14 @@ export function MissionPanel({
   mission: MissionState;
   scenario: ScenarioDefinition;
   scenarios: ScenarioDefinition[];
+  mapGeneration: ScenarioMapGenerationState;
+  mapBoardHeight: number;
+  mapBoardWidth: number;
+  mapHasManualChanges: boolean;
+  onGenerateMap: (useNextSeed: boolean) => void;
+  onMapGenerationSettingsChange: (
+    patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
+  ) => void;
   onScenarioChange: (scenarioId: string) => void;
   onArmyConfigChange: (
     armyId: string,
@@ -100,6 +116,15 @@ export function MissionPanel({
           ))}
         </select>
       </label>
+      <MapGeneratorPanel
+        boardHeight={mapBoardHeight}
+        boardWidth={mapBoardWidth}
+        canGenerate={armies.length >= 2 && armies.length <= 4}
+        hasManualMap={mapHasManualChanges}
+        settings={mapGeneration}
+        onGenerate={onGenerateMap}
+        onSettingsChange={onMapGenerationSettingsChange}
+      />
       <div className="missionRoles">
         <label className="missionSelector">
           Frakcja broniąca

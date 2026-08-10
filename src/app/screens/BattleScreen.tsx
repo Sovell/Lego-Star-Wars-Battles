@@ -18,6 +18,7 @@ import {
   alignDeploymentZones,
   createInitialBattleSnapshot,
   toggleDeploymentZoneCell,
+  type ScenarioMapGenerationState,
 } from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
 import { chooseAttackerBotAction } from "../../core/ai/attacker-bot";
@@ -83,6 +84,8 @@ export function BattleScreen({
   importError,
   logs,
   mission,
+  mapGeneration,
+  mapHasManualChanges,
   scenario,
   scenarioOptions,
   selectedOrder,
@@ -99,6 +102,8 @@ export function BattleScreen({
   onImportError,
   onLoadArmies,
   onLogsChange,
+  onGenerateMap,
+  onMapGenerationSettingsChange,
   onBattlefieldObjectPlace,
   onDeploymentZonesChange,
   onDefenderArmyChange,
@@ -122,6 +127,8 @@ export function BattleScreen({
   importError: string;
   logs: CombatLogEntry[];
   mission: MissionState;
+  mapGeneration: ScenarioMapGenerationState;
+  mapHasManualChanges: boolean;
   scenario: ScenarioDefinition;
   scenarioOptions: ScenarioDefinition[];
   selectedOrder: OrderType;
@@ -141,6 +148,10 @@ export function BattleScreen({
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
   onLogsChange: (logs: CombatLogEntry[]) => void;
+  onGenerateMap: (useNextSeed: boolean) => void;
+  onMapGenerationSettingsChange: (
+    patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
+  ) => void;
   onBattlefieldObjectPlace: (
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
@@ -759,10 +770,16 @@ export function BattleScreen({
             armies={battle.armies}
             canStart={canStartScenario}
             gamePhase={gamePhase}
+            mapBoardHeight={battle.board.height}
+            mapBoardWidth={battle.board.width}
+            mapGeneration={mapGeneration}
+            mapHasManualChanges={mapHasManualChanges}
             mission={mission}
             scenario={scenario}
             scenarios={scenarioOptions}
             onScenarioChange={onScenarioChange}
+            onGenerateMap={onGenerateMap}
+            onMapGenerationSettingsChange={onMapGenerationSettingsChange}
             onArmyConfigChange={onArmyConfigChange}
             onDefenderArmyChange={onDefenderArmyChange}
             onRoundTargetChange={(rounds) =>

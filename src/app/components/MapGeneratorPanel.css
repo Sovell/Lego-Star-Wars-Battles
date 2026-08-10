@@ -1,0 +1,97 @@
+.mapGeneratorPanel {
+  background: rgba(12, 17, 23, 0.56);
+  border: 1px solid rgba(223, 189, 121, 0.24);
+  border-radius: 7px;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+}
+
+.mapGeneratorHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mapGeneratorHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.mapGeneratorHeader span,
+.mapGeneratorFields label {
+  color: #9eabba;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mapGeneratorHeader strong {
+  color: #dfbd79;
+  font-size: 0.82rem;
+}
+
+.mapGeneratorHeader small,
+.mapGeneratorRecipe {
+  color: #84909d;
+  font-size: 0.66rem;
+}
+
+.mapGeneratorPanel > p {
+  color: #aeb9c6;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.mapGeneratorFields {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.65fr);
+}
+
+.mapGeneratorFields label {
+  display: grid;
+  gap: 4px;
+}
+
+.mapGeneratorActions,
+.mapGeneratorWarning > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mapGeneratorActions button {
+  flex: 1 1 120px;
+}
+
+.mapGeneratorHint {
+  color: #f0b0a8;
+  font-size: 0.68rem;
+}
+
+.mapGeneratorWarning {
+  background: rgba(130, 54, 43, 0.2);
+  border: 1px solid rgba(232, 117, 94, 0.42);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.mapGeneratorWarning strong {
+  color: #ffc1b5;
+  font-size: 0.74rem;
+}
+
+.mapGeneratorWarning span {
+  color: #d0b1ab;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 1180px) {
+  .mapGeneratorFields {
+    grid-template-columns: 1fr;
+  }
+}
