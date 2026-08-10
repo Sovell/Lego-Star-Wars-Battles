@@ -6,14 +6,19 @@ import {
 } from "./map-theme-assets";
 
 describe("map theme assets", () => {
-  it("registers the Tatooine bundle with its CC0 source", () => {
-    expect(getMapAssetSet("desert-outpost")?.source).toEqual({
+  it("registers every planetary bundle with its CC0 sources", () => {
+    expect(getMapAssetSet("desert-outpost")?.sources).toEqual([{
       name: "Kenney Sci-Fi RTS",
       url: "https://kenney.nl/assets/sci-fi-rts",
       license: "CC0 1.0",
       licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
-    });
-    expect(getMapAssetSet("forest-moon")).toBeUndefined();
+    }]);
+    expect(getMapAssetSet("forest-moon")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Foliage Pack", "Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("ice-front")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Foliage Pack", "Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("volcanic-foundry")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Sci-Fi RTS"]);
   });
 
   it("selects terrain decoration variants deterministically", () => {
@@ -24,6 +29,21 @@ describe("map theme assets", () => {
     expect(first).toBe(replay);
     expect(first).not.toBe(other);
     expect(getMapTerrainDecorationUrl("desert-outpost", "Open", 2, 3)).toBeUndefined();
+  });
+
+  it.each([
+    ["forest-moon", "/map-assets/endor/"],
+    ["ice-front", "/map-assets/hoth/"],
+    ["volcanic-foundry", "/map-assets/mustafar/"],
+  ] as const)("maps %s terrain to its own asset directory", (themeId, directory) => {
+    expect(getMapTerrainDecorationUrl(themeId, "LightCover", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "HeavyCover", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "DifficultTerrain", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "Building", 2, 3)?.startsWith(directory))
+      .toBe(true);
   });
 
   it("maps every battlefield object to themed Tatooine artwork", () => {
@@ -37,5 +57,21 @@ describe("map theme assets", () => {
       .toBe("/map-assets/tatooine/light-barricade.png");
     expect(getMapObjectAssetUrl("desert-outpost", "HeavyFortification"))
       .toBe("/map-assets/tatooine/heavy-bunker.png");
+  });
+
+  it.each([
+    ["forest-moon", "/map-assets/endor/"],
+    ["ice-front", "/map-assets/hoth/"],
+    ["volcanic-foundry", "/map-assets/mustafar/"],
+  ] as const)("maps every battlefield object for %s", (themeId, directory) => {
+    for (const objectType of [
+      "DefensePoint",
+      "StrategicPoint",
+      "Generator",
+      "LightFortification",
+      "HeavyFortification",
+    ] as const) {
+      expect(getMapObjectAssetUrl(themeId, objectType)?.startsWith(directory)).toBe(true);
+    }
   });
 });
