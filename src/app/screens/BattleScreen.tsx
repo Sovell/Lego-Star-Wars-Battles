@@ -1048,6 +1048,7 @@ export function BattleScreen({
           }
           enableRendererSwitch={debugMode}
           interactionDisabled={gamePhase === "Playing" && !missionActive}
+          mapThemeId={mapGeneration.themeId}
           mission={mission}
           missionActive={missionActive}
           scenario={scenario}

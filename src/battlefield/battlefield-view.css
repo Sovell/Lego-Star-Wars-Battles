@@ -6,6 +6,40 @@
   width: 100%;
 }
 
+.mapThemeBadge {
+  backdrop-filter: blur(8px);
+  background: rgba(8, 12, 18, 0.84);
+  border: 1px solid;
+  border-radius: 6px;
+  display: grid;
+  gap: 1px;
+  max-width: min(260px, 42%);
+  padding: 6px 9px;
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  text-align: right;
+  top: 12px;
+  z-index: 4;
+}
+
+.mapThemeBadge span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mapThemeBadge small {
+  color: #8e9baa;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .rendererSwitch {
   align-items: center;
   background: rgba(8, 11, 16, 0.94);

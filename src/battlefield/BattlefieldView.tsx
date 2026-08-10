@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { MissionState, ScenarioDefinition } from "../core/scenario/scenario-types";
+import { getMapTheme, type MapThemeId } from "../core/map-generation";
 import type { AbilityDefinition, Battle, OrderType } from "../types";
 import type { BattlefieldVisualEvent } from "./battlefield-visual-events";
 import { createBoardInteractionModel } from "./board-interaction-model";
@@ -22,6 +23,7 @@ export function BattlefieldView({
   deploymentZoneCells,
   enableRendererSwitch = false,
   interactionDisabled,
+  mapThemeId,
   mission,
   missionActive,
   scenario,
@@ -42,6 +44,7 @@ export function BattlefieldView({
   deploymentZoneCells?: Array<{ x: number; y: number }>;
   enableRendererSwitch?: boolean;
   interactionDisabled: boolean;
+  mapThemeId: MapThemeId;
   mission: MissionState;
   missionActive: boolean;
   scenario: ScenarioDefinition;
@@ -60,6 +63,7 @@ export function BattlefieldView({
 }) {
   const [renderer, setRenderer] = useState<BoardRendererMode>("pixi");
   const activeRenderer = resolveBoardRendererMode(enableRendererSwitch, renderer);
+  const mapTheme = getMapTheme(mapThemeId);
   const viewModel = useMemo(
     () => createBoardViewModel(battle, mission),
     [battle, mission],
@@ -102,6 +106,7 @@ export function BattlefieldView({
     ),
     interactionDisabled,
     interactionModel,
+    mapThemeId,
     selectedUnitId,
     visualEvent,
     viewModel,
@@ -111,6 +116,16 @@ export function BattlefieldView({
 
   return (
     <section className="battlefieldView">
+      <div
+        className="mapThemeBadge"
+        style={{
+          borderColor: mapTheme.presentation.palette.accent,
+          color: mapTheme.presentation.palette.accent,
+        }}
+      >
+        <span>{mapTheme.name}</span>
+        <small>{mapTheme.presentation.groundTextureId}</small>
+      </div>
       {enableRendererSwitch ? (
         <div className="rendererSwitch" role="group" aria-label="Renderer planszy">
           <span>Renderer</span>

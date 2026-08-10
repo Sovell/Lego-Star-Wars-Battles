@@ -5,7 +5,15 @@ export {
   type DeploymentEdge,
 } from "./deployment-zone-generator";
 export { validateMapConnectivity, type MapConnectivity } from "./map-connectivity";
-export { desertOutpostTheme, getMapTheme, mapThemes } from "./map-themes";
+export {
+  desertOutpostTheme,
+  forestMoonTheme,
+  getMapTheme,
+  getMapThemeTerrainColor,
+  iceFrontTheme,
+  mapThemes,
+  volcanicFoundryTheme,
+} from "./map-themes";
 export { getMapScenarioRequirements } from "./scenario-map-requirements";
 export type {
   GeneratedMap,
@@ -20,4 +28,6 @@ export type {
   MapTerrainWeight,
   MapTheme,
   MapThemeId,
+  MapThemeMotif,
+  MapThemeTerrainPalette,
 } from "./map-generation-types";

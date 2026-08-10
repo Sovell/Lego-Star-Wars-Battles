@@ -1,7 +1,21 @@
 import type { ScenarioDefinition } from "../scenario/scenario-types";
 import type { Army, BattlefieldObjectType, Board, TeamId, TerrainType } from "../../types";
 
-export type MapThemeId = "desert-outpost";
+export type MapThemeId =
+  | "desert-outpost"
+  | "forest-moon"
+  | "ice-front"
+  | "volcanic-foundry";
+
+export type MapThemeMotif = "dunes" | "forest" | "ice" | "lava";
+
+export type MapThemeTerrainPalette = {
+  open: string;
+  lightCover: string;
+  heavyCover: string;
+  building: string;
+  difficultTerrain: string;
+};
 
 export type MapTerrainWeight = {
   terrainType: TerrainType;
@@ -46,10 +60,12 @@ export type MapTheme = {
   presentation: {
     assetSetId: string;
     groundTextureId: string;
+    motif: MapThemeMotif;
     palette: {
       ground: string;
       accent: string;
       shadow: string;
+      terrain: MapThemeTerrainPalette;
     };
   };
   generation: {

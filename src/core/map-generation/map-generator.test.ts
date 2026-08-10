@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { validateMapConnectivity } from "./map-connectivity";
 import { generateMap } from "./map-generator";
-import { desertOutpostTheme, getMapTheme } from "./map-themes";
+import {
+  desertOutpostTheme,
+  getMapTheme,
+  getMapThemeTerrainColor,
+  mapThemes,
+} from "./map-themes";
 
 describe("map generator foundation", () => {
-  it("registers the Desert Outpost theme separately from terrain rules", () => {
+  it("registers the Tatooine theme separately from terrain rules", () => {
     expect(getMapTheme("desert-outpost")).toEqual(desertOutpostTheme);
-    expect(desertOutpostTheme.presentation.assetSetId).toBe("prototype-desert");
+    expect(desertOutpostTheme.presentation.assetSetId).toBe("tatooine-outpost");
     expect(desertOutpostTheme.generation.clusterSize).toEqual({ minimum: 2, maximum: 5 });
     expect(desertOutpostTheme.generation.terrainWeights).toEqual([
       { terrainType: "DifficultTerrain", weight: 4 },
@@ -14,6 +19,36 @@ describe("map generator foundation", () => {
       { terrainType: "HeavyCover", weight: 2 },
       { terrainType: "Building", weight: 1 },
     ]);
+  });
+
+  it("registers four planetary themes with complete visual palettes", () => {
+    expect(mapThemes.map(({ id }) => id)).toEqual([
+      "desert-outpost",
+      "forest-moon",
+      "ice-front",
+      "volcanic-foundry",
+    ]);
+    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(4);
+    expect(mapThemes.every(({ presentation }) =>
+      Object.values(presentation.palette.terrain).every((color) => /^#[0-9a-f]{6}$/i.test(color))
+    )).toBe(true);
+    expect(getMapThemeTerrainColor("ice-front", "DifficultTerrain"))
+      .toBe(getMapTheme("ice-front").presentation.palette.terrain.difficultTerrain);
+  });
+
+  it("generates every planetary theme deterministically", () => {
+    const generatedBoards = mapThemes.map(({ id }) => {
+      const config = { width: 8, height: 8, seed: 1138, themeId: id };
+      const first = generateMap(config);
+      const second = generateMap(config);
+
+      expect(first).toEqual(second);
+      expect(first.recipe.themeId).toBe(id);
+      expect(validateMapConnectivity(first.board).valid).toBe(true);
+      return JSON.stringify(first.board.tiles);
+    });
+
+    expect(new Set(generatedBoards).size).toBeGreaterThan(1);
   });
 
   it("recreates the same map from the same seed and recipe", () => {

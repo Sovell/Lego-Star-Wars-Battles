@@ -20,6 +20,12 @@ import {
   Texture,
 } from "pixi.js";
 import type { BattlefieldObjectType, FactionId, TerrainType } from "../types";
+import {
+  getMapTheme,
+  getMapThemeTerrainColor,
+  type MapThemeId,
+  type MapThemeMotif,
+} from "../core/map-generation";
 import { calculateSquareBoardLayout } from "./board-layout";
 import { zoomCameraAtPoint, type BoardCamera } from "./board-camera";
 import { getBoardCellInteraction, type BoardCellInteraction } from "./board-interaction-model";
@@ -40,6 +46,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [application, setApplication] = useState<PixiApplication | null>(null);
   const [camera, setCamera] = useState<BoardCamera>({ zoom: 1, x: 0, y: 0 });
+  const theme = getMapTheme(props.mapThemeId);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -111,8 +118,9 @@ export function PixiMapBoard(props: BoardRendererProps) {
       <Application
         antialias
         autoDensity
-        backgroundColor={0x0b1017}
+        backgroundColor={hexToNumber(theme.presentation.palette.shadow)}
         height={size.height}
+        key={props.mapThemeId}
         onInit={setApplication}
         resolution={Math.min(window.devicePixelRatio || 1, 2)}
         resizeTo={hostRef}
@@ -157,6 +165,7 @@ function PixiBoardScene({
   height,
   interactionDisabled,
   interactionModel,
+  mapThemeId,
   selectedUnitId,
   viewModel,
   visualEvent,
@@ -180,7 +189,12 @@ function PixiBoardScene({
   return (
     <CameraWorld camera={camera} height={height} visualEvent={visualEvent} width={width}>
       <pixiContainer x={-boardWidth / 2} y={-boardHeight / 2}>
-        <TerrainLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
+        <TerrainLayer
+          cellSize={cellSize}
+          mapThemeId={mapThemeId}
+          stride={stride}
+          viewModel={viewModel}
+        />
         <DeploymentZoneLayer
           cellSize={cellSize}
           cells={deploymentZoneCells}
@@ -278,9 +292,15 @@ function CameraWorld({
 
 function TerrainLayer({
   cellSize,
+  mapThemeId,
   stride,
   viewModel,
-}: { cellSize: number; stride: number; viewModel: BoardViewModel }) {
+}: {
+  cellSize: number;
+  mapThemeId: MapThemeId;
+  stride: number;
+  viewModel: BoardViewModel;
+}) {
   return (
     <pixiContainer eventMode="none">
       {viewModel.positions.map(({ x, y }) => {
@@ -288,7 +308,10 @@ function TerrainLayer({
         return (
           <TerrainCell
             cellSize={cellSize}
+            gridX={x}
+            gridY={y}
             key={`${x},${y}`}
+            mapThemeId={mapThemeId}
             terrainType={tile?.terrainType ?? "Open"}
             x={x * stride}
             y={y * stride}
@@ -301,29 +324,53 @@ function TerrainLayer({
 
 function TerrainCell({
   cellSize,
+  gridX,
+  gridY,
+  mapThemeId,
   terrainType,
   x,
   y,
-}: { cellSize: number; terrainType: TerrainType; x: number; y: number }) {
+}: {
+  cellSize: number;
+  gridX: number;
+  gridY: number;
+  mapThemeId: MapThemeId;
+  terrainType: TerrainType;
+  x: number;
+  y: number;
+}) {
+  const theme = getMapTheme(mapThemeId);
+  const terrainColor = hexToNumber(getMapThemeTerrainColor(mapThemeId, terrainType));
+  const accentColor = hexToNumber(theme.presentation.palette.accent);
+  const shadowColor = hexToNumber(theme.presentation.palette.shadow);
   const texture = usePixiTexture(getTerrainTextureUrl(terrainType));
   return (
     <pixiContainer x={x} y={y}>
       <pixiGraphics draw={(graphics) => {
         graphics.clear().roundRect(0, 0, cellSize, cellSize, 6)
-          .fill({ color: getTerrainColor(terrainType) });
+          .fill({ color: terrainColor });
       }} />
       {texture ? (
         <pixiSprite
-          alpha={0.78}
+          alpha={0.5}
           height={cellSize}
           texture={texture}
+          tint={terrainColor}
           width={cellSize}
         />
       ) : null}
+      <TerrainMotif
+        accentColor={accentColor}
+        cellSize={cellSize}
+        gridX={gridX}
+        gridY={gridY}
+        motif={theme.presentation.motif}
+        terrainType={terrainType}
+      />
       <pixiGraphics draw={(graphics) => {
         graphics.clear().roundRect(0, 0, cellSize, cellSize, 6)
-          .fill({ color: 0x081019, alpha: 0.14 })
-          .stroke({ color: 0x66788b, alpha: 0.55, width: 1 });
+          .fill({ color: shadowColor, alpha: 0.12 })
+          .stroke({ color: accentColor, alpha: 0.28, width: 1 });
       }} />
       <pixiText
         text={`${x / (cellSize + CELL_GAP) | 0},${y / (cellSize + CELL_GAP) | 0}`}
@@ -335,9 +382,79 @@ function TerrainCell({
         text={getTerrainLabel(terrainType)}
         x={6}
         y={cellSize - 16}
-        style={{ fill: 0xe4edf6, fontFamily: "Arial", fontSize: 8, fontWeight: "700" }}
+        style={{ fill: accentColor, fontFamily: "Arial", fontSize: 8, fontWeight: "700" }}
       />
     </pixiContainer>
+  );
+}
+
+function TerrainMotif({
+  accentColor,
+  cellSize,
+  gridX,
+  gridY,
+  motif,
+  terrainType,
+}: {
+  accentColor: number;
+  cellSize: number;
+  gridX: number;
+  gridY: number;
+  motif: MapThemeMotif;
+  terrainType: TerrainType;
+}) {
+  const variant = (gridX * 17 + gridY * 31) % 7;
+  return (
+    <pixiGraphics draw={(graphics) => {
+      graphics.clear();
+      if (motif === "dunes") {
+        const offset = 8 + variant;
+        graphics.moveTo(4, cellSize * 0.42)
+          .lineTo(cellSize * 0.35, cellSize * 0.34 + offset * 0.15)
+          .lineTo(cellSize * 0.68, cellSize * 0.46)
+          .lineTo(cellSize - 4, cellSize * 0.38)
+          .stroke({ color: accentColor, alpha: 0.2, width: 1.4 });
+        graphics.moveTo(8, cellSize * 0.72)
+          .lineTo(cellSize * 0.48, cellSize * 0.65)
+          .lineTo(cellSize - 7, cellSize * 0.74)
+          .stroke({ color: accentColor, alpha: 0.12, width: 1 });
+        return;
+      }
+      if (motif === "forest") {
+        const radius = Math.max(2, cellSize * 0.055);
+        graphics.circle(cellSize * 0.26, cellSize * (0.32 + variant * 0.015), radius)
+          .fill({ color: accentColor, alpha: 0.22 });
+        graphics.circle(cellSize * 0.62, cellSize * 0.48, radius * 1.35)
+          .stroke({ color: accentColor, alpha: 0.2, width: 1.2 });
+        graphics.circle(cellSize * 0.76, cellSize * 0.7, radius * 0.8)
+          .fill({ color: accentColor, alpha: 0.16 });
+        return;
+      }
+      if (motif === "ice") {
+        const centerX = cellSize * (0.42 + variant * 0.018);
+        const centerY = cellSize * 0.52;
+        graphics.moveTo(centerX, centerY)
+          .lineTo(centerX - cellSize * 0.2, centerY - cellSize * 0.17)
+          .lineTo(centerX - cellSize * 0.28, centerY - cellSize * 0.1)
+          .stroke({ color: accentColor, alpha: 0.28, width: 1 });
+        graphics.moveTo(centerX, centerY)
+          .lineTo(centerX + cellSize * 0.22, centerY + cellSize * 0.14)
+          .lineTo(centerX + cellSize * 0.3, centerY + cellSize * 0.08)
+          .stroke({ color: accentColor, alpha: 0.24, width: 1 });
+        return;
+      }
+      const strongLava = terrainType === "DifficultTerrain";
+      graphics.moveTo(3, cellSize * (0.24 + variant * 0.04))
+        .lineTo(cellSize * 0.3, cellSize * 0.38)
+        .lineTo(cellSize * 0.48, cellSize * 0.3)
+        .lineTo(cellSize * 0.72, cellSize * 0.55)
+        .lineTo(cellSize - 3, cellSize * 0.48)
+        .stroke({
+          color: accentColor,
+          alpha: strongLava ? 0.62 : 0.2,
+          width: strongLava ? 2.4 : 1.1,
+        });
+    }} />
   );
 }
 
@@ -680,16 +797,6 @@ function getTerrainTextureUrl(terrainType: TerrainType): string {
   }
 }
 
-function getTerrainColor(terrainType: TerrainType): number {
-  switch (terrainType) {
-    case "LightCover": return 0x263a30;
-    case "HeavyCover": return 0x35343d;
-    case "Building": return 0x303a40;
-    case "DifficultTerrain": return 0x493b27;
-    default: return 0x242c34;
-  }
-}
-
 function getTerrainLabel(terrainType: TerrainType): string {
   switch (terrainType) {
     case "LightCover": return "OSŁONA";
@@ -698,6 +805,10 @@ function getTerrainLabel(terrainType: TerrainType): string {
     case "DifficultTerrain": return "TRUDNY";
     default: return "OTWARTY";
   }
+}
+
+function hexToNumber(color: string): number {
+  return Number.parseInt(color.replace("#", ""), 16);
 }
 
 function getInteractionColor(interaction: BoardCellInteraction): number {

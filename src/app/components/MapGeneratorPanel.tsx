@@ -51,14 +51,24 @@ export function MapGeneratorPanel({
     <section className="mapGeneratorPanel">
       <div className="mapGeneratorHeader">
         <div>
-          <span>Generator mapy</span>
+          <span>Motyw planetarny</span>
           <strong>{selectedTheme.name}</strong>
         </div>
         <small>{boardWidth} × {boardHeight}</small>
       </div>
-      <p>
-        Układ uwzględni aktualny scenariusz, drużyny, obrońcę i strefy wejścia.
-      </p>
+      <div
+        className="mapThemePreview"
+        style={{
+          background: `linear-gradient(135deg, ${selectedTheme.presentation.palette.ground}, ${selectedTheme.presentation.palette.shadow})`,
+          borderColor: selectedTheme.presentation.palette.accent,
+        }}
+      >
+        <span style={{ background: selectedTheme.presentation.palette.terrain.open }} />
+        <span style={{ background: selectedTheme.presentation.palette.terrain.lightCover }} />
+        <span style={{ background: selectedTheme.presentation.palette.terrain.difficultTerrain }} />
+        <small>{selectedTheme.description}</small>
+      </div>
+      <p>Układ uwzględni scenariusz, drużyny, obrońcę i strefy wejścia.</p>
       <div className="mapGeneratorFields">
         <label>
           Motyw

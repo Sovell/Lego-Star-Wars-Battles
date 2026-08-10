@@ -3,6 +3,8 @@ import type {
   FactionId,
   UnitTemplate,
 } from "../types";
+import type { CSSProperties } from "react";
+import { getMapTheme } from "../core/map-generation";
 import { boardPositionKey } from "./board-view-model";
 import { getBoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
@@ -11,19 +13,30 @@ export function DomMapBoard({
   deploymentZoneCells,
   interactionDisabled,
   interactionModel,
+  mapThemeId,
   selectedUnitId,
   viewModel,
   onCellClick,
   onSelectedUnitChange,
 }: BoardRendererProps) {
+  const theme = getMapTheme(mapThemeId);
+  const themeStyle = {
+    "--map-open": theme.presentation.palette.terrain.open,
+    "--map-light-cover": theme.presentation.palette.terrain.lightCover,
+    "--map-heavy-cover": theme.presentation.palette.terrain.heavyCover,
+    "--map-building": theme.presentation.palette.terrain.building,
+    "--map-difficult": theme.presentation.palette.terrain.difficultTerrain,
+    "--map-theme-shadow": theme.presentation.palette.shadow,
+    gridTemplateColumns: `repeat(${viewModel.width}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${viewModel.height}, minmax(0, 1fr))`,
+  } as CSSProperties;
+
   return (
     <section
       aria-disabled={interactionDisabled}
       className={`mapBoard commandMapBoard ${interactionDisabled ? "missionLocked" : ""}`}
-      style={{
-        gridTemplateColumns: `repeat(${viewModel.width}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${viewModel.height}, minmax(0, 1fr))`,
-      }}
+      data-map-theme={mapThemeId}
+      style={themeStyle}
     >
       {viewModel.positions.map(({ x, y }) => {
         const key = boardPositionKey(x, y);
