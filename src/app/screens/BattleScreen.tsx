@@ -41,6 +41,7 @@ import {
 import { isPositionFree } from "../../core/rules/occupancy";
 import { createMissionState } from "../../core/scenario/scenario-engine";
 import { applyMissionAction } from "../../core/scenario/mission-session";
+import { validateScheduledScenarioEvents } from "../../core/scenario/scheduled-events";
 import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
 import { terrainPresets } from "../../core/terrain-presets";
 import type {
@@ -278,7 +279,11 @@ export function BattleScreen({
         (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
       ))
     ) &&
-    battle.armies.every((army) => army.units.length > 0);
+    battle.armies.every((army) => army.units.length > 0) &&
+    validateScheduledScenarioEvents(
+      scenario.scheduledEvents ?? [],
+      battle.armies,
+    );
 
   useEffect(() => {
     if (!battle.armies.some((army) => army.id === selectedDeploymentArmyId)) {
@@ -772,6 +777,7 @@ export function BattleScreen({
           <MissionPanel
             armies={battle.armies}
             canStart={canStartScenario}
+            currentRound={battle.turn}
             gamePhase={gamePhase}
             mapBoardHeight={battle.board.height}
             mapBoardWidth={battle.board.width}
@@ -790,6 +796,13 @@ export function BattleScreen({
                 ...mission,
                 roundTarget: Math.max(1, Math.floor(rounds || 1)),
                 roundsCompleted: 0,
+              })
+            }
+            onScheduledEventsChange={(scheduledEvents) =>
+              onMissionChange({
+                ...mission,
+                scheduledEvents,
+                resolvedEventIds: [],
               })
             }
             onRestart={onMissionRestart}

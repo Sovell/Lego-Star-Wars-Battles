@@ -30,6 +30,28 @@ export type ObjectiveDefinition = {
   victoryPoints: number;
 };
 
+export type ScenarioEventTrigger = {
+  type: "RoundStarted" | "RoundEnded";
+  round: number;
+};
+
+export type ScenarioReinforcementUnit = {
+  templateId: string;
+  count: number;
+};
+
+export type ScenarioScheduledEvent = {
+  id: string;
+  name: string;
+  trigger: ScenarioEventTrigger;
+  effect: {
+    type: "DeployReinforcements";
+    armyId: string;
+    units: ScenarioReinforcementUnit[];
+  };
+  visibility: "Announced" | "Hidden";
+};
+
 export type ScenarioDefinition = {
   id: string;
   name: string;
@@ -38,6 +60,7 @@ export type ScenarioDefinition = {
   board?: Battle["board"];
   deploymentZones: DeploymentZone[];
   objectives?: ObjectiveDefinition[];
+  scheduledEvents?: ScenarioScheduledEvent[];
   victoryCondition: ScenarioVictoryCondition;
   defeatCondition?: ScenarioDefeatCondition;
 };
@@ -52,6 +75,8 @@ export type MissionState = {
   deploymentZones?: DeploymentZone[];
   territoryOwners?: Record<string, string>;
   territoryScores?: Record<string, number>;
+  scheduledEvents?: ScenarioScheduledEvent[];
+  resolvedEventIds?: string[];
 };
 
 export type MissionEvent =
@@ -60,4 +85,9 @@ export type MissionEvent =
       status: "Victory" | "Defeat";
       message: string;
     }
-  | { type: "MissionProgress"; message: string };
+  | { type: "MissionProgress"; message: string }
+  | {
+      type: "ScheduledEventResolved";
+      eventId: string;
+      message: string;
+    };

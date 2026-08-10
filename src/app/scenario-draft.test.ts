@@ -12,6 +12,7 @@ import {
   nextMapSeed,
   prepareComposerDraft,
   remapDeploymentZonesByArmy,
+  remapScheduledEventsByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
   toggleDeploymentZoneCell,
@@ -196,5 +197,31 @@ describe("scenario draft flow", () => {
       { id: "army-slot-0-entry", armySlot: 0, cells: [{ x: 0, y: 0 }] },
       { id: "army-slot-1-entry", armySlot: 1, cells: [{ x: 2, y: 2 }] },
     ]);
+  });
+
+  it("keeps reinforcement events with the corresponding army slot", () => {
+    const events = remapScheduledEventsByArmy([{
+      id: "wave",
+      name: "Wsparcie",
+      trigger: { type: "RoundStarted", round: 2 },
+      effect: {
+        type: "DeployReinforcements",
+        armyId: "old-republic",
+        units: [{ templateId: "clone_trooper_battalion", count: 2 }],
+      },
+      visibility: "Announced",
+    }], [
+      { id: "old-republic" },
+      { id: "old-separatists" },
+    ], [
+      { id: "new-republic", faction: "Republic" },
+      { id: "new-separatists", faction: "Separatists" },
+    ]);
+
+    expect(events[0].effect).toEqual({
+      type: "DeployReinforcements",
+      armyId: "new-republic",
+      units: [{ templateId: "clone_trooper_battalion", count: 2 }],
+    });
   });
 });

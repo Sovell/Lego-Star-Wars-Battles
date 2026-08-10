@@ -1,15 +1,21 @@
-import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
+import type {
+  MissionState,
+  ScenarioDefinition,
+  ScenarioScheduledEvent,
+} from "../../core/scenario/scenario-types";
 import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
 import type { Army, ArmyControl, TeamId } from "../../types";
 import type { ScenarioMapGenerationState } from "../scenario-draft";
 import { MapGeneratorPanel } from "./MapGeneratorPanel";
 import { PanelTitle } from "./PanelTitle";
+import { ScenarioEventsPanel } from "./ScenarioEventsPanel";
 import "./MissionPanel.css";
 
 export function MissionPanel({
   armies,
   canStart,
   gamePhase,
+  currentRound,
   mission,
   scenario,
   scenarios,
@@ -23,12 +29,14 @@ export function MissionPanel({
   onArmyConfigChange,
   onDefenderArmyChange,
   onRoundTargetChange,
+  onScheduledEventsChange,
   onRestart,
   onStart,
 }: {
   armies: Army[];
   canStart: boolean;
   gamePhase: "Preparation" | "Playing";
+  currentRound: number;
   mission: MissionState;
   scenario: ScenarioDefinition;
   scenarios: ScenarioDefinition[];
@@ -47,6 +55,7 @@ export function MissionPanel({
   ) => void;
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
+  onScheduledEventsChange: (events: ScenarioScheduledEvent[]) => void;
   onRestart: () => void;
   onStart: () => void;
 }) {
@@ -82,6 +91,13 @@ export function MissionPanel({
             ))}
           </div>
         ) : null}
+        <ScenarioEventsPanel
+          armies={armies}
+          currentRound={currentRound}
+          editable={false}
+          events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
+          resolvedEventIds={mission.resolvedEventIds}
+        />
         <div className="missionCombatants">
           <span>Obrońca: <strong>{defender?.faction ?? "Brak"}</strong></span>
           <span>Atakujący: <strong>{attacker?.faction ?? "Brak"}</strong></span>
@@ -153,6 +169,13 @@ export function MissionPanel({
         teamEditingDisabled={false}
         onArmyConfigChange={onArmyConfigChange}
       />
+      <ScenarioEventsPanel
+        armies={armies}
+        currentRound={currentRound}
+        editable
+        events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
+        onChange={onScheduledEventsChange}
+      />
       <h3>{scenario.name}</h3>
       <p>{scenario.description}</p>
       <label className="missionSelector">
@@ -198,7 +221,7 @@ export function MissionPanel({
           </button>
           {!canStart ? (
             <small className="missionStartHint">
-              Przygotuj 2–4 armie z jednostkami i zaznacz strefę wejścia dla każdej z nich.
+              Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.
             </small>
           ) : null}
         </>

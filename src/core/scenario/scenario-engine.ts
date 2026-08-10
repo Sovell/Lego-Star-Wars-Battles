@@ -24,6 +24,9 @@ export function createMissionState(
     scenarioId: scenario.id,
     status: "Active",
     roundsCompleted: 0,
+    ...(scenario.scheduledEvents?.length
+      ? { scheduledEvents: structuredClone(scenario.scheduledEvents), resolvedEventIds: [] }
+      : {}),
     ...(defenderArmyId ? { defenderArmyId } : {}),
     ...(attackerArmyId ? { attackerArmyId } : {}),
     ...(scenario.victoryCondition.type === "ControlTerritory"

@@ -4,8 +4,12 @@ import {
   type MapGenerationRecipe,
   type MapThemeId,
 } from "../core/map-generation";
-import { getTemplate } from "../core/rules/state";
-import type { DeploymentZone, ScenarioDefinition } from "../core/scenario/scenario-types";
+import { getTemplate, templateById } from "../core/rules/state";
+import type {
+  DeploymentZone,
+  ScenarioDefinition,
+  ScenarioScheduledEvent,
+} from "../core/scenario/scenario-types";
 import type { Army, Battle, Board, UnitInstance } from "../types";
 import { createEmptyBoard } from "./new-game-state";
 
@@ -16,6 +20,7 @@ export type ScenarioDraft = {
   defenderArmyId?: string;
   deploymentZones: DeploymentZone[];
   roundTarget?: number;
+  scheduledEvents: ScenarioScheduledEvent[];
   mapGeneration?: ScenarioMapGenerationState;
 };
 
@@ -41,6 +46,7 @@ export function createScenarioDraft(
     armies: structuredClone(input.armies ?? []),
     board: structuredClone(input.board ?? createEmptyBoard()),
     deploymentZones: structuredClone(input.deploymentZones ?? []),
+    scheduledEvents: structuredClone(input.scheduledEvents ?? []),
     mapGeneration: structuredClone(input.mapGeneration ?? defaultMapGenerationState),
     ...(input.defenderArmyId ? { defenderArmyId: input.defenderArmyId } : {}),
     ...(input.roundTarget ? { roundTarget: input.roundTarget } : {}),
@@ -172,6 +178,7 @@ export function restartDraftFromBattle(
   defenderArmyId?: string,
   roundTarget?: number,
   deploymentZones: DeploymentZone[] = [],
+  scheduledEvents: ScenarioScheduledEvent[] = [],
 ): ScenarioDraft {
   const resetBattle = createInitialBattleSnapshot(initialBattle);
 
@@ -180,6 +187,7 @@ export function restartDraftFromBattle(
     board: resetBattle.board,
     defenderArmyId,
     deploymentZones,
+    scheduledEvents,
     roundTarget,
   });
 }
@@ -239,6 +247,33 @@ export function remapDeploymentZonesByArmy(
       armySlot: nextArmySlot,
       cells: structuredClone(previousZone?.cells ?? []),
     };
+  });
+}
+
+export function remapScheduledEventsByArmy(
+  events: readonly ScenarioScheduledEvent[],
+  previousArmies: Array<Pick<Army, "id">>,
+  nextArmies: Array<Pick<Army, "id" | "faction">>,
+): ScenarioScheduledEvent[] {
+  return events.flatMap((event) => {
+    const previousSlot = previousArmies.findIndex(
+      (army) => army.id === event.effect.armyId,
+    );
+    const nextArmy = nextArmies.find((army) => army.id === event.effect.armyId)
+      ?? nextArmies[previousSlot]
+      ?? nextArmies[0];
+    if (!nextArmy) return [];
+
+    return [{
+      ...structuredClone(event),
+      effect: {
+        ...structuredClone(event.effect),
+        armyId: nextArmy.id,
+        units: event.effect.units.filter((unit) =>
+          templateById.get(unit.templateId)?.faction === nextArmy.faction
+        ),
+      },
+    }];
   });
 }
 

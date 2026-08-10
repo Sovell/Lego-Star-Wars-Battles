@@ -6,6 +6,7 @@ import {
   type BattleActionResult,
 } from "../battle-actions";
 import { applyScenarioEvents } from "./scenario-engine";
+import { applyScheduledScenarioEvents } from "./scheduled-events";
 import type { MissionEvent, MissionState, ScenarioDefinition } from "./scenario-types";
 
 export type MissionSessionState = {
@@ -50,17 +51,33 @@ export function applyMissionAction(
     battleResult.events,
     battleResult.battle,
   );
-  const battle = scenarioResult.mission.status === "Active"
-    ? battleResult.battle
+  const completedTurn = battleResult.events.find((event) => event.type === "TurnEnded");
+  const scheduledResult = completedTurn && scenarioResult.mission.status === "Active"
+    ? applyScheduledScenarioEvents(
+        battleResult.battle,
+        scenarioResult.mission,
+        scenario,
+        [
+          { type: "RoundEnded", round: session.battle.turn },
+          { type: "RoundStarted", round: completedTurn.turn },
+        ],
+      )
     : {
-        ...battleResult.battle,
+        battle: battleResult.battle,
+        mission: scenarioResult.mission,
+        events: [],
+      };
+  const battle = scheduledResult.mission.status === "Active"
+    ? scheduledResult.battle
+    : {
+        ...scheduledResult.battle,
         activeActivation: undefined,
       };
 
   return {
     ...battleResult,
     battle,
-    mission: scenarioResult.mission,
-    missionEvents: scenarioResult.events,
+    mission: scheduledResult.mission,
+    missionEvents: [...scenarioResult.events, ...scheduledResult.events],
   };
 }

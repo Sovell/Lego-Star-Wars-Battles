@@ -1,0 +1,151 @@
+.scenarioEventsPanel {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.scenarioEventsHeader {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.scenarioEventsHeader h3,
+.scenarioEventsHeader small {
+  margin: 0;
+}
+
+.scenarioEventsHeader > span,
+.scenarioEventBadge {
+  background: rgba(109, 221, 255, 0.12);
+  border: 1px solid rgba(109, 221, 255, 0.3);
+  border-radius: 999px;
+  color: #9fe9ff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+.scenarioEventList {
+  display: grid;
+  gap: 8px;
+}
+
+.scenarioEventCard {
+  background: rgba(5, 16, 27, 0.52);
+  border: 1px solid rgba(130, 178, 214, 0.2);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.scenarioEventCard summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 10px;
+}
+
+.scenarioEventCard summary::-webkit-details-marker {
+  display: none;
+}
+
+.scenarioEventCard summary span:first-child,
+.scenarioEventCard.upcoming > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.scenarioEventCard summary strong,
+.scenarioEventCard.upcoming strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenarioEventCard summary small,
+.scenarioEventCard.upcoming small {
+  color: #8eb0ca;
+}
+
+.scenarioEventEditor {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.scenarioEventEditor label {
+  display: grid;
+  gap: 4px;
+}
+
+.scenarioEventFieldGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 82px;
+}
+
+.scenarioEventUnitsHeader,
+.scenarioEventUnitRow {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.scenarioEventUnitsHeader button {
+  padding: 6px 8px;
+}
+
+.scenarioEventUnits {
+  display: grid;
+  gap: 6px;
+}
+
+.scenarioEventUnitRow select {
+  flex: 1;
+  min-width: 0;
+}
+
+.scenarioEventUnitRow input {
+  flex: 0 0 58px;
+  min-width: 0;
+  width: 58px;
+}
+
+.scenarioEventUnitRow button {
+  flex: 0 0 34px;
+  padding: 7px 0;
+}
+
+.scenarioEventRemove {
+  justify-self: start;
+}
+
+.scenarioEventsEmpty,
+.scenarioEventCard.upcoming p {
+  color: #a8bfd0;
+  font-size: 12px;
+  margin: 0;
+}
+
+.scenarioEventCard.upcoming {
+  padding: 10px;
+}
+
+.scenarioEventCard.upcoming p {
+  margin-top: 6px;
+}
+
+.scenarioEventWarning {
+  color: #f4ba77;
+  display: block;
+  margin-top: 8px;
+}

@@ -12,6 +12,7 @@ import {
   markScenarioDraftMapEdited,
   prepareComposerDraft,
   remapDeploymentZonesByArmy,
+  remapScheduledEventsByArmy,
   restartDraftFromBattle,
   startBattleFromDraft,
   updateScenarioMapGenerationState,
@@ -33,6 +34,10 @@ import {
 } from "./core/battle-state";
 import { createBattlefieldObject } from "./core/battlefield-objects";
 import { createMissionState } from "./core/scenario/scenario-engine";
+import {
+  applyScheduledScenarioEvents,
+  validateScheduledScenarioEvents,
+} from "./core/scenario/scheduled-events";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import { createPersistenceAdapter } from "./core/persistence/create-persistence-adapter";
@@ -92,7 +97,12 @@ export function App() {
     () => recoveredSession?.battleStartSnapshot,
   );
   const [scenarioDraft, setScenarioDraft] = useState(() =>
-    recoveredSession?.scenarioDraft ?? createScenarioDraft(survivalTestScenario.id),
+    recoveredSession?.scenarioDraft
+      ? {
+          ...recoveredSession.scenarioDraft,
+          scheduledEvents: recoveredSession.scenarioDraft.scheduledEvents ?? [],
+        }
+      : createScenarioDraft(survivalTestScenario.id),
   );
   const [mission, setMission] = useState<MissionState>(() =>
     recoveredSession?.mission ?? createMissionState(survivalTestScenario, []),
@@ -128,11 +138,17 @@ export function App() {
   const configuredDeploymentZones = gamePhase === "Preparation"
     ? scenarioDraft.deploymentZones
     : mission.deploymentZones;
+  const configuredScheduledEvents = gamePhase === "Preparation"
+    ? scenarioDraft.scheduledEvents
+    : mission.scheduledEvents;
   const activeScenario: ScenarioDefinition = {
     ...baseScenario,
     deploymentZones: configuredDeploymentZones?.length
       ? configuredDeploymentZones
       : baseScenario.deploymentZones,
+    scheduledEvents: structuredClone(
+      configuredScheduledEvents ?? baseScenario.scheduledEvents ?? [],
+    ),
   };
   const preparationBattle = useMemo(
     () => createPreparationBattle(scenarioDraft),
@@ -214,8 +230,15 @@ export function App() {
           nextArmies,
         )
       : alignDeploymentZones(scenario.deploymentZones, nextArmies.length);
+    const scheduledEvents = keepsCurrentScenario
+      ? remapScheduledEventsByArmy(
+          scenario.scheduledEvents ?? scenarioDraft.scheduledEvents,
+          scenarioDraft.armies,
+          nextArmies,
+        )
+      : structuredClone(scenario.scheduledEvents ?? []);
     const nextMission = {
-      ...createMissionState(scenario, nextArmies, defenderArmyId),
+      ...createMissionState({ ...scenario, scheduledEvents }, nextArmies, defenderArmyId),
       deploymentZones,
       ...(roundTarget ? { roundTarget } : {}),
     };
@@ -226,6 +249,7 @@ export function App() {
       defenderArmyId: nextMission.defenderArmyId,
       deploymentZones,
       roundTarget,
+      scheduledEvents,
     };
     setScenarioDraft(nextDraft);
     setMission(nextMission);
@@ -411,7 +435,11 @@ export function App() {
         scenarioDraft.deploymentZones,
         scenarioDraft.armies.length,
       ).some((zone) => zone.cells.length === 0) ||
-      scenarioDraft.armies.some((army) => army.units.length === 0)
+      scenarioDraft.armies.some((army) => army.units.length === 0) ||
+      !validateScheduledScenarioEvents(
+        scenarioDraft.scheduledEvents,
+        scenarioDraft.armies,
+      )
     ) {
       return;
     }
@@ -420,20 +448,32 @@ export function App() {
     scenarioStartInProgress.current = true;
 
     try {
-      const nextBattle = startBattleFromDraft(scenarioDraft);
-      const initialBattle = structuredClone(nextBattle);
-      const nextMission = {
+      const preparedBattle = startBattleFromDraft(scenarioDraft);
+      const initialBattle = structuredClone(preparedBattle);
+      const preparedMission = {
         ...createMissionState(
           activeScenario,
-          nextBattle.armies,
+          preparedBattle.armies,
           scenarioDraft.defenderArmyId,
         ),
         deploymentZones: structuredClone(activeScenario.deploymentZones),
         ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
       };
+      const startEvents = applyScheduledScenarioEvents(
+        preparedBattle,
+        preparedMission,
+        activeScenario,
+        [{ type: "RoundStarted", round: 1 }],
+      );
+      const nextBattle = startEvents.battle;
+      const nextMission = startEvents.mission;
       const startLog = createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`);
       const saveLog = createLog(1, "Utworzono automatyczny zapis początkowy.");
-      let nextLogs = [saveLog, startLog];
+      let nextLogs = [
+        ...startEvents.events.map((event) => createLog(1, event.message)),
+        saveLog,
+        startLog,
+      ];
 
       try {
         await persistence.saveBattle(createScenarioStartSave({
@@ -446,6 +486,7 @@ export function App() {
       } catch (error) {
         const detail = error instanceof Error ? ` ${error.message}` : "";
         nextLogs = [
+          ...startEvents.events.map((event) => createLog(1, event.message)),
           createLog(1, `Nie udało się utworzyć zapisu początkowego.${detail}`),
           startLog,
         ];
@@ -506,6 +547,7 @@ export function App() {
       loadedMission.defenderArmyId,
       loadedMission.roundTarget,
       loadedMission.deploymentZones,
+      loadedMission.scheduledEvents,
     ));
     setMission(loadedMission);
     setLogs(savedBattle.logs);
@@ -526,6 +568,7 @@ export function App() {
         defenderArmyId: nextMission.defenderArmyId,
         deploymentZones: nextMission.deploymentZones ?? current.deploymentZones,
         roundTarget: nextMission.roundTarget,
+        scheduledEvents: structuredClone(nextMission.scheduledEvents ?? []),
       }));
     }
   }
@@ -577,6 +620,7 @@ export function App() {
       mission.defenderArmyId,
       mission.roundTarget,
       mission.deploymentZones,
+      mission.scheduledEvents,
     );
     setScenarioDraft(nextDraft);
     setBattle(structuredClone(initialBattle));
@@ -584,6 +628,8 @@ export function App() {
       ...createMissionState(activeScenario, nextDraft.armies, nextDraft.defenderArmyId),
       deploymentZones: structuredClone(nextDraft.deploymentZones),
       ...(nextDraft.roundTarget ? { roundTarget: nextDraft.roundTarget } : {}),
+      scheduledEvents: structuredClone(nextDraft.scheduledEvents),
+      resolvedEventIds: [],
     });
     setActiveArmyId(undefined);
     setSelectedUnitId("");
