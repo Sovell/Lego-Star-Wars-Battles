@@ -12,7 +12,13 @@ export function getUnitInitials(template: UnitTemplate): string {
 export function getUnitTokenImageUrl(template: UnitTemplate): string | undefined {
   const photoPrefix = "/unit-images/photos/";
 
-  return template.imageUrl?.startsWith(photoPrefix)
+  if (!template.imageUrl) return undefined;
+  return template.imageUrl.startsWith(photoPrefix)
     ? template.imageUrl.replace(photoPrefix, "/unit-images/tokens/")
-    : undefined;
+    : template.imageUrl;
+}
+
+export function getUnitTokenFallbackImageUrl(template: UnitTemplate): string | undefined {
+  const photoPrefix = "/unit-images/photos/";
+  return template.imageUrl?.startsWith(photoPrefix) ? template.imageUrl : undefined;
 }

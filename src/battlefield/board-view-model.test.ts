@@ -40,6 +40,8 @@ describe("board view model", () => {
       faction: battle.armies[0].faction,
       name: "Clone Trooper Battalion",
       initials: "CTB",
+      imageUrl: "/unit-images/tokens/clone-trooper.jpg",
+      fallbackImageUrl: "/unit-images/photos/clone-trooper.jpg",
       currentHp: 3,
       maxHp: 3,
       healthRatio: 1,

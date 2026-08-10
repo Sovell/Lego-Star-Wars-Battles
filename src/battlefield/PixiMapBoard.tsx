@@ -42,6 +42,9 @@ import type { BattlefieldVisualEvent } from "./battlefield-visual-events";
 import { boardPositionKey, type BoardTokenViewModel, type BoardViewModel } from "./board-view-model";
 import type { BoardRendererProps } from "./board-renderer";
 
+const loadedPixiTextures = new Map<string, Texture>();
+const pendingPixiTextures = new Map<string, Promise<Texture>>();
+
 extend({ Container, Graphics, Sprite, Text: PixiText });
 
 const BOARD_PADDING = 34;
@@ -628,7 +631,7 @@ function AnimatedUnitToken({
   const ringRef = useRef<Graphics>(null);
   const initialized = useRef(false);
   const target = useRef({ x: targetX, y: targetY });
-  const texture = usePixiTexture(token.imageUrl);
+  const texture = usePixiTexture(token.imageUrl, token.fallbackImageUrl);
   target.current = { x: targetX, y: targetY };
 
   useLayoutEffect(() => {
@@ -838,18 +841,76 @@ function CombatEffect({
   );
 }
 
-function usePixiTexture(url?: string): Texture | undefined {
-  const [texture, setTexture] = useState<Texture>();
+function usePixiTexture(url?: string, fallbackUrl?: string): Texture | undefined {
+  const candidates = useMemo(
+    () => [...new Set([url, fallbackUrl].filter((candidate): candidate is string => Boolean(candidate)))],
+    [fallbackUrl, url],
+  );
+  const [texture, setTexture] = useState<Texture | undefined>(
+    () => findLoadedTexture(candidates),
+  );
+
   useEffect(() => {
     let active = true;
-    setTexture(undefined);
-    if (!url) return () => { active = false; };
-    void Assets.load<Texture>(url).then((loaded) => {
-      if (active) setTexture(loaded);
-    }).catch(() => undefined);
+    const cached = findLoadedTexture(candidates);
+    setTexture(cached);
+
+    if (!cached && candidates.length > 0) {
+      void loadFirstAvailableTexture(candidates).then((loaded) => {
+        if (active) setTexture(loaded);
+      }).catch(() => undefined);
+    }
+
     return () => { active = false; };
-  }, [url]);
+  }, [candidates]);
+
   return texture;
+}
+
+function findLoadedTexture(urls: readonly string[]): Texture | undefined {
+  for (const url of urls) {
+    const texture = loadedPixiTextures.get(resolveAssetUrl(url));
+    if (texture) return texture;
+  }
+  return undefined;
+}
+
+async function loadFirstAvailableTexture(urls: readonly string[]): Promise<Texture> {
+  let lastError: unknown;
+  for (const url of urls) {
+    try {
+      return await loadPixiTexture(url);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError ?? new Error("No texture URL provided");
+}
+
+function loadPixiTexture(url: string): Promise<Texture> {
+  const resolvedUrl = resolveAssetUrl(url);
+  const cached = loadedPixiTextures.get(resolvedUrl);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = pendingPixiTextures.get(resolvedUrl);
+  if (pending) return pending;
+
+  const request = Assets.load<Texture>(resolvedUrl)
+    .then((texture) => {
+      loadedPixiTextures.set(resolvedUrl, texture);
+      pendingPixiTextures.delete(resolvedUrl);
+      return texture;
+    })
+    .catch((error: unknown) => {
+      pendingPixiTextures.delete(resolvedUrl);
+      throw error;
+    });
+  pendingPixiTextures.set(resolvedUrl, request);
+  return request;
+}
+
+function resolveAssetUrl(url: string): string {
+  return new URL(url, window.location.href).href;
 }
 
 type LayerProps = { cellSize: number; stride: number; viewModel: BoardViewModel };

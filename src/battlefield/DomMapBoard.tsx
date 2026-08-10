@@ -130,7 +130,13 @@ export function DomMapBoard({
                         className="tokenPortrait"
                         src={token.imageUrl}
                         onError={(event) => {
-                          event.currentTarget.hidden = true;
+                          const image = event.currentTarget;
+                          if (token.fallbackImageUrl && image.dataset.fallback !== "true") {
+                            image.dataset.fallback = "true";
+                            image.src = token.fallbackImageUrl;
+                            return;
+                          }
+                          image.hidden = true;
                         }}
                       />
                     ) : null}

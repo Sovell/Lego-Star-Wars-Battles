@@ -1,6 +1,10 @@
 import { getTemplate } from "../core/battle-state";
 import type { MissionState } from "../core/scenario/scenario-types";
-import { getUnitInitials, getUnitTokenImageUrl } from "../presentation/unit-presentation";
+import {
+  getUnitInitials,
+  getUnitTokenFallbackImageUrl,
+  getUnitTokenImageUrl,
+} from "../presentation/unit-presentation";
 import type {
   Battle,
   BattlefieldObject,
@@ -24,6 +28,7 @@ export type BoardTokenViewModel = {
   name: string;
   initials: string;
   imageUrl?: string;
+  fallbackImageUrl?: string;
   currentHp: number;
   maxHp: number;
   healthRatio: number;
@@ -83,6 +88,7 @@ export function createBoardViewModel(
         name: template.name,
         initials: getUnitInitials(template),
         imageUrl: getUnitTokenImageUrl(template),
+        fallbackImageUrl: getUnitTokenFallbackImageUrl(template),
         currentHp: unit.currentHp,
         maxHp: template.maxHp,
         healthRatio,
