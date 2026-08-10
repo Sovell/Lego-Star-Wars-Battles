@@ -176,11 +176,143 @@ export const volcanicFoundryTheme: MapTheme = {
   },
 };
 
+export const geonosisFoundryTheme: MapTheme = {
+  id: "geonosis-foundry",
+  version: 1,
+  name: "Geonosis — Droid Foundry",
+  description: "Czerwone pustkowie pełne skalnych iglic, kanionów i fabryk droidów.",
+  presentation: {
+    assetSetId: "geonosis-foundry",
+    groundTextureId: "geonosis-dust",
+    motif: "spires",
+    palette: {
+      ground: "#8f4e32",
+      accent: "#f3a45f",
+      shadow: "#25130f",
+      terrain: {
+        open: "#75412f",
+        lightCover: "#85472e",
+        heavyCover: "#623629",
+        building: "#4b4340",
+        difficultTerrain: "#98452a",
+      },
+    },
+  },
+  generation: {
+    defaultTerrainDensity: 0.42,
+    clusterSize: { minimum: 2, maximum: 6 },
+    terrainWeights: [
+      { terrainType: "DifficultTerrain", weight: 4 },
+      { terrainType: "HeavyCover", weight: 3 },
+      { terrainType: "LightCover", weight: 2 },
+      { terrainType: "Building", weight: 2 },
+    ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 2 },
+        { objectType: "HeavyFortification", weight: 3 },
+      ],
+    },
+  },
+};
+
+export const feluciaWildsTheme: MapTheme = {
+  id: "felucia-wilds",
+  version: 1,
+  name: "Felucia — Fungal Wilds",
+  description: "Gęsta, obca dżungla porośnięta olbrzymimi grzybami i jaskrawą roślinnością.",
+  presentation: {
+    assetSetId: "felucia-fungal",
+    groundTextureId: "felucia-spores",
+    motif: "fungal",
+    palette: {
+      ground: "#334b3a",
+      accent: "#e17ad8",
+      shadow: "#101923",
+      terrain: {
+        open: "#354c42",
+        lightCover: "#426144",
+        heavyCover: "#2b4939",
+        building: "#4b4853",
+        difficultTerrain: "#57416a",
+      },
+    },
+  },
+  generation: {
+    defaultTerrainDensity: 0.5,
+    clusterSize: { minimum: 3, maximum: 7 },
+    terrainWeights: [
+      { terrainType: "LightCover", weight: 4 },
+      { terrainType: "HeavyCover", weight: 4 },
+      { terrainType: "DifficultTerrain", weight: 3 },
+      { terrainType: "Building", weight: 1 },
+    ],
+    objectBudget: {
+      minimum: 2,
+      maximum: 4,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 4 },
+        { objectType: "HeavyFortification", weight: 1 },
+      ],
+    },
+  },
+};
+
+export const christophsisCrystalCityTheme: MapTheme = {
+  id: "christophsis-crystal-city",
+  version: 1,
+  name: "Christophsis — Crystal City",
+  description: "Chłodne miasto przecięte kryształowymi formacjami, barykadami i ciężką zabudową.",
+  presentation: {
+    assetSetId: "christophsis-crystal",
+    groundTextureId: "christophsis-glass",
+    motif: "crystal",
+    palette: {
+      ground: "#55738a",
+      accent: "#8cecff",
+      shadow: "#111c2b",
+      terrain: {
+        open: "#536f84",
+        lightCover: "#4f8293",
+        heavyCover: "#3f657d",
+        building: "#465767",
+        difficultTerrain: "#557b96",
+      },
+    },
+  },
+  generation: {
+    defaultTerrainDensity: 0.36,
+    clusterSize: { minimum: 2, maximum: 5 },
+    terrainWeights: [
+      { terrainType: "Building", weight: 4 },
+      { terrainType: "HeavyCover", weight: 3 },
+      { terrainType: "DifficultTerrain", weight: 3 },
+      { terrainType: "LightCover", weight: 2 },
+    ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 2 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
 export const mapThemes: readonly MapTheme[] = [
   desertOutpostTheme,
   forestMoonTheme,
   iceFrontTheme,
   volcanicFoundryTheme,
+  geonosisFoundryTheme,
+  feluciaWildsTheme,
+  christophsisCrystalCityTheme,
 ];
 
 export function getMapTheme(themeId: MapThemeId): MapTheme {

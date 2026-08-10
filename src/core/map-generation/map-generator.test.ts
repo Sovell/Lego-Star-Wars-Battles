@@ -21,14 +21,17 @@ describe("map generator foundation", () => {
     ]);
   });
 
-  it("registers four planetary themes with complete visual palettes", () => {
+  it("registers seven planetary themes with complete visual palettes", () => {
     expect(mapThemes.map(({ id }) => id)).toEqual([
       "desert-outpost",
       "forest-moon",
       "ice-front",
       "volcanic-foundry",
+      "geonosis-foundry",
+      "felucia-wilds",
+      "christophsis-crystal-city",
     ]);
-    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(4);
+    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(7);
     expect(mapThemes.every(({ presentation }) =>
       Object.values(presentation.palette.terrain).every((color) => /^#[0-9a-f]{6}$/i.test(color))
     )).toBe(true);

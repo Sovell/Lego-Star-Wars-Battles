@@ -474,6 +474,46 @@ function TerrainMotif({
           .stroke({ color: accentColor, alpha: 0.24, width: 1 });
         return;
       }
+      if (motif === "spires") {
+        const baseline = cellSize * 0.7;
+        graphics.moveTo(cellSize * 0.12, baseline)
+          .lineTo(cellSize * 0.28, cellSize * (0.28 + variant * 0.012))
+          .lineTo(cellSize * 0.39, baseline)
+          .lineTo(cellSize * 0.62, cellSize * 0.2)
+          .lineTo(cellSize * 0.82, baseline)
+          .stroke({ color: accentColor, alpha: 0.26, width: 1.3 });
+        graphics.moveTo(cellSize * 0.2, cellSize * 0.8)
+          .lineTo(cellSize * 0.76, cellSize * 0.8)
+          .stroke({ color: accentColor, alpha: 0.14, width: 1 });
+        return;
+      }
+      if (motif === "fungal") {
+        const capY = cellSize * (0.34 + variant * 0.014);
+        graphics.moveTo(cellSize * 0.32, cellSize * 0.72)
+          .lineTo(cellSize * 0.32, capY)
+          .stroke({ color: accentColor, alpha: 0.22, width: 1.4 });
+        graphics.circle(cellSize * 0.32, capY, cellSize * 0.12)
+          .fill({ color: accentColor, alpha: 0.16 });
+        graphics.moveTo(cellSize * 0.68, cellSize * 0.78)
+          .lineTo(cellSize * 0.68, cellSize * 0.48)
+          .stroke({ color: accentColor, alpha: 0.18, width: 1.2 });
+        graphics.circle(cellSize * 0.68, cellSize * 0.48, cellSize * 0.085)
+          .stroke({ color: accentColor, alpha: 0.24, width: 1.1 });
+        return;
+      }
+      if (motif === "crystal") {
+        const centerX = cellSize * (0.45 + variant * 0.012);
+        graphics.moveTo(centerX, cellSize * 0.16)
+          .lineTo(centerX + cellSize * 0.16, cellSize * 0.5)
+          .lineTo(centerX, cellSize * 0.76)
+          .lineTo(centerX - cellSize * 0.14, cellSize * 0.5)
+          .lineTo(centerX, cellSize * 0.16)
+          .stroke({ color: accentColor, alpha: 0.3, width: 1.2 });
+        graphics.moveTo(centerX - cellSize * 0.14, cellSize * 0.5)
+          .lineTo(centerX + cellSize * 0.16, cellSize * 0.5)
+          .stroke({ color: accentColor, alpha: 0.18, width: 1 });
+        return;
+      }
       const strongLava = terrainType === "DifficultTerrain";
       graphics.moveTo(3, cellSize * (0.24 + variant * 0.04))
         .lineTo(cellSize * 0.3, cellSize * 0.38)

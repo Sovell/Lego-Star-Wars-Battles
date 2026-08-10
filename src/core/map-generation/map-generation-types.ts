@@ -5,9 +5,19 @@ export type MapThemeId =
   | "desert-outpost"
   | "forest-moon"
   | "ice-front"
-  | "volcanic-foundry";
+  | "volcanic-foundry"
+  | "geonosis-foundry"
+  | "felucia-wilds"
+  | "christophsis-crystal-city";
 
-export type MapThemeMotif = "dunes" | "forest" | "ice" | "lava";
+export type MapThemeMotif =
+  | "dunes"
+  | "forest"
+  | "ice"
+  | "lava"
+  | "spires"
+  | "fungal"
+  | "crystal";
 
 export type MapThemeTerrainPalette = {
   open: string;

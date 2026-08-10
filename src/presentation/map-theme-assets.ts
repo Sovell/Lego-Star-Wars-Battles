@@ -142,6 +142,90 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
     LightFortification: "/map-assets/mustafar/light-barricade.png",
     HeavyFortification: "/map-assets/mustafar/heavy-bunker.png",
   },
+}, {
+  id: "geonosis-foundry",
+  sources: [sciFiRtsSource],
+  terrain: {
+    LightCover: [
+      "/map-assets/geonosis/rocks-light-a.png",
+      "/map-assets/geonosis/rocks-light-b.png",
+    ],
+    HeavyCover: [
+      "/map-assets/geonosis/spires-heavy-a.png",
+      "/map-assets/geonosis/spires-heavy-b.png",
+    ],
+    DifficultTerrain: [
+      "/map-assets/geonosis/mineral-rough-a.png",
+      "/map-assets/geonosis/mineral-rough-b.png",
+    ],
+    Building: [
+      "/map-assets/geonosis/foundry-building-a.png",
+      "/map-assets/geonosis/foundry-building-b.png",
+    ],
+  },
+  objects: {
+    DefensePoint: "/map-assets/geonosis/defense-turret.png",
+    StrategicPoint: "/map-assets/geonosis/strategic-array.png",
+    Generator: "/map-assets/geonosis/generator-core.png",
+    LightFortification: "/map-assets/geonosis/light-barricade.png",
+    HeavyFortification: "/map-assets/geonosis/heavy-bunker.png",
+  },
+}, {
+  id: "felucia-fungal",
+  sources: [foliagePackSource, sciFiRtsSource],
+  terrain: {
+    LightCover: [
+      "/map-assets/felucia/alien-flora-light-a.png",
+      "/map-assets/felucia/alien-flora-light-b.png",
+    ],
+    HeavyCover: [
+      "/map-assets/felucia/fungal-growth-heavy-a.png",
+      "/map-assets/felucia/fungal-growth-heavy-b.png",
+    ],
+    DifficultTerrain: [
+      "/map-assets/felucia/fungal-rough-a.png",
+      "/map-assets/felucia/fungal-rough-b.png",
+    ],
+    Building: [
+      "/map-assets/felucia/outpost-building-a.png",
+      "/map-assets/felucia/outpost-building-b.png",
+    ],
+  },
+  objects: {
+    DefensePoint: "/map-assets/felucia/defense-turret.png",
+    StrategicPoint: "/map-assets/felucia/strategic-array.png",
+    Generator: "/map-assets/felucia/generator-tanks.png",
+    LightFortification: "/map-assets/felucia/light-barricade.png",
+    HeavyFortification: "/map-assets/felucia/heavy-bunker.png",
+  },
+}, {
+  id: "christophsis-crystal",
+  sources: [sciFiRtsSource],
+  terrain: {
+    LightCover: [
+      "/map-assets/christophsis/crystal-rocks-light-a.png",
+      "/map-assets/christophsis/crystal-rocks-light-b.png",
+    ],
+    HeavyCover: [
+      "/map-assets/christophsis/crystal-ridge-heavy-a.png",
+      "/map-assets/christophsis/crystal-ridge-heavy-b.png",
+    ],
+    DifficultTerrain: [
+      "/map-assets/christophsis/crystal-rough-a.png",
+      "/map-assets/christophsis/crystal-rough-b.png",
+    ],
+    Building: [
+      "/map-assets/christophsis/city-building-a.png",
+      "/map-assets/christophsis/city-building-b.png",
+    ],
+  },
+  objects: {
+    DefensePoint: "/map-assets/christophsis/defense-turret.png",
+    StrategicPoint: "/map-assets/christophsis/strategic-array.png",
+    Generator: "/map-assets/christophsis/generator-tanks.png",
+    LightFortification: "/map-assets/christophsis/light-barricade.png",
+    HeavyFortification: "/map-assets/christophsis/heavy-bunker.png",
+  },
 }];
 
 export function getMapAssetSet(themeId: MapThemeId): MapAssetSet | undefined {

@@ -19,6 +19,12 @@ describe("map theme assets", () => {
       .toEqual(["Kenney Foliage Pack", "Kenney Sci-Fi RTS"]);
     expect(getMapAssetSet("volcanic-foundry")?.sources.map(({ name }) => name))
       .toEqual(["Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("geonosis-foundry")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("felucia-wilds")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Foliage Pack", "Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("christophsis-crystal-city")?.sources.map(({ name }) => name))
+      .toEqual(["Kenney Sci-Fi RTS"]);
   });
 
   it("selects terrain decoration variants deterministically", () => {
@@ -35,6 +41,9 @@ describe("map theme assets", () => {
     ["forest-moon", "/map-assets/endor/"],
     ["ice-front", "/map-assets/hoth/"],
     ["volcanic-foundry", "/map-assets/mustafar/"],
+    ["geonosis-foundry", "/map-assets/geonosis/"],
+    ["felucia-wilds", "/map-assets/felucia/"],
+    ["christophsis-crystal-city", "/map-assets/christophsis/"],
   ] as const)("maps %s terrain to its own asset directory", (themeId, directory) => {
     expect(getMapTerrainDecorationUrl(themeId, "LightCover", 2, 3)?.startsWith(directory))
       .toBe(true);
@@ -63,6 +72,9 @@ describe("map theme assets", () => {
     ["forest-moon", "/map-assets/endor/"],
     ["ice-front", "/map-assets/hoth/"],
     ["volcanic-foundry", "/map-assets/mustafar/"],
+    ["geonosis-foundry", "/map-assets/geonosis/"],
+    ["felucia-wilds", "/map-assets/felucia/"],
+    ["christophsis-crystal-city", "/map-assets/christophsis/"],
   ] as const)("maps every battlefield object for %s", (themeId, directory) => {
     for (const objectType of [
       "DefensePoint",
