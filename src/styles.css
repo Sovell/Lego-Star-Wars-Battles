@@ -1681,7 +1681,9 @@ select {
   justify-items: start;
   min-height: 64px;
   min-width: 56px;
+  overflow: hidden;
   padding: 6px;
+  position: relative;
 }
 
 .mapCell.territoryRepublic {
@@ -1732,6 +1734,8 @@ select {
   color: #9aa4b2;
   font-size: 0.72rem;
   font-weight: 900;
+  position: relative;
+  z-index: 1;
 }
 
 .terrainTag {
@@ -1743,8 +1747,29 @@ select {
   max-width: 100%;
   overflow: hidden;
   padding: 3px 5px;
+  position: relative;
   text-overflow: ellipsis;
   white-space: nowrap;
+  z-index: 1;
+}
+
+.terrainDecoration,
+.battlefieldObjectArt {
+  height: 90%;
+  inset: 5%;
+  object-fit: contain;
+  pointer-events: none;
+  position: absolute;
+  width: 90%;
+  z-index: 0;
+}
+
+.terrainDecoration {
+  opacity: 0.92;
+}
+
+.battlefieldObjectArt {
+  opacity: 0.96;
 }
 
 .battlefieldObject {
@@ -1756,6 +1781,8 @@ select {
   display: inline-flex;
   gap: 5px;
   padding: 4px 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .battlefieldObject small {
@@ -1790,6 +1817,8 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  position: relative;
+  z-index: 2;
 }
 
 .mapUnit {

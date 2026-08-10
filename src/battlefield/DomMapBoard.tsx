@@ -5,6 +5,10 @@ import type {
 } from "../types";
 import type { CSSProperties } from "react";
 import { getMapTheme } from "../core/map-generation";
+import {
+  getMapObjectAssetUrl,
+  getMapTerrainDecorationUrl,
+} from "../presentation/map-theme-assets";
 import { boardPositionKey } from "./board-view-model";
 import { getBoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
@@ -45,6 +49,15 @@ export function DomMapBoard({
         const tileUnits = viewModel.unitsByPosition.get(key) ?? [];
         const territoryFaction = viewModel.territoryByPosition.get(key)?.faction;
         const cellInteraction = getBoardCellInteraction(interactionModel, x, y);
+        const terrainDecorationUrl = getMapTerrainDecorationUrl(
+          mapThemeId,
+          tile?.terrainType ?? "Open",
+          x,
+          y,
+        );
+        const battlefieldObjectAssetUrl = battlefieldObject
+          ? getMapObjectAssetUrl(mapThemeId, battlefieldObject.type)
+          : undefined;
 
         return (
           <button
@@ -61,6 +74,22 @@ export function DomMapBoard({
             key={`${x}-${y}`}
             onClick={() => onCellClick(x, y)}
           >
+            {terrainDecorationUrl ? (
+              <img
+                alt=""
+                aria-hidden="true"
+                className="terrainDecoration"
+                src={terrainDecorationUrl}
+              />
+            ) : null}
+            {battlefieldObjectAssetUrl ? (
+              <img
+                alt=""
+                aria-hidden="true"
+                className="battlefieldObjectArt"
+                src={battlefieldObjectAssetUrl}
+              />
+            ) : null}
             <span className="cellCoords">
               {x},{y}
             </span>

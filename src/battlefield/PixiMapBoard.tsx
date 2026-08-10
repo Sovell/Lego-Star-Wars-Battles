@@ -19,13 +19,22 @@ import {
   Text as PixiText,
   Texture,
 } from "pixi.js";
-import type { BattlefieldObjectType, FactionId, TerrainType } from "../types";
+import type {
+  BattlefieldObject,
+  BattlefieldObjectType,
+  FactionId,
+  TerrainType,
+} from "../types";
 import {
   getMapTheme,
   getMapThemeTerrainColor,
   type MapThemeId,
   type MapThemeMotif,
 } from "../core/map-generation";
+import {
+  getMapObjectAssetUrl,
+  getMapTerrainDecorationUrl,
+} from "../presentation/map-theme-assets";
 import { calculateSquareBoardLayout } from "./board-layout";
 import { zoomCameraAtPoint, type BoardCamera } from "./board-camera";
 import { getBoardCellInteraction, type BoardCellInteraction } from "./board-interaction-model";
@@ -212,7 +221,12 @@ function PixiBoardScene({
           onCellClick={onCellClick}
           onHoveredCellChange={setHoveredCellKey}
         />
-        <ObjectLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
+        <ObjectLayer
+          cellSize={cellSize}
+          mapThemeId={mapThemeId}
+          stride={stride}
+          viewModel={viewModel}
+        />
         <UnitLayer
           cellSize={cellSize}
           interactionDisabled={interactionDisabled}
@@ -344,6 +358,9 @@ function TerrainCell({
   const accentColor = hexToNumber(theme.presentation.palette.accent);
   const shadowColor = hexToNumber(theme.presentation.palette.shadow);
   const texture = usePixiTexture(getTerrainTextureUrl(terrainType));
+  const decorationTexture = usePixiTexture(
+    getMapTerrainDecorationUrl(mapThemeId, terrainType, gridX, gridY),
+  );
   return (
     <pixiContainer x={x} y={y}>
       <pixiGraphics draw={(graphics) => {
@@ -367,6 +384,17 @@ function TerrainCell({
         motif={theme.presentation.motif}
         terrainType={terrainType}
       />
+      {decorationTexture ? (
+        <pixiSprite
+          anchor={0.5}
+          alpha={0.94}
+          height={cellSize * 0.9}
+          texture={decorationTexture}
+          width={cellSize * 0.9}
+          x={cellSize / 2}
+          y={cellSize / 2}
+        />
+      ) : null}
       <pixiGraphics draw={(graphics) => {
         graphics.clear().roundRect(0, 0, cellSize, cellSize, 6)
           .fill({ color: shadowColor, alpha: 0.12 })
@@ -473,27 +501,74 @@ function TerritoryLayer({ cellSize, stride, viewModel }: LayerProps) {
   );
 }
 
-function ObjectLayer({ cellSize, stride, viewModel }: LayerProps) {
+function ObjectLayer({
+  cellSize,
+  mapThemeId,
+  stride,
+  viewModel,
+}: LayerProps & { mapThemeId: MapThemeId }) {
   return (
     <pixiContainer eventMode="none">
       {viewModel.positions.map(({ x, y }) => {
         const object = viewModel.objectsByPosition.get(boardPositionKey(x, y));
         if (!object) return null;
         return (
-          <pixiContainer key={object.id} x={x * stride + cellSize - 28} y={y * stride + 16}>
-            <pixiGraphics draw={(graphics) => {
-              graphics.clear().roundRect(-22, -11, 44, 22, 5)
-                .fill({ color: 0x10151c, alpha: 0.94 })
-                .stroke({ color: object.status === "Destroyed" ? 0x65707c : 0xffe56b, width: 1.5 });
-            }} />
-            <pixiText
-              anchor={0.5}
-              text={`${getObjectCode(object.type)} ${object.currentHp}/${object.maxHp}`}
-              style={{ fill: 0xfff27a, fontFamily: "Arial", fontSize: 8, fontWeight: "800" }}
-            />
-          </pixiContainer>
+          <BattlefieldObjectToken
+            cellSize={cellSize}
+            key={object.id}
+            mapThemeId={mapThemeId}
+            object={object}
+            x={x * stride}
+            y={y * stride}
+          />
         );
       })}
+    </pixiContainer>
+  );
+}
+
+function BattlefieldObjectToken({
+  cellSize,
+  mapThemeId,
+  object,
+  x,
+  y,
+}: {
+  cellSize: number;
+  mapThemeId: MapThemeId;
+  object: BattlefieldObject;
+  x: number;
+  y: number;
+}) {
+  const texture = usePixiTexture(getMapObjectAssetUrl(mapThemeId, object.type));
+  const destroyed = object.status === "Destroyed";
+
+  return (
+    <pixiContainer x={x} y={y}>
+      {texture ? (
+        <pixiSprite
+          anchor={0.5}
+          alpha={destroyed ? 0.42 : 0.96}
+          height={cellSize * 0.9}
+          texture={texture}
+          tint={destroyed ? 0x71777d : 0xffffff}
+          width={cellSize * 0.9}
+          x={cellSize / 2}
+          y={cellSize / 2}
+        />
+      ) : null}
+      <pixiContainer x={cellSize - 28} y={16}>
+        <pixiGraphics draw={(graphics) => {
+          graphics.clear().roundRect(-22, -11, 44, 22, 5)
+            .fill({ color: 0x10151c, alpha: 0.94 })
+            .stroke({ color: destroyed ? 0x65707c : 0xffe56b, width: 1.5 });
+        }} />
+        <pixiText
+          anchor={0.5}
+          text={`${getObjectCode(object.type)} ${object.currentHp}/${object.maxHp}`}
+          style={{ fill: 0xfff27a, fontFamily: "Arial", fontSize: 8, fontWeight: "800" }}
+        />
+      </pixiContainer>
     </pixiContainer>
   );
 }
