@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { abilities, taskForces, unitTemplates } from "./data";
 import { createNewGameBattle } from "./app/new-game-state";
 import {
@@ -35,7 +35,9 @@ import { createBattlefieldObject } from "./core/battlefield-objects";
 import { createMissionState } from "./core/scenario/scenario-engine";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
+import { createPersistenceAdapter } from "./core/persistence/create-persistence-adapter";
 import type { SavedBattle } from "./core/persistence/save-types";
+import { createScenarioStartSave } from "./app/scenario-start-save";
 import {
   clearActiveSessionRecovery,
   loadActiveSessionRecovery,
@@ -79,6 +81,8 @@ const appTitles: AppTitle = {
 };
 
 export function App() {
+  const persistence = useMemo(() => createPersistenceAdapter(), []);
+  const scenarioStartInProgress = useRef(false);
   const [recoveredSession] = useState(() => loadActiveSessionRecovery());
   const [view, setView] = useState<AppView>(() => recoveredSession?.view ?? "home");
   const [battle, setBattle] = useState<Battle>(() =>
@@ -399,7 +403,7 @@ export function App() {
     });
   }
 
-  function handleStartScenario() {
+  async function handleStartScenario() {
     if (
       scenarioDraft.armies.length < 2 ||
       scenarioDraft.armies.length > maximumArmyCount ||
@@ -412,27 +416,54 @@ export function App() {
       return;
     }
 
-    const nextBattle = startBattleFromDraft(scenarioDraft);
-    const nextMission = {
-      ...createMissionState(
-        activeScenario,
-        nextBattle.armies,
-        scenarioDraft.defenderArmyId,
-      ),
-      deploymentZones: structuredClone(activeScenario.deploymentZones),
-      ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
-    };
+    if (scenarioStartInProgress.current) return;
+    scenarioStartInProgress.current = true;
 
-    setBattle(nextBattle);
-    setBattleStartSnapshot(structuredClone(nextBattle));
-    setMission(nextMission);
-    setActiveArmyId(undefined);
-    setSelectedUnitId("");
-    setTargetUnitId("");
-    setSelectedWeaponId("");
-    setLogs([createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`)]);
-    setGamePhase("Playing");
-    setView("battle");
+    try {
+      const nextBattle = startBattleFromDraft(scenarioDraft);
+      const initialBattle = structuredClone(nextBattle);
+      const nextMission = {
+        ...createMissionState(
+          activeScenario,
+          nextBattle.armies,
+          scenarioDraft.defenderArmyId,
+        ),
+        deploymentZones: structuredClone(activeScenario.deploymentZones),
+        ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
+      };
+      const startLog = createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`);
+      const saveLog = createLog(1, "Utworzono automatyczny zapis początkowy.");
+      let nextLogs = [saveLog, startLog];
+
+      try {
+        await persistence.saveBattle(createScenarioStartSave({
+          battle: nextBattle,
+          initialBattle,
+          logs: nextLogs,
+          mission: nextMission,
+          scenarioName: activeScenario.name,
+        }));
+      } catch (error) {
+        const detail = error instanceof Error ? ` ${error.message}` : "";
+        nextLogs = [
+          createLog(1, `Nie udało się utworzyć zapisu początkowego.${detail}`),
+          startLog,
+        ];
+      }
+
+      setBattle(nextBattle);
+      setBattleStartSnapshot(initialBattle);
+      setMission(nextMission);
+      setActiveArmyId(undefined);
+      setSelectedUnitId("");
+      setTargetUnitId("");
+      setSelectedWeaponId("");
+      setLogs(nextLogs);
+      setGamePhase("Playing");
+      setView("battle");
+    } finally {
+      scenarioStartInProgress.current = false;
+    }
   }
 
   function handleLoadSavedBattle(savedBattle: SavedBattle) {
