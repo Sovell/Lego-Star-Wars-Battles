@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { UnitTemplate } from "../types";
+import type { Army, UnitInstance, UnitTemplate } from "../types";
 import {
+  getUnitArmyLabel,
   getUnitTokenFallbackImageUrl,
   getUnitTokenImageUrl,
 } from "./unit-presentation";
@@ -29,6 +30,24 @@ describe("unit token presentation", () => {
     expect(getUnitTokenImageUrl(template)).toBeUndefined();
     expect(getUnitTokenFallbackImageUrl(template)).toBeUndefined();
   });
+
+  it("identifies both the army and team in unit selection lists", () => {
+    const unit = unitInstance("army-republic-2");
+    const army: Army = {
+      id: "army-republic-2",
+      playerName: "Gracz 3",
+      faction: "Republic",
+      teamId: 1,
+      control: "Human",
+      units: [unit],
+    };
+
+    expect(getUnitArmyLabel(unit, [army])).toBe("Gracz 3 · Team 1");
+  });
+
+  it("handles a unit whose army is missing from legacy data", () => {
+    expect(getUnitArmyLabel(unitInstance("missing-army"), [])).toBe("Nieznana armia");
+  });
 });
 
 function unitTemplate(imageUrl: string | undefined): UnitTemplate {
@@ -48,5 +67,18 @@ function unitTemplate(imageUrl: string | undefined): UnitTemplate {
     command: 1,
     abilities: [],
     cost: 1,
+  };
+}
+
+function unitInstance(armyId: string): UnitInstance {
+  return {
+    id: "test-instance",
+    templateId: "test-unit",
+    armyId,
+    currentHp: 1,
+    suppression: 0,
+    position: null,
+    status: "Ready",
+    hidden: false,
   };
 }

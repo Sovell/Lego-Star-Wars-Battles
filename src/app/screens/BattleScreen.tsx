@@ -60,7 +60,10 @@ import {
   createBattlefieldVisualEvent,
   type BattlefieldVisualEvent,
 } from "../../battlefield/battlefield-visual-events";
-import { getUnitInitials } from "../../presentation/unit-presentation";
+import {
+  getUnitArmyLabel,
+  getUnitInitials,
+} from "../../presentation/unit-presentation";
 
 type PendingAdvance = {
   attackerId: string;
@@ -677,7 +680,7 @@ export function BattleScreen({
               <option value="">Wybierz oddział</option>
               {allUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {getTemplate(unit).name} -{" "}
+                  {getTemplate(unit).name} | {getUnitArmyLabel(unit, battle.armies)} |{" "}
                   {unit.position ? `${unit.position.x},${unit.position.y}` : "rezerwa"}
                 </option>
               ))}
@@ -877,7 +880,8 @@ export function BattleScreen({
                 <option value="">Kliknij jednostkę lub wybierz</option>
                 {allUnits.map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {getTemplate(unit).name} | {unit.status}
+                    {getTemplate(unit).name} | {getUnitArmyLabel(unit, battle.armies)} |{" "}
+                    {unit.status}
                   </option>
                 ))}
               </select>
