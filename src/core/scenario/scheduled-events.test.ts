@@ -9,6 +9,7 @@ import {
 } from "./scheduled-events";
 import { survivalTestScenario } from "./scenarios";
 import type { ScenarioDefinition, ScenarioScheduledEvent } from "./scenario-types";
+import { buildActivationBag } from "../rules/activation";
 
 const roundOneReinforcements: ScenarioScheduledEvent = {
   id: "republic-wave-one",
@@ -70,6 +71,30 @@ describe("scheduled scenario events", () => {
     expect(replay.battle).toBe(first.battle);
     expect(replay.mission).toBe(first.mission);
     expect(replay.events).toEqual([]);
+  });
+
+  it("does not let reinforcements raise an army above eight orders", () => {
+    const scenario = withEvents([roundOneReinforcements]);
+    const battle = createBattle();
+    const templateUnit = battle.armies[0].units[0];
+    battle.armies[0].units = Array.from({ length: 7 }, (_, index) => ({
+      ...structuredClone(templateUnit),
+      id: `republic-${index + 1}`,
+      position: null,
+    }));
+    battle.activationBag = buildActivationBag(battle.armies);
+
+    const result = applyScheduledScenarioEvents(
+      battle,
+      createMissionState(scenario, battle.armies),
+      scenario,
+      [{ type: "RoundStarted", round: 1 }],
+    );
+
+    expect(result.battle.armies[0].units).toHaveLength(9);
+    expect(result.battle.activationBag.filter(
+      ({ armyId }) => armyId === battle.armies[0].id,
+    )).toHaveLength(8);
   });
 
   it("rejects incomplete waves before the scenario starts", () => {

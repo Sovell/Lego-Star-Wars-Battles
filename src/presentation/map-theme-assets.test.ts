@@ -38,6 +38,7 @@ describe("map theme assets", () => {
   });
 
   it.each([
+    ["desert-outpost", "/map-assets/tatooine/"],
     ["forest-moon", "/map-assets/endor/"],
     ["ice-front", "/map-assets/hoth/"],
     ["volcanic-foundry", "/map-assets/mustafar/"],
@@ -52,6 +53,12 @@ describe("map theme assets", () => {
     expect(getMapTerrainDecorationUrl(themeId, "DifficultTerrain", 2, 3)?.startsWith(directory))
       .toBe(true);
     expect(getMapTerrainDecorationUrl(themeId, "Building", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "Impassable", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "Hazardous", 2, 3)?.startsWith(directory))
+      .toBe(true);
+    expect(getMapTerrainDecorationUrl(themeId, "HighGround", 2, 3)?.startsWith(directory))
       .toBe(true);
   });
 

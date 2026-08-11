@@ -3,7 +3,7 @@ import type { MapTheme, MapThemeId } from "./map-generation-types";
 
 export const desertOutpostTheme: MapTheme = {
   id: "desert-outpost",
-  version: 2,
+  version: 3,
   name: "Tatooine — Desert Outpost",
   description: "Wyschnięte pustkowie z wydmami, skałami i rozsianymi placówkami.",
   presentation: {
@@ -20,6 +20,9 @@ export const desertOutpostTheme: MapTheme = {
         heavyCover: "#594a3f",
         building: "#554a43",
         difficultTerrain: "#8a552f",
+        impassable: "#382b26",
+        hazardous: "#c05a24",
+        highGround: "#a67b49",
       },
     },
   },
@@ -34,6 +37,9 @@ export const desertOutpostTheme: MapTheme = {
       { terrainType: "LightCover", weight: 3 },
       { terrainType: "HeavyCover", weight: 2 },
       { terrainType: "Building", weight: 1 },
+      { terrainType: "Impassable", weight: 2 },
+      { terrainType: "Hazardous", weight: 1 },
+      { terrainType: "HighGround", weight: 2 },
     ],
     objectBudget: {
       minimum: 3,
@@ -49,7 +55,7 @@ export const desertOutpostTheme: MapTheme = {
 
 export const forestMoonTheme: MapTheme = {
   id: "forest-moon",
-  version: 1,
+  version: 2,
   name: "Endor — Forest Moon",
   description: "Gęsty leśny księżyc z paprociami, głazami i imperialną infrastrukturą.",
   presentation: {
@@ -66,6 +72,9 @@ export const forestMoonTheme: MapTheme = {
         heavyCover: "#263f31",
         building: "#414a43",
         difficultTerrain: "#4f4931",
+        impassable: "#17291e",
+        hazardous: "#6f6033",
+        highGround: "#52734b",
       },
     },
   },
@@ -77,6 +86,9 @@ export const forestMoonTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 3 },
       { terrainType: "DifficultTerrain", weight: 2 },
       { terrainType: "Building", weight: 1 },
+      { terrainType: "Impassable", weight: 1 },
+      { terrainType: "Hazardous", weight: 1 },
+      { terrainType: "HighGround", weight: 2 },
     ],
     objectBudget: {
       minimum: 2,
@@ -92,7 +104,7 @@ export const forestMoonTheme: MapTheme = {
 
 export const iceFrontTheme: MapTheme = {
   id: "ice-front",
-  version: 1,
+  version: 2,
   name: "Hoth — Ice Front",
   description: "Otwarta lodowa równina, zaspy, szczeliny i umocnione pozycje rebelianckie.",
   presentation: {
@@ -109,6 +121,9 @@ export const iceFrontTheme: MapTheme = {
         heavyCover: "#627d8c",
         building: "#536977",
         difficultTerrain: "#6d8795",
+        impassable: "#405b6b",
+        hazardous: "#4f9ab0",
+        highGround: "#abc8d4",
       },
     },
   },
@@ -120,6 +135,9 @@ export const iceFrontTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 3 },
       { terrainType: "LightCover", weight: 2 },
       { terrainType: "Building", weight: 1 },
+      { terrainType: "Impassable", weight: 2 },
+      { terrainType: "Hazardous", weight: 2 },
+      { terrainType: "HighGround", weight: 2 },
     ],
     objectBudget: {
       minimum: 2,
@@ -135,7 +153,7 @@ export const iceFrontTheme: MapTheme = {
 
 export const volcanicFoundryTheme: MapTheme = {
   id: "volcanic-foundry",
-  version: 1,
+  version: 2,
   name: "Mustafar — Volcanic Foundry",
   description: "Wulkaniczny kompleks przemysłowy przecięty zastygłą lawą i ciężkimi konstrukcjami.",
   presentation: {
@@ -152,6 +170,9 @@ export const volcanicFoundryTheme: MapTheme = {
         heavyCover: "#342e32",
         building: "#41383a",
         difficultTerrain: "#6d2d1f",
+        impassable: "#21191b",
+        hazardous: "#d44c1f",
+        highGround: "#744336",
       },
     },
   },
@@ -163,6 +184,9 @@ export const volcanicFoundryTheme: MapTheme = {
       { terrainType: "Building", weight: 2 },
       { terrainType: "HeavyCover", weight: 2 },
       { terrainType: "LightCover", weight: 1 },
+      { terrainType: "Impassable", weight: 3 },
+      { terrainType: "Hazardous", weight: 5 },
+      { terrainType: "HighGround", weight: 2 },
     ],
     objectBudget: {
       minimum: 3,
@@ -178,7 +202,7 @@ export const volcanicFoundryTheme: MapTheme = {
 
 export const geonosisFoundryTheme: MapTheme = {
   id: "geonosis-foundry",
-  version: 1,
+  version: 2,
   name: "Geonosis — Droid Foundry",
   description: "Czerwone pustkowie pełne skalnych iglic, kanionów i fabryk droidów.",
   presentation: {
@@ -195,6 +219,9 @@ export const geonosisFoundryTheme: MapTheme = {
         heavyCover: "#623629",
         building: "#4b4340",
         difficultTerrain: "#98452a",
+        impassable: "#47251d",
+        hazardous: "#c76632",
+        highGround: "#b96c42",
       },
     },
   },
@@ -206,6 +233,9 @@ export const geonosisFoundryTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 3 },
       { terrainType: "LightCover", weight: 2 },
       { terrainType: "Building", weight: 2 },
+      { terrainType: "Impassable", weight: 3 },
+      { terrainType: "Hazardous", weight: 2 },
+      { terrainType: "HighGround", weight: 3 },
     ],
     objectBudget: {
       minimum: 3,
@@ -221,7 +251,7 @@ export const geonosisFoundryTheme: MapTheme = {
 
 export const feluciaWildsTheme: MapTheme = {
   id: "felucia-wilds",
-  version: 1,
+  version: 2,
   name: "Felucia — Fungal Wilds",
   description: "Gęsta, obca dżungla porośnięta olbrzymimi grzybami i jaskrawą roślinnością.",
   presentation: {
@@ -238,6 +268,9 @@ export const feluciaWildsTheme: MapTheme = {
         heavyCover: "#2b4939",
         building: "#4b4853",
         difficultTerrain: "#57416a",
+        impassable: "#21352d",
+        hazardous: "#92507f",
+        highGround: "#677b50",
       },
     },
   },
@@ -249,6 +282,9 @@ export const feluciaWildsTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 4 },
       { terrainType: "DifficultTerrain", weight: 3 },
       { terrainType: "Building", weight: 1 },
+      { terrainType: "Impassable", weight: 2 },
+      { terrainType: "Hazardous", weight: 4 },
+      { terrainType: "HighGround", weight: 2 },
     ],
     objectBudget: {
       minimum: 2,
@@ -264,7 +300,7 @@ export const feluciaWildsTheme: MapTheme = {
 
 export const christophsisCrystalCityTheme: MapTheme = {
   id: "christophsis-crystal-city",
-  version: 1,
+  version: 2,
   name: "Christophsis — Crystal City",
   description: "Chłodne miasto przecięte kryształowymi formacjami, barykadami i ciężką zabudową.",
   presentation: {
@@ -281,6 +317,9 @@ export const christophsisCrystalCityTheme: MapTheme = {
         heavyCover: "#3f657d",
         building: "#465767",
         difficultTerrain: "#557b96",
+        impassable: "#293f58",
+        hazardous: "#467b88",
+        highGround: "#70a9bd",
       },
     },
   },
@@ -292,6 +331,9 @@ export const christophsisCrystalCityTheme: MapTheme = {
       { terrainType: "HeavyCover", weight: 3 },
       { terrainType: "DifficultTerrain", weight: 3 },
       { terrainType: "LightCover", weight: 2 },
+      { terrainType: "Impassable", weight: 3 },
+      { terrainType: "Hazardous", weight: 1 },
+      { terrainType: "HighGround", weight: 3 },
     ],
     objectBudget: {
       minimum: 3,
@@ -333,6 +375,9 @@ export function getMapThemeTerrainColor(
     case "HeavyCover": return terrain.heavyCover;
     case "Building": return terrain.building;
     case "DifficultTerrain": return terrain.difficultTerrain;
+    case "Impassable": return terrain.impassable;
+    case "Hazardous": return terrain.hazardous;
+    case "HighGround": return terrain.highGround;
     default: return terrain.open;
   }
 }

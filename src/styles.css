@@ -1362,6 +1362,24 @@ select {
     url("/terrain-textures/difficult-terrain.png");
 }
 
+.terrainRule.Impassable {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.18), rgba(18, 23, 30, 0.84)),
+    url("/terrain-textures/impassable.png");
+}
+
+.terrainRule.Hazardous {
+  background-image:
+    linear-gradient(rgba(70, 20, 13, 0.14), rgba(18, 23, 30, 0.8)),
+    url("/terrain-textures/hazardous.png");
+}
+
+.terrainRule.HighGround {
+  background-image:
+    linear-gradient(rgba(18, 23, 30, 0.16), rgba(18, 23, 30, 0.78)),
+    url("/terrain-textures/high-ground.png");
+}
+
 .terrainRule.Open {
   background-image:
     linear-gradient(rgba(18, 23, 30, 0.22), rgba(18, 23, 30, 0.78)),
@@ -1372,7 +1390,10 @@ select {
 .terrainRule.LightCover,
 .terrainRule.HeavyCover,
 .terrainRule.Building,
-.terrainRule.DifficultTerrain {
+.terrainRule.DifficultTerrain,
+.terrainRule.Impassable,
+.terrainRule.Hazardous,
+.terrainRule.HighGround {
   background-position: center;
   background-size: cover;
 }
@@ -1736,6 +1757,33 @@ select {
   font-weight: 900;
   position: relative;
   z-index: 1;
+}
+
+.mapCell.Impassable {
+  background:
+    linear-gradient(rgba(12, 14, 18, 0.18), rgba(12, 14, 18, 0.58)),
+    url("/terrain-textures/impassable.png"),
+    var(--map-impassable, #24272c);
+  background-position: center;
+  background-size: cover;
+}
+
+.mapCell.Hazardous {
+  background:
+    linear-gradient(rgba(97, 26, 12, 0.04), rgba(97, 26, 12, 0.4)),
+    url("/terrain-textures/hazardous.png"),
+    var(--map-hazardous, #7c3b25);
+  background-position: center;
+  background-size: cover;
+}
+
+.mapCell.HighGround {
+  background:
+    linear-gradient(rgba(79, 100, 112, 0.04), rgba(32, 45, 52, 0.34)),
+    url("/terrain-textures/high-ground.png"),
+    var(--map-high-ground, #627784);
+  background-position: center;
+  background-size: cover;
 }
 
 .terrainTag {

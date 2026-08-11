@@ -12,6 +12,7 @@ import { ScenarioEventsPanel } from "./ScenarioEventsPanel";
 import "./MissionPanel.css";
 
 export function MissionPanel({
+  activationCounts,
   armies,
   canStart,
   gamePhase,
@@ -33,6 +34,7 @@ export function MissionPanel({
   onRestart,
   onStart,
 }: {
+  activationCounts?: Record<string, { remaining: number; total: number }>;
   armies: Army[];
   canStart: boolean;
   gamePhase: "Preparation" | "Playing";
@@ -103,6 +105,7 @@ export function MissionPanel({
           <span>Atakujący: <strong>{attacker?.faction ?? "Brak"}</strong></span>
         </div>
         <ArmySideConfiguration
+          activationCounts={activationCounts}
           armies={armies}
           defenderArmyId={mission.defenderArmyId}
           deploymentZones={scenario.deploymentZones}
@@ -235,6 +238,7 @@ export function MissionPanel({
 }
 
 function ArmySideConfiguration({
+  activationCounts,
   armies,
   defenderArmyId,
   deploymentZones,
@@ -242,6 +246,7 @@ function ArmySideConfiguration({
   teamEditingDisabled,
   onArmyConfigChange,
 }: {
+  activationCounts?: Record<string, { remaining: number; total: number }>;
   armies: Army[];
   defenderArmyId?: string;
   deploymentZones: ScenarioDefinition["deploymentZones"];
@@ -269,6 +274,14 @@ function ArmySideConfiguration({
                 {army.faction} · {defenderSide ? "obrona" : "atak"} · strefa:{" "}
                 {deploymentZones.find((zone) => zone.armySlot === index)?.cells.length ?? 0} pól
               </small>
+              {activationCounts?.[army.id] ? (
+                <small>
+                  Rozkazy: {activationCounts[army.id].remaining}/{activationCounts[army.id].total}
+                  {" · "}rezerwa: {army.units.filter((unit) =>
+                    unit.status !== "Destroyed" && !unit.position
+                  ).length}
+                </small>
+              ) : null}
             </div>
             <label>
               Drużyna

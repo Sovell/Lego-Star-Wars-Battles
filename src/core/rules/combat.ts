@@ -9,7 +9,7 @@ import {
   resolveMoraleRetreat,
 } from "./morale";
 import { getTemplate, findUnit, replaceUnit } from "./state";
-import { getDefenseBonus } from "./terrain";
+import { getAttackBonus, getDefenseBonus } from "./terrain";
 import { randomD6, type DiceRoller } from "../random";
 
 export function resolveAttack(
@@ -71,8 +71,12 @@ export function resolveAttack(
       ? getNumericAbilityEffect(attackerTemplate, "hit_bonus_without_suppression")
       : 0;
   const coverPenalty = getDefenseBonus(battle, defender);
+  const highGroundBonus = getAttackBonus(battle, attacker);
   const attackerSuppressionPenalty = Math.min(2, attacker.suppression);
-  const hitTarget = Math.min(6, Math.max(2, 4 + coverPenalty + attackerSuppressionPenalty - cloneBonus));
+  const hitTarget = Math.min(6, Math.max(
+    2,
+    4 + coverPenalty + attackerSuppressionPenalty - cloneBonus - highGroundBonus,
+  ));
   const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender);
   const attackDice = Math.max(1, weapon.attacks + attackDiceBonus);
   const hitRolls = rollD6Pool(attackDice, rollD6);
@@ -144,7 +148,7 @@ export function resolveAttack(
       ...(moraleResult ? { moraleRolls: moraleResult.rolls } : {}),
       ...(moraleResult?.retreatedTo ? { retreatedTo: moraleResult.retreatedTo } : {}),
     },
-    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, ataki ${attackDice}${attackDiceBonus ? ` (+${attackDiceBonus})` : ""}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, bonus obrazen +${categoryDamageBonus}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.${moraleResult ? ` Morale ${moraleResult.rolls.join("+")} ${moraleResult.failed ? moraleResult.retreatedTo ? `nieudane: odwrot na ${moraleResult.retreatedTo.x}, ${moraleResult.retreatedTo.y}.` : "nieudane: brak wolnego pola odwrotu." : "zdane: jednostka utrzymuje pozycje."}` : ""}`,
+    log: `${attackerTemplate.name} strzela z ${weapon.name} do ${defenderTemplate.name}: zasieg ${targetDistance}/${weapon.range}, cel ${hitTarget}+${highGroundBonus ? ` (wysoki teren -${highGroundBonus})` : ""}, ataki ${attackDice}${attackDiceBonus ? ` (+${attackDiceBonus})` : ""}, rzuty ${hitRolls.join(", ")}, trafienia ${hits}, save ${armorRolls.length ? armorRolls.join(", ") : "-"}, przebicia ${unsavedHits}, bonus obrazen +${categoryDamageBonus}, tarcza -${shieldReduction}, obrazenia ${damage}, suppression +${suppression}.${moraleResult ? ` Morale ${moraleResult.rolls.join("+")} ${moraleResult.failed ? moraleResult.retreatedTo ? `nieudane: odwrot na ${moraleResult.retreatedTo.x}, ${moraleResult.retreatedTo.y}.` : "nieudane: brak wolnego pola odwrotu." : "zdane: jednostka utrzymuje pozycje."}` : ""}`,
   };
 }
 

@@ -3,6 +3,7 @@ import { randomD6, type DiceRoller } from "../random";
 import { validateUnitActivation } from "./activation";
 import { distance, lineOfSight } from "./geometry";
 import { findUnit, getTemplate, replaceUnit } from "./state";
+import { getAttackBonus } from "./terrain";
 
 export function resolveObjectAttack(
   battle: Battle,
@@ -45,7 +46,11 @@ export function resolveObjectAttack(
     return { battle, log: `${attackerTemplate.name} nie ma linii widzenia do ${target.name}.` };
   }
 
-  const hitTarget = Math.min(6, 4 + Math.min(2, attacker.suppression));
+  const highGroundBonus = getAttackBonus(battle, attacker);
+  const hitTarget = Math.min(6, Math.max(
+    2,
+    4 + Math.min(2, attacker.suppression) - highGroundBonus,
+  ));
   const hitRolls = rollD6Pool(weapon.attacks, rollD6);
   const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
   const armorSave = target.armorSave ?? 7;

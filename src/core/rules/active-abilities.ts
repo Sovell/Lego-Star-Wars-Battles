@@ -9,6 +9,8 @@ import { resolveAttack } from "./combat";
 import { findUnit, getTemplate, replaceUnit } from "./state";
 import { validateUnitActivation } from "./activation";
 import { crossedCriticalHpThreshold, resolveMoraleRetreat } from "./morale";
+import { isTerrainEnterable } from "../terrain-definitions";
+import { getTerrainAtPosition } from "./terrain";
 
 export type UseAbilityInput = {
   unitId: string;
@@ -92,6 +94,7 @@ function applyAbilityEffect(
         !source.position ||
         !targetPosition ||
         !isOnBoard(battle, targetPosition) ||
+        !isTerrainEnterable(getTerrainAtPosition(battle, targetPosition)) ||
         distance(source.position, targetPosition) > (ability.range ?? 1) ||
         !isPositionFree(battle, targetPosition) ||
         battle.board.objects?.some(
@@ -174,7 +177,11 @@ function applyAbilityEffect(
         source.position
       ) {
         const pushedPosition = stepAway(nextTarget.position, source.position);
-        if (isOnBoard(nextBattle, pushedPosition) && isPositionFree(nextBattle, pushedPosition, nextTarget.id)) {
+        if (
+          isOnBoard(nextBattle, pushedPosition) &&
+          isTerrainEnterable(getTerrainAtPosition(nextBattle, pushedPosition)) &&
+          isPositionFree(nextBattle, pushedPosition, nextTarget.id)
+        ) {
           nextTarget = { ...nextTarget, position: pushedPosition };
           nextBattle = replaceUnit(nextBattle, nextTarget);
         }
@@ -222,6 +229,7 @@ function applyAbilityEffect(
         !source.position ||
         !targetPosition ||
         !isOnBoard(battle, targetPosition) ||
+        !isTerrainEnterable(getTerrainAtPosition(battle, targetPosition)) ||
         distance(source.position, targetPosition) > (ability.effect.value ?? 0) ||
         !isPositionFree(battle, targetPosition, source.id)
       ) {
@@ -406,6 +414,7 @@ function adjacentFreePositions(
       if (
         (x !== position.x || y !== position.y) &&
         isOnBoard(battle, candidate) &&
+        isTerrainEnterable(getTerrainAtPosition(battle, candidate)) &&
         isPositionFree(battle, candidate, excludedUnitId)
       ) {
         result.push(candidate);

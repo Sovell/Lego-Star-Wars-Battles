@@ -25,6 +25,9 @@ export type MapThemeTerrainPalette = {
   heavyCover: string;
   building: string;
   difficultTerrain: string;
+  impassable: string;
+  hazardous: string;
+  highGround: string;
 };
 
 export type MapTerrainWeight = {

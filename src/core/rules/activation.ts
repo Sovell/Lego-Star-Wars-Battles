@@ -2,10 +2,13 @@ import type { ActivationToken, Army, Battle } from "../../types";
 import { randomIndex, systemRandom, type RandomSource } from "../random";
 import { findArmy, findUnit } from "./state";
 
+export const MAX_ACTIVATIONS_PER_ARMY = 8;
+
 export function buildActivationBag(armies: Army[]): ActivationToken[] {
   return armies.flatMap((army) =>
     army.units
       .filter((unit) => unit.status !== "Destroyed")
+      .slice(0, MAX_ACTIVATIONS_PER_ARMY)
       .map((unit, index) => ({
         id: `${army.id}_token_${unit.id}_${index}`,
         armyId: army.id,
@@ -31,7 +34,7 @@ export function drawActivation(battle: Battle, randomSource: RandomSource = syst
   if (unusedTokens.length === 0) {
     return {
       battle: { ...battle, activeActivation: undefined },
-      log: "Wszystkie zywe jednostki wykonaly juz rozkaz. Mozesz zakonczyc ture.",
+      log: "Wszystkie rozkazy tej tury zostaly wykorzystane. Mozesz zakonczyc ture.",
     };
   }
 
@@ -47,15 +50,30 @@ export function drawActivation(battle: Battle, randomSource: RandomSource = syst
   return {
     battle: nextBattle,
     token: pickedToken,
-    log: `Wylosowano aktywacje: ${pickedToken.faction}.`,
+    log: `Wylosowano rozkaz dla armii: ${pickedToken.faction}.`,
   };
 }
 
 export function getRemainingActivationCount(battle: Battle): number {
-  return battle.armies.reduce(
-    (total, army) => total + army.units.filter(isAwaitingActivation).length,
-    0,
-  );
+  return getAvailableActivationTokens(battle).length + (battle.activeActivation ? 1 : 0);
+}
+
+export function getTurnActivationCount(battle: Battle): number {
+  return getEligibleActivationTokens(battle).length;
+}
+
+export function getArmyActivationCounts(
+  battle: Battle,
+  armyId: string,
+): { remaining: number; total: number } {
+  const eligible = getEligibleActivationTokens(battle)
+    .filter((token) => token.armyId === armyId);
+  return {
+    remaining: getAvailableActivationTokens(battle)
+      .filter((token) => token.armyId === armyId).length +
+      (battle.activeActivation?.armyId === armyId ? 1 : 0),
+    total: eligible.length,
+  };
 }
 
 export function canEndTurn(battle: Battle): boolean {
@@ -63,15 +81,31 @@ export function canEndTurn(battle: Battle): boolean {
 }
 
 function getAvailableActivationTokens(battle: Battle): ActivationToken[] {
-  const armiesWithPendingUnits = new Set(
-    battle.armies
-      .filter((army) => army.units.some(isAwaitingActivation))
-      .map((army) => army.id),
-  );
+  const eligible = getEligibleActivationTokens(battle);
+  return battle.armies.flatMap((army) => {
+    const pendingUnitCount = army.units.filter(isAwaitingActivation).length;
+    const activeOrderCount = battle.activeActivation?.armyId === army.id ? 1 : 0;
+    const availableUnitCount = Math.max(0, pendingUnitCount - activeOrderCount);
+    return eligible
+      .filter((token) => token.armyId === army.id && !token.used)
+      .slice(0, availableUnitCount);
+  });
+}
 
-  return battle.activationBag.filter(
-    (token) => !token.used && armiesWithPendingUnits.has(token.armyId),
-  );
+function getEligibleActivationTokens(battle: Battle): ActivationToken[] {
+  return battle.armies.flatMap((army) => {
+    const tokens = battle.activationBag.filter((token) => token.armyId === army.id);
+    const activeToken = battle.activeActivation?.armyId === army.id
+      ? tokens.find((token) => token.id === battle.activeActivation?.id)
+      : undefined;
+    if (!activeToken || tokens.indexOf(activeToken) < MAX_ACTIVATIONS_PER_ARMY) {
+      return tokens.slice(0, MAX_ACTIVATIONS_PER_ARMY);
+    }
+    return [
+      ...tokens.slice(0, MAX_ACTIVATIONS_PER_ARMY - 1),
+      activeToken,
+    ];
+  });
 }
 
 function isAwaitingActivation(unit: Army["units"][number]): boolean {

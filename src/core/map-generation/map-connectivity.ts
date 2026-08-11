@@ -1,4 +1,5 @@
 import type { Board, TerrainTile } from "../../types";
+import { isTerrainEnterable } from "../terrain-definitions";
 
 export type MapConnectivity = {
   horizontal: boolean;
@@ -45,7 +46,8 @@ function isCorridorPosition(
   terrainByPosition: ReadonlyMap<string, TerrainTile>,
 ): boolean {
   const terrain = terrainByPosition.get(positionKey(position.x, position.y));
-  return !terrain || (terrain.movementCost <= 1 && !terrain.blocksLineOfSight);
+  return isTerrainEnterable(terrain) &&
+    (!terrain || (terrain.movementCost <= 1 && !terrain.blocksLineOfSight));
 }
 
 function neighbors(position: Position, width: number, height: number): Position[] {

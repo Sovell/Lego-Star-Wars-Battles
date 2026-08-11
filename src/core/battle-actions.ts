@@ -266,7 +266,7 @@ export function applyBattleAction(
       if (!canEndTurn(battle)) {
         const log = battle.activeActivation
           ? "Nie mozna zakonczyc tury: najpierw wykorzystaj aktywny token."
-          : `Nie mozna zakonczyc tury: ${getRemainingActivationCount(battle)} jednostek nadal czeka na rozkaz.`;
+          : `Nie mozna zakonczyc tury: ${getRemainingActivationCount(battle)} rozkazow pozostalo w puli.`;
 
         return { battle, events: [], log };
       }

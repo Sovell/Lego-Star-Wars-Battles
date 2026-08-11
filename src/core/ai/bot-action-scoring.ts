@@ -4,7 +4,7 @@ import type { LegalUnitAction } from "../legal-actions";
 import { distance, type GridPosition } from "../rules/geometry";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
 import { findUnit, getTemplate } from "../rules/state";
-import { getDefenseBonus } from "../rules/terrain";
+import { getDefenseBonus, getHazardSuppression } from "../rules/terrain";
 import type { BotStrategyContext } from "./bot-strategy-context";
 
 export type BotActionScoringContext = Pick<
@@ -162,7 +162,9 @@ function scoreMovement(
     (action.type === "AdvanceUnit" ? doctrine.advanceActionBonus : 0) +
     progress * doctrine.movementProgressWeight -
     targetDistance * doctrine.remainingDistancePenaltyWeight +
-    getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight
+    getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight +
+    getTileAttackBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight -
+    getTileHazardPenalty(battle, action.targetPosition) * doctrine.suppressionWeight
   );
 }
 
@@ -177,7 +179,9 @@ function scoreDeployment(
   return (
     doctrine.deploymentBaseScore -
     distance(action.targetPosition, destination) * doctrine.deploymentDistancePenaltyWeight +
-    getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight
+    getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight +
+    getTileAttackBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight -
+    getTileHazardPenalty(battle, action.targetPosition) * doctrine.suppressionWeight
   );
 }
 
@@ -204,6 +208,17 @@ function getWeapon(unit: UnitInstance | undefined, weaponId: string): WeaponProf
 function getTileDefenseBonus(battle: Battle, position: GridPosition): number {
   return battle.board.tiles.find((tile) => tile.x === position.x && tile.y === position.y)
     ?.defenseBonus ?? 0;
+}
+
+function getTileAttackBonus(battle: Battle, position: GridPosition): number {
+  return battle.board.tiles.find((tile) => tile.x === position.x && tile.y === position.y)
+    ?.attackBonus ?? 0;
+}
+
+function getTileHazardPenalty(battle: Battle, position: GridPosition): number {
+  return getHazardSuppression(
+    battle.board.tiles.find((tile) => tile.x === position.x && tile.y === position.y),
+  );
 }
 
 function actionKey(action: LegalUnitAction): string {

@@ -1,4 +1,5 @@
 import type { Battle, TerrainTile, UnitInstance } from "../../types";
+import { hasTerrainTrait } from "../terrain-definitions";
 import type { GridPosition } from "./geometry";
 
 export function getTerrainAtPosition(
@@ -33,4 +34,13 @@ export function getDefenseBonus(battle: Battle, defender: UnitInstance): number 
     .reduce((highestBonus, object) => Math.max(highestBonus, object.defenseBonus), 0);
 
   return terrainBonus + fortificationBonus;
+}
+
+export function getAttackBonus(battle: Battle, attacker: UnitInstance): number {
+  return getTerrainAtUnit(battle, attacker)?.attackBonus ?? 0;
+}
+
+export function getHazardSuppression(terrain: TerrainTile | undefined): number {
+  if (!hasTerrainTrait(terrain, "Hazardous")) return 0;
+  return terrain?.hazardSuppression ?? 1;
 }

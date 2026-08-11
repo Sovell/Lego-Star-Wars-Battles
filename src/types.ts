@@ -81,7 +81,12 @@ export type TerrainType =
   | "HeavyCover"
   | "Building"
   | "DifficultTerrain"
+  | "Impassable"
+  | "Hazardous"
+  | "HighGround"
   | string;
+
+export type TerrainTrait = "Impassable" | "Hazardous" | "Elevated";
 
 export type TerrainTile = {
   x: number;
@@ -91,6 +96,8 @@ export type TerrainTile = {
   attackBonus: number;
   movementCost: number;
   blocksLineOfSight: boolean;
+  traits?: TerrainTrait[];
+  hazardSuppression?: number;
 };
 
 export type BattlefieldObjectType =

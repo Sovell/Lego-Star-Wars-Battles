@@ -514,7 +514,7 @@ function TerrainMotif({
           .stroke({ color: accentColor, alpha: 0.18, width: 1 });
         return;
       }
-      const strongLava = terrainType === "DifficultTerrain";
+      const strongLava = terrainType === "DifficultTerrain" || terrainType === "Hazardous";
       graphics.moveTo(3, cellSize * (0.24 + variant * 0.04))
         .lineTo(cellSize * 0.3, cellSize * 0.38)
         .lineTo(cellSize * 0.48, cellSize * 0.3)
@@ -969,6 +969,9 @@ function getTerrainTextureUrl(terrainType: TerrainType): string {
     case "HeavyCover": return "/terrain-textures/heavy-cover.png";
     case "Building": return "/terrain-textures/building.png";
     case "DifficultTerrain": return "/terrain-textures/difficult-terrain.png";
+    case "Impassable": return "/terrain-textures/impassable.png";
+    case "Hazardous": return "/terrain-textures/hazardous.png";
+    case "HighGround": return "/terrain-textures/high-ground.png";
     default: return "/terrain-textures/open.png";
   }
 }
@@ -979,6 +982,9 @@ function getTerrainLabel(terrainType: TerrainType): string {
     case "HeavyCover": return "CIĘŻKA";
     case "Building": return "BUDYNEK";
     case "DifficultTerrain": return "TRUDNY";
+    case "Impassable": return "NIEDOST.";
+    case "Hazardous": return "RYZYKO";
+    case "HighGround": return "WYSOKI";
     default: return "OTWARTY";
   }
 }

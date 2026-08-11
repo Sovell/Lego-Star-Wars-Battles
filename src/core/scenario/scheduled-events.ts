@@ -156,10 +156,8 @@ function deployReinforcements(
       ? { ...candidateArmy, units: [...candidateArmy.units, ...addedUnits] }
       : candidateArmy
   );
-  const reinforcementTokens = buildActivationBag([{
-    ...army,
-    units: addedUnits,
-  }]);
+  const updatedArmy = armies.find((candidateArmy) => candidateArmy.id === army.id)!;
+  const armyTokens = buildActivationBag([updatedArmy]);
   const deployedCount = addedUnits.filter((unit) => unit.position).length;
   const reserveCount = addedUnits.length - deployedCount;
   const reserveSuffix = reserveCount > 0
@@ -170,7 +168,10 @@ function deployReinforcements(
     battle: {
       ...battle,
       armies,
-      activationBag: [...battle.activationBag, ...reinforcementTokens],
+      activationBag: [
+        ...battle.activationBag.filter((token) => token.armyId !== army.id),
+        ...armyTokens,
+      ],
     },
     message: `Zdarzenie „${event.name}”: ${addedUnits.length} jednostek dołącza do armii ${army.playerName}; ${deployedCount} wchodzi na mapę.${reserveSuffix}`,
   };

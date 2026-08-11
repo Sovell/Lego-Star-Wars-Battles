@@ -1,6 +1,6 @@
 import type { TerrainTile, TerrainType } from "../../types";
 import { createSeededRandomSource, randomIndex, type RandomSource } from "../random";
-import { terrainPresets } from "../terrain-presets";
+import { createTerrainTile } from "../terrain-definitions";
 import type {
   GeneratedMap,
   MapGenerationConfig,
@@ -309,14 +309,6 @@ function selectWeightedTerrain(
     if (roll < boundary) return entry.terrainType;
   }
   return weights[weights.length - 1].terrainType;
-}
-
-function createTerrainTile(terrainType: TerrainType, x: number, y: number): TerrainTile {
-  const preset = terrainPresets.find((entry) => entry.terrainType === terrainType);
-  if (!preset) {
-    throw new Error(`Map theme uses terrain without a preset: ${terrainType}.`);
-  }
-  return { ...preset, x, y };
 }
 
 function assertPositiveInteger(value: number, label: string): void {

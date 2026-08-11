@@ -5,7 +5,10 @@ type DecoratedTerrainType =
   | "LightCover"
   | "HeavyCover"
   | "Building"
-  | "DifficultTerrain";
+  | "DifficultTerrain"
+  | "Impassable"
+  | "Hazardous"
+  | "HighGround";
 
 export type MapAssetSet = {
   id: string;
@@ -37,6 +40,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "tatooine-outpost",
   sources: [sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/tatooine/impassable-a.png"],
+    Hazardous: ["/map-assets/tatooine/hazardous-a.png"],
+    HighGround: ["/map-assets/tatooine/high-ground-a.png"],
     LightCover: [
       "/map-assets/tatooine/rocks-light-a.png",
       "/map-assets/tatooine/rocks-light-b.png",
@@ -62,6 +68,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "endor-forest",
   sources: [foliagePackSource, sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/endor/impassable-a.png"],
+    Hazardous: ["/map-assets/endor/hazardous-a.png"],
+    HighGround: ["/map-assets/endor/high-ground-a.png"],
     LightCover: [
       "/map-assets/endor/forest-floor-a.png",
       "/map-assets/endor/forest-floor-b.png",
@@ -90,6 +99,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "hoth-ice",
   sources: [foliagePackSource, sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/hoth/impassable-a.png"],
+    Hazardous: ["/map-assets/hoth/hazardous-a.png"],
+    HighGround: ["/map-assets/hoth/high-ground-a.png"],
     LightCover: [
       "/map-assets/hoth/ice-rocks-light-a.png",
       "/map-assets/hoth/ice-rocks-light-b.png",
@@ -118,6 +130,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "mustafar-foundry",
   sources: [sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/mustafar/impassable-a.png"],
+    Hazardous: ["/map-assets/mustafar/hazardous-a.png"],
+    HighGround: ["/map-assets/mustafar/high-ground-a.png"],
     LightCover: [
       "/map-assets/mustafar/basalt-light-a.png",
       "/map-assets/mustafar/basalt-light-b.png",
@@ -146,6 +161,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "geonosis-foundry",
   sources: [sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/geonosis/impassable-a.png"],
+    Hazardous: ["/map-assets/geonosis/hazardous-a.png"],
+    HighGround: ["/map-assets/geonosis/high-ground-a.png"],
     LightCover: [
       "/map-assets/geonosis/rocks-light-a.png",
       "/map-assets/geonosis/rocks-light-b.png",
@@ -174,6 +192,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "felucia-fungal",
   sources: [foliagePackSource, sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/felucia/impassable-a.png"],
+    Hazardous: ["/map-assets/felucia/hazardous-a.png"],
+    HighGround: ["/map-assets/felucia/high-ground-a.png"],
     LightCover: [
       "/map-assets/felucia/alien-flora-light-a.png",
       "/map-assets/felucia/alien-flora-light-b.png",
@@ -202,6 +223,9 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "christophsis-crystal",
   sources: [sciFiRtsSource],
   terrain: {
+    Impassable: ["/map-assets/christophsis/impassable-a.png"],
+    Hazardous: ["/map-assets/christophsis/hazardous-a.png"],
+    HighGround: ["/map-assets/christophsis/high-ground-a.png"],
     LightCover: [
       "/map-assets/christophsis/crystal-rocks-light-a.png",
       "/map-assets/christophsis/crystal-rocks-light-b.png",

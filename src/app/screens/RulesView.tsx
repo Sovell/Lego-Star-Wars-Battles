@@ -1,5 +1,6 @@
 import { abilities, taskForces, unitTemplates } from "../../data";
 import { terrainPresets } from "../../core/terrain-presets";
+import { getTerrainDefinition, hasTerrainTrait } from "../../core/terrain-definitions";
 import type { TerrainTile, TerrainType, UnitTemplate } from "../../types";
 import { PanelTitle } from "../components/PanelTitle";
 
@@ -54,7 +55,7 @@ export function RulesView() {
                 <div className="ruleMetaGrid">
                   <span>Obrona +{terrain.defenseBonus}</span>
                   <span>Atak +{terrain.attackBonus}</span>
-                  <span>Ruch x{terrain.movementCost}</span>
+                  <span>Ruch {hasTerrainTrait(terrain, "Impassable") ? "niedostepny" : `x${terrain.movementCost}`}</span>
                   <span>LOS {terrain.blocksLineOfSight ? "blokuje" : "nie blokuje"}</span>
                 </div>
                 <p>{getTerrainRuleDescription(terrain)}</p>
@@ -194,35 +195,10 @@ function formatAbilityMeta(ability: (typeof abilities)[number]): string {
 }
 
 function getTerrainRuleName(terrainType: TerrainType): string {
-  switch (terrainType) {
-    case "Open":
-      return "Otwarty teren";
-    case "LightCover":
-      return "Lekka oslona";
-    case "HeavyCover":
-      return "Ciezka oslona";
-    case "Building":
-      return "Zabudowania";
-    case "DifficultTerrain":
-      return "Trudny teren";
-    default:
-      return terrainType;
-  }
+  return getTerrainDefinition(terrainType)?.name ?? terrainType;
 }
 
 function getTerrainRuleDescription(terrain: TerrainTile): string {
-  switch (terrain.terrainType) {
-    case "Open":
-      return "Standardowe pole bez modyfikatorow. Najlepsze do szybkiego przemieszczania.";
-    case "LightCover":
-      return "Daje niewielka ochrone przed ostrzalem bez spowalniania ruchu.";
-    case "HeavyCover":
-      return "Mocna oslona, ale wejscie na pole jest wolniejsze.";
-    case "Building":
-      return "Mocna oslona i przeszkoda blokujaca linie widzenia.";
-    case "DifficultTerrain":
-      return "Nie daje oslony, ale spowalnia ruch przez gruzy, przeszkody albo nierowny teren.";
-    default:
-      return `Pole terenowe: obrona +${terrain.defenseBonus}, koszt ruchu ${terrain.movementCost}.`;
-  }
+  return getTerrainDefinition(terrain.terrainType)?.description ??
+    `Pole terenowe: obrona +${terrain.defenseBonus}, koszt ruchu ${terrain.movementCost}.`;
 }

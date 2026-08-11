@@ -1,4 +1,5 @@
 import type { Battle } from "../../types";
+import { hasTerrainTrait } from "../terrain-definitions";
 
 export type GridPosition = {
   x: number;
@@ -36,7 +37,7 @@ export function lineOfSight(battle: Battle, from: GridPosition, to: GridPosition
         object.position.y === y,
     );
 
-    if (tile?.blocksLineOfSight || blockingObject) {
+    if (tile?.blocksLineOfSight || hasTerrainTrait(tile, "Impassable") || blockingObject) {
       return false;
     }
   }

@@ -273,7 +273,7 @@ describe("applyBattleAction", () => {
 
     expect(result.battle).toBe(battle);
     expect(result.events).toEqual([]);
-    expect(result.log).toContain("5 jednostek nadal czeka na rozkaz");
+    expect(result.log).toContain("5 rozkazow pozostalo w puli");
   });
 
   it("allows a turn to end when every surviving unit activated", () => {

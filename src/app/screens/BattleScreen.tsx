@@ -36,7 +36,9 @@ import {
 import { getUnitActiveAbilities } from "../../core/rules/active-abilities";
 import {
   canEndTurn,
+  getArmyActivationCounts,
   getRemainingActivationCount,
+  getTurnActivationCount,
 } from "../../core/rules/activation";
 import { isPositionFree } from "../../core/rules/occupancy";
 import { createMissionState } from "../../core/scenario/scenario-engine";
@@ -44,6 +46,7 @@ import { applyMissionAction } from "../../core/scenario/mission-session";
 import { validateScheduledScenarioEvents } from "../../core/scenario/scheduled-events";
 import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
 import { terrainPresets } from "../../core/terrain-presets";
+import { getTerrainDefinition, hasTerrainTrait } from "../../core/terrain-definitions";
 import type {
   Army,
   AttackResult,
@@ -261,7 +264,10 @@ export function BattleScreen({
   );
   const targetIsLegal = legalTargetIds.has(targetUnitId);
   const remainingActivations = getRemainingActivationCount(battle);
-  const livingUnits = allUnits.filter((unit) => unit.status !== "Destroyed").length;
+  const turnActivationCount = getTurnActivationCount(battle);
+  const activationCounts = Object.fromEntries(
+    battle.armies.map((army) => [army.id, getArmyActivationCounts(battle, army.id)]),
+  );
   const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active" && gamePhase === "Playing";
   const preparationActive = gamePhase === "Preparation";
@@ -698,18 +704,25 @@ export function BattleScreen({
               >
                 {terrainPresets.map((terrain) => (
                   <option key={terrain.terrainType} value={terrain.terrainType}>
-                    {terrain.terrainType}
+                    {getTerrainDefinition(terrain.terrainType)?.name ?? terrain.terrainType}
                   </option>
                 ))}
               </select>
               <div className="mapReadout">
-                <strong>{selectedTerrainPreset.terrainType}</strong>
+                <strong>{getTerrainDefinition(selectedTerrainPreset.terrainType)?.name ?? selectedTerrainPreset.terrainType}</strong>
                 <span>Obrona: +{selectedTerrainPreset.defenseBonus}</span>
                 <span>Atak: +{selectedTerrainPreset.attackBonus}</span>
-                <span>Koszt ruchu: {selectedTerrainPreset.movementCost}</span>
+                <span>
+                  Koszt ruchu: {hasTerrainTrait(selectedTerrainPreset, "Impassable")
+                    ? "niedostepny"
+                    : selectedTerrainPreset.movementCost}
+                </span>
                 <span>
                   Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}
                 </span>
+                {selectedTerrainPreset.traits?.length ? (
+                  <span>Klasy: {selectedTerrainPreset.traits.join(", ")}</span>
+                ) : null}
               </div>
             </>
           ) : mapMode === "objects" ? (
@@ -775,6 +788,7 @@ export function BattleScreen({
       inspector={(
         <BattleInspector phase={gamePhase}>
           <MissionPanel
+            activationCounts={preparationActive ? undefined : activationCounts}
             armies={battle.armies}
             canStart={canStartScenario}
             currentRound={battle.turn}
@@ -823,7 +837,9 @@ export function BattleScreen({
               <div className="playingSideSummary">
                 <PanelTitle title="Rozgrywka" detail={`Tura ${battle.turn}`} />
                 <span>{scenario.name}</span>
-                <span>Aktywacje: {remainingActivations}/{livingUnits}</span>
+                <span>
+                  Rozkazy: {remainingActivations}/{turnActivationCount} · maks. 8 na armię
+                </span>
                 <span>
                   {activeArmyId
                     ? `Aktywna: ${
@@ -875,7 +891,7 @@ export function BattleScreen({
                 disabled={Boolean(battle.activeActivation) || remainingActivations === 0}
                 onClick={handleDrawActivation}
               >
-                Losuj aktywację
+                Losuj rozkaz
               </button>
               <span>
                 {activeArmyId
@@ -1047,7 +1063,7 @@ export function BattleScreen({
               onClick={handleEndTurn}
             >
               {remainingActivations > 0
-                ? `${remainingActivations} aktywacji`
+                ? `${remainingActivations} rozkazów`
                 : "Koniec tury"}
             </button>
           </section>

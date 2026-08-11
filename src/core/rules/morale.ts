@@ -3,6 +3,8 @@ import type { DiceRoller } from "../random";
 import { distance, isOnBoard, type GridPosition } from "./geometry";
 import { isPositionFree } from "./occupancy";
 import { findUnit, getTemplate, replaceUnit } from "./state";
+import { getTerrainAtPosition } from "./terrain";
+import { isTerrainEnterable } from "../terrain-definitions";
 
 export type MoraleRetreatResult = {
   battle: Battle;
@@ -41,6 +43,7 @@ export function resolveMoraleRetreat(
 
   const retreatPosition = getAdjacentPositions(unit.position)
     .filter((position) => isOnBoard(battle, position))
+    .filter((position) => isTerrainEnterable(getTerrainAtPosition(battle, position)))
     .filter((position) => isPositionFree(battle, position, unit.id))
     .sort((left, right) => {
       const distanceDifference =

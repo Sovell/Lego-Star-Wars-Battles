@@ -18,6 +18,9 @@ describe("map generator foundation", () => {
       { terrainType: "LightCover", weight: 3 },
       { terrainType: "HeavyCover", weight: 2 },
       { terrainType: "Building", weight: 1 },
+      { terrainType: "Impassable", weight: 2 },
+      { terrainType: "Hazardous", weight: 1 },
+      { terrainType: "HighGround", weight: 2 },
     ]);
   });
 
@@ -103,7 +106,7 @@ describe("map generator foundation", () => {
       height: 3,
       seed: 42,
       themeId: "desert-outpost",
-      themeVersion: 2,
+      themeVersion: 3,
       terrainDensity: 1,
       deploymentDepth: 2,
       armyLayout: [],

@@ -4,6 +4,8 @@ import { validateUnitActivation } from "./activation";
 import { isOnBoard, type GridPosition } from "./geometry";
 import { getUnitAtPosition } from "./occupancy";
 import { findUnit, getTemplate, replaceUnit } from "./state";
+import { getHazardSuppression, getTerrainAtPosition } from "./terrain";
+import { isTerrainEnterable } from "../terrain-definitions";
 
 export function getLegalReserveEntryCells(
   battle: Battle,
@@ -33,6 +35,7 @@ export function getLegalReserveEntryCells(
     if (
       seen.has(key) ||
       !isOnBoard(battle, position) ||
+      !isTerrainEnterable(getTerrainAtPosition(battle, position)) ||
       getUnitAtPosition(battle, position, unit.id)
     ) {
       return false;
@@ -77,10 +80,15 @@ export function deployUnit(
     };
   }
 
+  const terrain = getTerrainAtPosition(battle, targetPosition);
+  const hazardSuppression = getHazardSuppression(terrain);
+  const nextSuppression = unit.suppression + hazardSuppression;
+  const template = getTemplate(unit);
   const updatedUnit: UnitInstance = {
     ...unit,
     position: targetPosition,
-    status: "Activated",
+    status: nextSuppression >= template.morale ? "Pinned" : "Activated",
+    suppression: nextSuppression,
     movedThisTurn: true,
   };
 
@@ -89,6 +97,6 @@ export function deployUnit(
       ...replaceUnit(battle, updatedUnit),
       activeActivation: undefined,
     },
-    log: `${getTemplate(unit).name} wchodzi z rezerwy na pole ${targetPosition.x}, ${targetPosition.y}.`,
+    log: `${template.name} wchodzi z rezerwy na pole ${targetPosition.x}, ${targetPosition.y}.${hazardSuppression ? ` Teren niebezpieczny: suppression +${hazardSuppression}.` : ""}`,
   };
 }

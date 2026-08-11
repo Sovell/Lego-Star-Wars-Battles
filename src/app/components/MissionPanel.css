@@ -84,8 +84,12 @@
   border-radius: 6px;
   display: grid;
   gap: 7px;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(82px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 8px;
+}
+
+.missionSideRow > div {
+  grid-column: 1 / -1;
 }
 
 .missionSideRow > div,
@@ -143,6 +147,10 @@
 
   .missionSideRow {
     grid-template-columns: 1fr;
+  }
+
+  .missionSideRow > div {
+    grid-column: auto;
   }
 }
 
