@@ -18,6 +18,7 @@ export function DomMapBoard({
   interactionDisabled,
   interactionModel,
   mapThemeId,
+  scenarioZoneCells,
   selectedUnitId,
   viewModel,
   onCellClick,
@@ -67,6 +68,8 @@ export function DomMapBoard({
             aria-label={`Pole ${x}, ${y}: ${getInteractionLabel(cellInteraction)}`}
             className={`mapCell ${tile?.terrainType ?? "Open"} interaction-${cellInteraction} ${
               deploymentZoneCells?.has(key) ? "deploymentZoneCell" : ""
+            } ${
+              scenarioZoneCells?.has(key) ? "scenarioZoneCell" : ""
             } ${
               territoryFaction === "Republic"
                 ? "territoryRepublic"

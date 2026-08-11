@@ -20,6 +20,7 @@ export type ScenarioDraft = {
   defenderArmyId?: string;
   deploymentZones: DeploymentZone[];
   roundTarget?: number;
+  stageRoundTargets?: number[];
   scheduledEvents: ScenarioScheduledEvent[];
   mapGeneration?: ScenarioMapGenerationState;
 };
@@ -50,6 +51,9 @@ export function createScenarioDraft(
     mapGeneration: structuredClone(input.mapGeneration ?? defaultMapGenerationState),
     ...(input.defenderArmyId ? { defenderArmyId: input.defenderArmyId } : {}),
     ...(input.roundTarget ? { roundTarget: input.roundTarget } : {}),
+    ...(input.stageRoundTargets
+      ? { stageRoundTargets: structuredClone(input.stageRoundTargets) }
+      : {}),
   };
 }
 
@@ -179,6 +183,7 @@ export function restartDraftFromBattle(
   roundTarget?: number,
   deploymentZones: DeploymentZone[] = [],
   scheduledEvents: ScenarioScheduledEvent[] = [],
+  stageRoundTargets?: number[],
 ): ScenarioDraft {
   const resetBattle = createInitialBattleSnapshot(initialBattle);
 
@@ -189,6 +194,7 @@ export function restartDraftFromBattle(
     deploymentZones,
     scheduledEvents,
     roundTarget,
+    stageRoundTargets,
   });
 }
 

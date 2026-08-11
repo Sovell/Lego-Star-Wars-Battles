@@ -51,11 +51,32 @@ export function getMapScenarioRequirements(
           placement: "distributed",
         }],
       };
+    case "DestroyObjects":
+      return {
+        ...common,
+        defenderArmySlot: defenderArmySlot ?? getDefaultDefenderArmySlot(scenario),
+        requiredObjects: [{
+          objectType: scenario.victoryCondition.objectType,
+          count: scenario.victoryCondition.count,
+          placement: "defender-side",
+        }],
+      };
+    case "ProgressiveControl":
+      return {
+        ...common,
+        requiredObjects: [{
+          objectType: scenario.victoryCondition.objectiveType,
+          count: scenario.victoryCondition.count,
+          placement: "distributed",
+        }],
+      };
+    case "SurviveAndExtract":
+      return { ...common, requiredObjects: [] };
   }
 }
 
 function getDefaultDefenderArmySlot(scenario: ScenarioDefinition): number {
-  return scenario.defeatCondition?.type === "ArmyEliminated"
+  return scenario.defaultDefenderArmySlot ?? (scenario.defeatCondition?.type === "ArmyEliminated"
     ? scenario.defeatCondition.armySlot
-    : 0;
+    : 0);
 }

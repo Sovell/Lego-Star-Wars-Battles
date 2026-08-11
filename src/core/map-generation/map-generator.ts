@@ -11,6 +11,7 @@ import type {
 import { createMapArmyLayout, generateDeploymentZones } from "./deployment-zone-generator";
 import { placeMapObjects } from "./map-object-placement";
 import { getMapTheme } from "./map-themes";
+import { createMapTopologyPlan, type MapClusterShape } from "./map-topology";
 import { getMapScenarioRequirements } from "./scenario-map-requirements";
 
 export function generateMap(config: MapGenerationConfig): GeneratedMap {
@@ -38,7 +39,13 @@ export function generateMap(config: MapGenerationConfig): GeneratedMap {
   };
   const theme = getMapTheme(recipe.themeId);
   const random = createSeededRandomSource(recipe.seed);
-  const corridorCells = createCrossMapCorridors(recipe.width, recipe.height, random);
+  const topology = createMapTopologyPlan({
+    motif: recipe.generationMotif,
+    width: recipe.width,
+    height: recipe.height,
+    random,
+  });
+  const corridorCells = topology.corridorCells;
   const reservedTerrainCells = new Set([
     ...corridorCells,
     ...requirements.deploymentZones.flatMap((zone) =>
@@ -56,6 +63,7 @@ export function generateMap(config: MapGenerationConfig): GeneratedMap {
     corridorCells: reservedTerrainCells,
     clusterSize: theme.generation.clusterSize,
     terrainWeights: theme.generation.terrainWeights,
+    clusterShape: topology.clusterShape,
     random,
   });
   const objects = placeMapObjects({
@@ -101,12 +109,13 @@ function createRecipe(
   }
 
   return {
-    generatorVersion: 3,
+    generatorVersion: 4,
     width: config.width,
     height: config.height,
     seed: config.seed,
     themeId: config.themeId,
     themeVersion: theme.version,
+    generationMotif: theme.generation.motif,
     terrainDensity,
     ...(requirements.scenarioId ? { scenarioId: requirements.scenarioId } : {}),
     ...(requirements.defenderArmySlot !== undefined
@@ -137,6 +146,7 @@ function createTerrainClusters({
   corridorCells,
   clusterSize,
   terrainWeights,
+  clusterShape,
   random,
 }: {
   width: number;
@@ -145,6 +155,7 @@ function createTerrainClusters({
   corridorCells: ReadonlySet<string>;
   clusterSize: { minimum: number; maximum: number };
   terrainWeights: MapTerrainWeight[];
+  clusterShape: MapClusterShape;
   random: RandomSource;
 }): TerrainTile[] {
   assertClusterSize(clusterSize);
@@ -167,6 +178,7 @@ function createTerrainClusters({
       height,
       corridorCells,
       tiles,
+      clusterShape,
       random,
     });
   }
@@ -184,6 +196,7 @@ function growCluster({
   height,
   corridorCells,
   tiles,
+  clusterShape,
   random,
 }: {
   origin: Position;
@@ -193,13 +206,16 @@ function growCluster({
   height: number;
   corridorCells: ReadonlySet<string>;
   tiles: Map<string, TerrainTile>;
+  clusterShape: MapClusterShape;
   random: RandomSource;
 }): void {
   const clusterCells: Position[] = [];
   addCell(origin);
 
   while (clusterCells.length < desiredSize) {
-    const candidates = uniquePositions(clusterCells.flatMap((cell) => neighbors(cell, width, height)))
+    const candidates = uniquePositions(
+      clusterCells.flatMap((cell) => clusterNeighbors(cell, width, height, clusterShape)),
+    )
       .filter((cell) => isAvailable(cell, corridorCells, tiles));
     if (candidates.length === 0) break;
     addCell(candidates[randomIndex(candidates.length, random)]);
@@ -209,41 +225,6 @@ function growCluster({
     tiles.set(positionKey(cell), createTerrainTile(terrainType, cell.x, cell.y));
     clusterCells.push(cell);
   }
-}
-
-function createCrossMapCorridors(
-  width: number,
-  height: number,
-  random: RandomSource,
-): ReadonlySet<string> {
-  const cells = new Set<string>();
-  let y = randomIndex(height, random);
-  for (let x = 0; x < width; x += 1) {
-    cells.add(positionKey({ x, y }));
-    if (x < width - 1) {
-      const nextY = clamp(y + chooseCorridorStep(random), 0, height - 1);
-      cells.add(positionKey({ x, y: nextY }));
-      y = nextY;
-    }
-  }
-
-  let x = randomIndex(width, random);
-  for (let verticalY = 0; verticalY < height; verticalY += 1) {
-    cells.add(positionKey({ x, y: verticalY }));
-    if (verticalY < height - 1) {
-      const nextX = clamp(x + chooseCorridorStep(random), 0, width - 1);
-      cells.add(positionKey({ x: nextX, y: verticalY }));
-      x = nextX;
-    }
-  }
-  return cells;
-}
-
-function chooseCorridorStep(random: RandomSource): -1 | 0 | 1 {
-  const roll = random();
-  if (roll < 0.25) return -1;
-  if (roll >= 0.75) return 1;
-  return 0;
 }
 
 function listAvailableCells(
@@ -269,6 +250,30 @@ function neighbors(position: Position, width: number, height: number): Position[
     { x: position.x, y: position.y - 1 },
     { x: position.x, y: position.y + 1 },
   ].filter(({ x, y }) => x >= 0 && y >= 0 && x < width && y < height);
+}
+
+function clusterNeighbors(
+  position: Position,
+  width: number,
+  height: number,
+  shape: MapClusterShape,
+): Position[] {
+  if (shape === "compact") return neighbors(position, width, height);
+
+  const candidates = shape === "organic"
+    ? [
+        ...neighbors(position, width, height),
+        { x: position.x - 1, y: position.y - 1 },
+        { x: position.x + 1, y: position.y - 1 },
+        { x: position.x - 1, y: position.y + 1 },
+        { x: position.x + 1, y: position.y + 1 },
+      ]
+    : [
+        { x: position.x - 1, y: position.y },
+        { x: position.x + 1, y: position.y },
+      ];
+
+  return candidates.filter(({ x, y }) => x >= 0 && y >= 0 && x < width && y < height);
 }
 
 function uniquePositions(positions: Position[]): Position[] {
@@ -326,10 +331,6 @@ function assertClusterSize(clusterSize: { minimum: number; maximum: number }): v
   ) {
     throw new Error("Map theme cluster size must define a positive minimum and maximum.");
   }
-}
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
 }
 
 type Position = { x: number; y: number };

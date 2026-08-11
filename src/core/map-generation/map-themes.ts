@@ -3,7 +3,7 @@ import type { MapTheme, MapThemeId } from "./map-generation-types";
 
 export const desertOutpostTheme: MapTheme = {
   id: "desert-outpost",
-  version: 3,
+  version: 4,
   name: "Tatooine — Desert Outpost",
   description: "Wyschnięte pustkowie z wydmami, skałami i rozsianymi placówkami.",
   presentation: {
@@ -27,6 +27,7 @@ export const desertOutpostTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "open-outpost",
     defaultTerrainDensity: 0.34,
     clusterSize: {
       minimum: 2,
@@ -55,7 +56,7 @@ export const desertOutpostTheme: MapTheme = {
 
 export const forestMoonTheme: MapTheme = {
   id: "forest-moon",
-  version: 2,
+  version: 3,
   name: "Endor — Forest Moon",
   description: "Gęsty leśny księżyc z paprociami, głazami i imperialną infrastrukturą.",
   presentation: {
@@ -79,6 +80,7 @@ export const forestMoonTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "forest-lanes",
     defaultTerrainDensity: 0.46,
     clusterSize: { minimum: 3, maximum: 7 },
     terrainWeights: [
@@ -104,7 +106,7 @@ export const forestMoonTheme: MapTheme = {
 
 export const iceFrontTheme: MapTheme = {
   id: "ice-front",
-  version: 2,
+  version: 3,
   name: "Hoth — Ice Front",
   description: "Otwarta lodowa równina, zaspy, szczeliny i umocnione pozycje rebelianckie.",
   presentation: {
@@ -128,6 +130,7 @@ export const iceFrontTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "ice-fields",
     defaultTerrainDensity: 0.3,
     clusterSize: { minimum: 2, maximum: 6 },
     terrainWeights: [
@@ -153,7 +156,7 @@ export const iceFrontTheme: MapTheme = {
 
 export const volcanicFoundryTheme: MapTheme = {
   id: "volcanic-foundry",
-  version: 2,
+  version: 3,
   name: "Mustafar — Volcanic Foundry",
   description: "Wulkaniczny kompleks przemysłowy przecięty zastygłą lawą i ciężkimi konstrukcjami.",
   presentation: {
@@ -177,6 +180,7 @@ export const volcanicFoundryTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "lava-channels",
     defaultTerrainDensity: 0.4,
     clusterSize: { minimum: 2, maximum: 5 },
     terrainWeights: [
@@ -202,7 +206,7 @@ export const volcanicFoundryTheme: MapTheme = {
 
 export const geonosisFoundryTheme: MapTheme = {
   id: "geonosis-foundry",
-  version: 2,
+  version: 3,
   name: "Geonosis — Droid Foundry",
   description: "Czerwone pustkowie pełne skalnych iglic, kanionów i fabryk droidów.",
   presentation: {
@@ -226,6 +230,7 @@ export const geonosisFoundryTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "canyons",
     defaultTerrainDensity: 0.42,
     clusterSize: { minimum: 2, maximum: 6 },
     terrainWeights: [
@@ -251,7 +256,7 @@ export const geonosisFoundryTheme: MapTheme = {
 
 export const feluciaWildsTheme: MapTheme = {
   id: "felucia-wilds",
-  version: 2,
+  version: 3,
   name: "Felucia — Fungal Wilds",
   description: "Gęsta, obca dżungla porośnięta olbrzymimi grzybami i jaskrawą roślinnością.",
   presentation: {
@@ -275,6 +280,7 @@ export const feluciaWildsTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "organic-islands",
     defaultTerrainDensity: 0.5,
     clusterSize: { minimum: 3, maximum: 7 },
     terrainWeights: [
@@ -300,7 +306,7 @@ export const feluciaWildsTheme: MapTheme = {
 
 export const christophsisCrystalCityTheme: MapTheme = {
   id: "christophsis-crystal-city",
-  version: 2,
+  version: 3,
   name: "Christophsis — Crystal City",
   description: "Chłodne miasto przecięte kryształowymi formacjami, barykadami i ciężką zabudową.",
   presentation: {
@@ -324,6 +330,7 @@ export const christophsisCrystalCityTheme: MapTheme = {
     },
   },
   generation: {
+    motif: "urban-grid",
     defaultTerrainDensity: 0.36,
     clusterSize: { minimum: 2, maximum: 5 },
     terrainWeights: [
@@ -347,6 +354,56 @@ export const christophsisCrystalCityTheme: MapTheme = {
   },
 };
 
+export const mandaloreCityTheme: MapTheme = {
+  id: "mandalore-city",
+  version: 1,
+  name: "Mandalore — Sundari Sectors",
+  description: "Kanciaste sektory miasta z durastalowymi placami, kopułami i wąskimi liniami natarcia.",
+  presentation: {
+    assetSetId: "mandalore-city",
+    groundTextureId: "mandalore-durasteel",
+    motif: "mandalore",
+    palette: {
+      ground: "#59666d",
+      accent: "#62d5ef",
+      shadow: "#121a20",
+      terrain: {
+        open: "#50616a",
+        lightCover: "#65747a",
+        heavyCover: "#3f4e56",
+        building: "#46545c",
+        difficultTerrain: "#675d57",
+        impassable: "#28343b",
+        hazardous: "#a34e35",
+        highGround: "#71858e",
+      },
+    },
+  },
+  generation: {
+    motif: "urban-grid",
+    defaultTerrainDensity: 0.39,
+    clusterSize: { minimum: 2, maximum: 5 },
+    terrainWeights: [
+      { terrainType: "Building", weight: 5 },
+      { terrainType: "HeavyCover", weight: 4 },
+      { terrainType: "HighGround", weight: 3 },
+      { terrainType: "LightCover", weight: 2 },
+      { terrainType: "DifficultTerrain", weight: 2 },
+      { terrainType: "Impassable", weight: 2 },
+      { terrainType: "Hazardous", weight: 1 },
+    ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 3 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
 export const mapThemes: readonly MapTheme[] = [
   desertOutpostTheme,
   forestMoonTheme,
@@ -355,6 +412,7 @@ export const mapThemes: readonly MapTheme[] = [
   geonosisFoundryTheme,
   feluciaWildsTheme,
   christophsisCrystalCityTheme,
+  mandaloreCityTheme,
 ];
 
 export function getMapTheme(themeId: MapThemeId): MapTheme {

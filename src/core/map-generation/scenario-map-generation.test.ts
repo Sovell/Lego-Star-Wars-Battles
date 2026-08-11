@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   controlTerritoryScenario,
+  christophsisBreakLineScenario,
   defendPointScenario,
   protectGeneratorScenario,
+  geonosisDroidFoundryScenario,
+  mandaloreBattleForSectorsScenario,
   survivalTestScenario,
 } from "../scenario/scenarios";
 import type { BattlefieldObject } from "../../types";
@@ -28,6 +31,16 @@ describe("scenario-aware map generation", () => {
       count: 3,
       placement: "distributed",
     }]);
+    expect(getMapScenarioRequirements(geonosisDroidFoundryScenario).requiredObjects).toEqual([{
+      objectType: "Generator",
+      count: 2,
+      placement: "defender-side",
+    }]);
+    expect(getMapScenarioRequirements(christophsisBreakLineScenario).requiredObjects).toEqual([{
+      objectType: "StrategicPoint",
+      count: 3,
+      placement: "distributed",
+    }]);
   });
 
   it("places exactly one protected generator close to the defender side", () => {
@@ -41,6 +54,21 @@ describe("scenario-aware map generation", () => {
     )).toBe(1);
     expect(result.recipe.scenarioId).toBe(protectGeneratorScenario.id);
     expect(result.recipe.defenderArmySlot).toBe(0);
+    expect(validateMapConnectivity(result.board).valid).toBe(true);
+  });
+
+  it("places two deterministic foundry generators without blocking the map", () => {
+    const result = generateMap({
+      width: 8,
+      height: 8,
+      seed: 1138,
+      themeId: geonosisDroidFoundryScenario.recommendedMapThemeId!,
+      scenario: geonosisDroidFoundryScenario,
+    });
+
+    expect(objectsOfType(result.board.objects, "Generator")).toHaveLength(2);
+    expect(result.recipe.generationMotif).toBe("canyons");
+    expect(result.recipe.defenderArmySlot).toBe(1);
     expect(validateMapConnectivity(result.board).valid).toBe(true);
   });
 
@@ -146,6 +174,22 @@ describe("scenario-aware map generation", () => {
     expect(objects.every(({ type }) =>
       type === "LightFortification" || type === "HeavyFortification"
     )).toBe(true);
+  });
+
+  it("generates the Mandalore sector scenario with its dedicated city pack", () => {
+    const themeId = mandaloreBattleForSectorsScenario.recommendedMapThemeId!;
+    const result = generateMap({
+      width: 8,
+      height: 8,
+      seed: 1977,
+      themeId,
+      scenario: mandaloreBattleForSectorsScenario,
+    });
+
+    expect(themeId).toBe("mandalore-city");
+    expect(result.recipe.generationMotif).toBe("urban-grid");
+    expect(objectsOfType(result.board.objects, "StrategicPoint")).toHaveLength(3);
+    expect(validateMapConnectivity(result.board).valid).toBe(true);
   });
 
   it("keeps scenario objects deterministic as part of the seed", () => {

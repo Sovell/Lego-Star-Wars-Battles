@@ -178,6 +178,7 @@ function PixiBoardScene({
   interactionDisabled,
   interactionModel,
   mapThemeId,
+  scenarioZoneCells,
   selectedUnitId,
   viewModel,
   visualEvent,
@@ -201,7 +202,18 @@ function PixiBoardScene({
   return (
     <CameraWorld camera={camera} height={height} visualEvent={visualEvent} width={width}>
       <pixiContainer x={-boardWidth / 2} y={-boardHeight / 2}>
+        <GroundLayer
+          boardHeight={boardHeight}
+          boardWidth={boardWidth}
+          mapThemeId={mapThemeId}
+        />
         <TerrainLayer
+          cellSize={cellSize}
+          mapThemeId={mapThemeId}
+          stride={stride}
+          viewModel={viewModel}
+        />
+        <DecorationLayer
           cellSize={cellSize}
           mapThemeId={mapThemeId}
           stride={stride}
@@ -210,6 +222,12 @@ function PixiBoardScene({
         <DeploymentZoneLayer
           cellSize={cellSize}
           cells={deploymentZoneCells}
+          stride={stride}
+          viewModel={viewModel}
+        />
+        <ScenarioZoneLayer
+          cellSize={cellSize}
+          cells={scenarioZoneCells}
           stride={stride}
           viewModel={viewModel}
         />
@@ -307,6 +325,58 @@ function CameraWorld({
   return <pixiContainer ref={containerRef}>{children}</pixiContainer>;
 }
 
+function GroundLayer({
+  boardHeight,
+  boardWidth,
+  mapThemeId,
+}: {
+  boardHeight: number;
+  boardWidth: number;
+  mapThemeId: MapThemeId;
+}) {
+  const theme = getMapTheme(mapThemeId);
+  const groundColor = hexToNumber(theme.presentation.palette.ground);
+  const accentColor = hexToNumber(theme.presentation.palette.accent);
+  return (
+    <pixiContainer eventMode="none">
+      <pixiGraphics draw={(graphics) => {
+        graphics.clear().roundRect(-8, -8, boardWidth + 16, boardHeight + 16, 12)
+          .fill({ color: groundColor })
+          .stroke({ color: accentColor, alpha: 0.28, width: 2 });
+      }} />
+    </pixiContainer>
+  );
+}
+
+function ScenarioZoneLayer({
+  cellSize,
+  cells,
+  stride,
+  viewModel,
+}: LayerProps & { cells?: ReadonlySet<string> }) {
+  if (!cells?.size) return null;
+  return (
+    <pixiContainer eventMode="none">
+      {viewModel.positions.map(({ x, y }) => {
+        const key = boardPositionKey(x, y);
+        if (!cells.has(key)) return null;
+        return (
+          <pixiGraphics
+            draw={(graphics) => {
+              graphics.clear().roundRect(4, 4, cellSize - 8, cellSize - 8, 5)
+                .fill({ color: 0x55e6b2, alpha: 0.12 })
+                .stroke({ color: 0x55e6b2, alpha: 0.92, width: 2 });
+            }}
+            key={key}
+            x={x * stride}
+            y={y * stride}
+          />
+        );
+      })}
+    </pixiContainer>
+  );
+}
+
 function TerrainLayer({
   cellSize,
   mapThemeId,
@@ -335,6 +405,31 @@ function TerrainLayer({
           />
         );
       })}
+    </pixiContainer>
+  );
+}
+
+function DecorationLayer({
+  cellSize,
+  mapThemeId,
+  stride,
+  viewModel,
+}: LayerProps & { mapThemeId: MapThemeId }) {
+  const theme = getMapTheme(mapThemeId);
+  const accentColor = hexToNumber(theme.presentation.palette.accent);
+  return (
+    <pixiContainer eventMode="none">
+      {viewModel.positions.map(({ x, y }) => (
+        <pixiContainer key={`${x},${y}`} x={x * stride} y={y * stride}>
+          <TerrainMotif
+            accentColor={accentColor}
+            cellSize={cellSize}
+            gridX={x}
+            gridY={y}
+            motif={theme.presentation.motif}
+          />
+        </pixiContainer>
+      ))}
     </pixiContainer>
   );
 }
@@ -368,7 +463,7 @@ function TerrainCell({
     <pixiContainer x={x} y={y}>
       <pixiGraphics draw={(graphics) => {
         graphics.clear().roundRect(0, 0, cellSize, cellSize, 6)
-          .fill({ color: terrainColor });
+          .fill({ color: terrainColor, alpha: 0.94 });
       }} />
       {texture ? (
         <pixiSprite
@@ -379,14 +474,6 @@ function TerrainCell({
           width={cellSize}
         />
       ) : null}
-      <TerrainMotif
-        accentColor={accentColor}
-        cellSize={cellSize}
-        gridX={gridX}
-        gridY={gridY}
-        motif={theme.presentation.motif}
-        terrainType={terrainType}
-      />
       {decorationTexture ? (
         <pixiSprite
           anchor={0.5}
@@ -425,14 +512,12 @@ function TerrainMotif({
   gridX,
   gridY,
   motif,
-  terrainType,
 }: {
   accentColor: number;
   cellSize: number;
   gridX: number;
   gridY: number;
   motif: MapThemeMotif;
-  terrainType: TerrainType;
 }) {
   const variant = (gridX * 17 + gridY * 31) % 7;
   return (
@@ -514,7 +599,21 @@ function TerrainMotif({
           .stroke({ color: accentColor, alpha: 0.18, width: 1 });
         return;
       }
-      const strongLava = terrainType === "DifficultTerrain" || terrainType === "Hazardous";
+      if (motif === "mandalore") {
+        const inset = cellSize * (0.2 + variant * 0.008);
+        graphics.moveTo(cellSize / 2, inset)
+          .lineTo(cellSize - inset, cellSize * 0.36)
+          .lineTo(cellSize - inset, cellSize * 0.66)
+          .lineTo(cellSize / 2, cellSize - inset)
+          .lineTo(inset, cellSize * 0.66)
+          .lineTo(inset, cellSize * 0.36)
+          .lineTo(cellSize / 2, inset)
+          .stroke({ color: accentColor, alpha: 0.25, width: 1.2 });
+        graphics.moveTo(cellSize * 0.12, cellSize * 0.82)
+          .lineTo(cellSize * 0.42, cellSize * 0.82)
+          .stroke({ color: accentColor, alpha: 0.16, width: 2 });
+        return;
+      }
       graphics.moveTo(3, cellSize * (0.24 + variant * 0.04))
         .lineTo(cellSize * 0.3, cellSize * 0.38)
         .lineTo(cellSize * 0.48, cellSize * 0.3)
@@ -522,8 +621,8 @@ function TerrainMotif({
         .lineTo(cellSize - 3, cellSize * 0.48)
         .stroke({
           color: accentColor,
-          alpha: strongLava ? 0.62 : 0.2,
-          width: strongLava ? 2.4 : 1.1,
+          alpha: 0.22,
+          width: 1.2,
         });
     }} />
   );

@@ -199,6 +199,26 @@ describe("scenario draft flow", () => {
     ]);
   });
 
+  it("preserves custom progressive stage limits when rebuilding a draft", () => {
+    const battle = startBattleFromDraft(createScenarioDraft("christophsis-break-line", {
+      armies: starterArmies,
+      stageRoundTargets: [3, 2, 4],
+    }));
+
+    const restarted = restartDraftFromBattle(
+      battle,
+      "christophsis-break-line",
+      undefined,
+      9,
+      [],
+      [],
+      [3, 2, 4],
+    );
+
+    expect(restarted.roundTarget).toBe(9);
+    expect(restarted.stageRoundTargets).toEqual([3, 2, 4]);
+  });
+
   it("keeps reinforcement events with the corresponding army slot", () => {
     const events = remapScheduledEventsByArmy([{
       id: "wave",

@@ -15,7 +15,7 @@ export function createMissionState(
 ): MissionState {
   const defenderArmyId = armies.some((army) => army.id === requestedDefenderArmyId)
     ? requestedDefenderArmyId
-    : armies[0]?.id;
+    : armies[scenario.defaultDefenderArmySlot ?? 0]?.id ?? armies[0]?.id;
   const attackerArmyId = armies.find((army) =>
     defenderArmyId && areArmiesEnemies({ armies }, army.id, defenderArmyId)
   )?.id;
@@ -31,6 +31,19 @@ export function createMissionState(
     ...(attackerArmyId ? { attackerArmyId } : {}),
     ...(scenario.victoryCondition.type === "ControlTerritory"
       ? { territoryOwners: {}, territoryScores: {} }
+      : {}),
+    ...(scenario.victoryCondition.type === "DestroyObjects"
+      ? { destroyedObjectiveIds: [] }
+      : {}),
+    ...(scenario.victoryCondition.type === "ProgressiveControl"
+      ? {
+          objectiveStage: 0,
+          stageStartedRound: 0,
+          stageRoundTargets: structuredClone(
+            scenario.victoryCondition.stageRoundLimits ??
+              Array(scenario.victoryCondition.count).fill(scenario.victoryCondition.roundLimit),
+          ),
+        }
       : {}),
   };
 }
@@ -110,6 +123,17 @@ export function applyScenarioEvents(
   }
 
   const completedRounds = battleEvents.filter((event) => event.type === "TurnEnded").length;
+
+  if (scenario.victoryCondition.type === "DestroyObjects") {
+    return applyDestroyObjectsProgress(
+      mission,
+      scenario.victoryCondition,
+      battleEvents,
+      battle,
+      completedRounds,
+    );
+  }
+
   if (completedRounds === 0) {
     return { mission, events: [] };
   }
@@ -121,6 +145,26 @@ export function applyScenarioEvents(
       battle,
       completedRounds,
       defenderArmyId,
+    );
+  }
+
+  if (scenario.victoryCondition.type === "ProgressiveControl") {
+    return applyProgressiveControlRound(
+      mission,
+      scenario.victoryCondition,
+      scenario.deploymentZones,
+      battle,
+      completedRounds,
+    );
+  }
+
+  if (scenario.victoryCondition.type === "SurviveAndExtract") {
+    return applyExtractionRound(
+      mission,
+      scenario.victoryCondition,
+      scenario.zones ?? [],
+      battle,
+      completedRounds,
     );
   }
 
@@ -217,6 +261,235 @@ export function applyScenarioEvents(
   };
 }
 
+function applyDestroyObjectsProgress(
+  mission: MissionState,
+  condition: Extract<ScenarioDefinition["victoryCondition"], { type: "DestroyObjects" }>,
+  battleEvents: BattleEvent[],
+  battle: Battle | undefined,
+  completedRounds: number,
+): ScenarioEngineResult {
+  const destroyedIds = new Set(mission.destroyedObjectiveIds ?? []);
+  for (const object of battle?.board.objects ?? []) {
+    if (object.type === condition.objectType && object.status === "Destroyed") {
+      destroyedIds.add(object.id);
+    }
+  }
+  for (const event of battleEvents) {
+    if (event.type === "BattlefieldObjectDestroyed" && event.objectType === condition.objectType) {
+      destroyedIds.add(event.objectId);
+    }
+  }
+  const roundsCompleted = mission.roundsCompleted + completedRounds;
+  const roundLimit = mission.roundTarget ?? condition.roundLimit;
+  const nextMission = {
+    ...mission,
+    roundsCompleted,
+    destroyedObjectiveIds: [...destroyedIds],
+  };
+
+  if (destroyedIds.size >= condition.count) {
+    return {
+      mission: { ...nextMission, status: "Victory" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Victory",
+        message: `Cele strategiczne zniszczone: ${condition.count}/${condition.count}.`,
+      }],
+    };
+  }
+  if (roundsCompleted >= roundLimit) {
+    return {
+      mission: { ...nextMission, status: "Defeat" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Defeat",
+        message: "Limit rund minął, zanim zniszczono wszystkie cele strategiczne.",
+      }],
+    };
+  }
+  return {
+    mission: nextMission,
+    events: battleEvents.some((event) => event.type === "BattlefieldObjectDestroyed")
+      ? [{
+          type: "MissionProgress",
+          message: `Zniszczone cele: ${destroyedIds.size}/${condition.count}.`,
+        }]
+      : [],
+  };
+}
+
+function applyProgressiveControlRound(
+  mission: MissionState,
+  condition: Extract<ScenarioDefinition["victoryCondition"], { type: "ProgressiveControl" }>,
+  deploymentZones: ScenarioDefinition["deploymentZones"],
+  battle: Battle | undefined,
+  completedRounds: number,
+): ScenarioEngineResult {
+  const attacker = battle?.armies[condition.attackerArmySlot];
+  const objectives = orderObjectivesFromDeployment(
+    (battle?.board.objects ?? []).filter((object) =>
+      object.type === condition.objectiveType && object.status === "Active"
+    ),
+    deploymentZones.find((zone) => zone.armySlot === condition.attackerArmySlot)?.cells ?? [],
+  );
+  let objectiveStage = mission.objectiveStage ?? 0;
+  const currentStage = objectiveStage;
+  const target = objectives[objectiveStage];
+
+  if (attacker && target && battle && teamControlsPosition(battle, attacker.id, target.position)) {
+    objectiveStage += 1;
+  }
+  const roundsCompleted = mission.roundsCompleted + completedRounds;
+  const roundLimit = mission.roundTarget ?? condition.roundLimit;
+  const stageRoundTargets = mission.stageRoundTargets ?? condition.stageRoundLimits ?? [];
+  const stageStartedRound = objectiveStage > currentStage
+    ? roundsCompleted
+    : mission.stageStartedRound ?? 0;
+  const nextMission = {
+    ...mission,
+    roundsCompleted,
+    objectiveStage,
+    stageRoundTargets: [...stageRoundTargets],
+    stageStartedRound,
+  };
+
+  if (objectiveStage >= condition.count) {
+    return {
+      mission: { ...nextMission, status: "Victory" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Victory",
+        message: "Linia obrony została przełamana sektor po sektorze.",
+      }],
+    };
+  }
+  const currentStageLimit = stageRoundTargets[currentStage];
+  const roundsInCurrentStage = roundsCompleted - (mission.stageStartedRound ?? 0);
+  if (
+    objectiveStage === currentStage &&
+    Number.isInteger(currentStageLimit) &&
+    currentStageLimit > 0 &&
+    roundsInCurrentStage >= currentStageLimit
+  ) {
+    return {
+      mission: { ...nextMission, status: "Defeat" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Defeat",
+        message: `Nie przełamano sektora ${currentStage + 1} w wyznaczonym czasie.`,
+      }],
+    };
+  }
+  if (roundsCompleted >= roundLimit) {
+    return {
+      mission: { ...nextMission, status: "Defeat" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Defeat",
+        message: "Natarcie zatrzymało się przed ostatnim sektorem.",
+      }],
+    };
+  }
+  return {
+    mission: nextMission,
+    events: [{
+      type: "MissionProgress",
+      message: `Przełamane sektory: ${objectiveStage}/${condition.count}.`,
+    }],
+  };
+}
+
+function applyExtractionRound(
+  mission: MissionState,
+  condition: Extract<ScenarioDefinition["victoryCondition"], { type: "SurviveAndExtract" }>,
+  zones: NonNullable<ScenarioDefinition["zones"]>,
+  battle: Battle | undefined,
+  completedRounds: number,
+): ScenarioEngineResult {
+  const roundsCompleted = mission.roundsCompleted + completedRounds;
+  const roundLimit = mission.roundTarget ?? condition.roundLimit;
+  const army = battle?.armies[condition.armySlot];
+  const extractionZone = zones.find((zone) => zone.id === condition.zoneId);
+  const extractionCells = new Set(
+    (extractionZone?.cells ?? []).map(({ x, y }) => `${x},${y}`),
+  );
+  const extractedUnits = army && battle
+    ? battle.armies.flatMap((candidate) => candidate.units).filter((unit) =>
+        unit.status !== "Destroyed" &&
+        unit.position &&
+        areArmiesAllied(battle, unit.armyId, army.id) &&
+        extractionCells.has(`${unit.position.x},${unit.position.y}`)
+      ).length
+    : 0;
+  const nextMission = { ...mission, roundsCompleted };
+
+  if (roundsCompleted >= condition.minimumRounds && extractedUnits >= condition.minimumUnits) {
+    return {
+      mission: { ...nextMission, status: "Victory" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Victory",
+        message: "Oddział przetrwał zasadzkę i dotarł do strefy ewakuacji.",
+      }],
+    };
+  }
+  if (roundsCompleted >= roundLimit) {
+    return {
+      mission: { ...nextMission, status: "Defeat" },
+      events: [{
+        type: "MissionCompleted",
+        status: "Defeat",
+        message: "Okno ewakuacji zamknęło się.",
+      }],
+    };
+  }
+  return {
+    mission: nextMission,
+    events: [{
+      type: "MissionProgress",
+      message: roundsCompleted < condition.minimumRounds
+        ? `Przetrwaj jeszcze ${condition.minimumRounds - roundsCompleted} rund.`
+        : `Jednostki w strefie ewakuacji: ${extractedUnits}/${condition.minimumUnits}.`,
+    }],
+  };
+}
+
+function teamControlsPosition(
+  battle: Battle,
+  armyId: string,
+  position: { x: number; y: number },
+): boolean {
+  const occupants = battle.armies.flatMap((army) => army.units).filter((unit) =>
+    unit.status !== "Destroyed" &&
+    unit.position?.x === position.x &&
+    unit.position.y === position.y
+  );
+  return occupants.some((unit) => areArmiesAllied(battle, unit.armyId, armyId)) &&
+    !occupants.some((unit) => areArmiesEnemies(battle, unit.armyId, armyId));
+}
+
+function orderObjectivesFromDeployment<T extends { position: { x: number; y: number } }>(
+  objectives: T[],
+  deploymentCells: { x: number; y: number }[],
+): T[] {
+  const origin = deploymentCells.length > 0
+    ? {
+        x: deploymentCells.reduce((sum, cell) => sum + cell.x, 0) / deploymentCells.length,
+        y: deploymentCells.reduce((sum, cell) => sum + cell.y, 0) / deploymentCells.length,
+      }
+    : { x: 0, y: 0 };
+  return [...objectives].sort((left, right) =>
+    manhattanDistance(left.position, origin) - manhattanDistance(right.position, origin)
+  );
+}
+
+function manhattanDistance(
+  first: { x: number; y: number },
+  second: { x: number; y: number },
+): number {
+  return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
+}
+
 function applyTerritoryRound(
   mission: MissionState,
   scenario: ScenarioDefinition,
@@ -253,7 +526,11 @@ function applyTerritoryRound(
   }
 
   const roundsCompleted = mission.roundsCompleted + completedRounds;
-  const requiredRounds = mission.roundTarget ?? scenario.victoryCondition.rounds;
+  const requiredRounds = mission.roundTarget ?? (
+    scenario.victoryCondition.type === "ControlTerritory"
+      ? scenario.victoryCondition.rounds
+      : 0
+  );
   const rankedArmies = [...(battle?.armies ?? [])].sort(
     (left, right) =>
       (territoryScores[right.id] ?? 0) - (territoryScores[left.id] ?? 0),

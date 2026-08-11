@@ -25,6 +25,8 @@ describe("map theme assets", () => {
       .toEqual(["Kenney Foliage Pack", "Kenney Sci-Fi RTS"]);
     expect(getMapAssetSet("christophsis-crystal-city")?.sources.map(({ name }) => name))
       .toEqual(["Kenney Sci-Fi RTS"]);
+    expect(getMapAssetSet("mandalore-city")?.sources.map(({ name }) => name))
+      .toEqual(["LEGO Star Wars Battles — Mandalore vector pack"]);
   });
 
   it("selects terrain decoration variants deterministically", () => {
@@ -45,6 +47,7 @@ describe("map theme assets", () => {
     ["geonosis-foundry", "/map-assets/geonosis/"],
     ["felucia-wilds", "/map-assets/felucia/"],
     ["christophsis-crystal-city", "/map-assets/christophsis/"],
+    ["mandalore-city", "/map-assets/mandalore/"],
   ] as const)("maps %s terrain to its own asset directory", (themeId, directory) => {
     expect(getMapTerrainDecorationUrl(themeId, "LightCover", 2, 3)?.startsWith(directory))
       .toBe(true);
@@ -82,6 +85,7 @@ describe("map theme assets", () => {
     ["geonosis-foundry", "/map-assets/geonosis/"],
     ["felucia-wilds", "/map-assets/felucia/"],
     ["christophsis-crystal-city", "/map-assets/christophsis/"],
+    ["mandalore-city", "/map-assets/mandalore/"],
   ] as const)("maps every battlefield object for %s", (themeId, directory) => {
     for (const objectType of [
       "DefensePoint",

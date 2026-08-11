@@ -12,6 +12,7 @@ describe("map generator foundation", () => {
   it("registers the Tatooine theme separately from terrain rules", () => {
     expect(getMapTheme("desert-outpost")).toEqual(desertOutpostTheme);
     expect(desertOutpostTheme.presentation.assetSetId).toBe("tatooine-outpost");
+    expect(desertOutpostTheme.generation.motif).toBe("open-outpost");
     expect(desertOutpostTheme.generation.clusterSize).toEqual({ minimum: 2, maximum: 5 });
     expect(desertOutpostTheme.generation.terrainWeights).toEqual([
       { terrainType: "DifficultTerrain", weight: 4 },
@@ -24,7 +25,7 @@ describe("map generator foundation", () => {
     ]);
   });
 
-  it("registers seven planetary themes with complete visual palettes", () => {
+  it("registers eight planetary themes with complete visual palettes", () => {
     expect(mapThemes.map(({ id }) => id)).toEqual([
       "desert-outpost",
       "forest-moon",
@@ -33,8 +34,10 @@ describe("map generator foundation", () => {
       "geonosis-foundry",
       "felucia-wilds",
       "christophsis-crystal-city",
+      "mandalore-city",
     ]);
-    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(7);
+    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(8);
+    expect(new Set(mapThemes.map(({ generation }) => generation.motif)).size).toBe(7);
     expect(mapThemes.every(({ presentation }) =>
       Object.values(presentation.palette.terrain).every((color) => /^#[0-9a-f]{6}$/i.test(color))
     )).toBe(true);
@@ -101,12 +104,13 @@ describe("map generator foundation", () => {
     )).toBe(true);
     expect(result.board.tiles.every((tile) => tile.movementCost >= 1)).toBe(true);
     expect(result.recipe).toEqual({
-      generatorVersion: 3,
+      generatorVersion: 4,
       width: 4,
       height: 3,
       seed: 42,
       themeId: "desert-outpost",
-      themeVersion: 3,
+      themeVersion: 4,
+      generationMotif: "open-outpost",
       terrainDensity: 1,
       deploymentDepth: 2,
       armyLayout: [],

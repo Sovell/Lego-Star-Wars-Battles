@@ -809,6 +809,17 @@ export function BattleScreen({
               onMissionChange({
                 ...mission,
                 roundTarget: Math.max(1, Math.floor(rounds || 1)),
+                objectiveStage: mission.objectiveStage === undefined ? undefined : 0,
+                stageStartedRound: mission.stageStartedRound === undefined ? undefined : 0,
+                roundsCompleted: 0,
+              })
+            }
+            onStageRoundTargetsChange={(stageRoundTargets) =>
+              onMissionChange({
+                ...mission,
+                stageRoundTargets,
+                objectiveStage: 0,
+                stageStartedRound: 0,
                 roundsCompleted: 0,
               })
             }
@@ -1184,7 +1195,11 @@ function MissionSummary({
       />
       <p className="tokenReadout">
         {outcomeMessage} Ukonczono {mission.roundsCompleted} z{" "}
-        {mission.roundTarget ?? scenario.victoryCondition.rounds} rund.
+        {mission.roundTarget ?? (
+          "rounds" in scenario.victoryCondition
+            ? scenario.victoryCondition.rounds
+            : scenario.victoryCondition.roundLimit
+        )} rund.
       </p>
     </section>
   );

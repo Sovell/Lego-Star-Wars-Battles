@@ -30,6 +30,7 @@ export function MissionPanel({
   onArmyConfigChange,
   onDefenderArmyChange,
   onRoundTargetChange,
+  onStageRoundTargetsChange,
   onScheduledEventsChange,
   onRestart,
   onStart,
@@ -57,11 +58,19 @@ export function MissionPanel({
   ) => void;
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
+  onStageRoundTargetsChange: (rounds: number[]) => void;
   onScheduledEventsChange: (events: ScenarioScheduledEvent[]) => void;
   onRestart: () => void;
   onStart: () => void;
 }) {
-  const requiredRounds = mission.roundTarget ?? scenario.victoryCondition.rounds;
+  const requiredRounds = mission.roundTarget ?? (
+    "rounds" in scenario.victoryCondition
+      ? scenario.victoryCondition.rounds
+      : scenario.victoryCondition.roundLimit
+  );
+  const progressiveCondition = scenario.victoryCondition.type === "ProgressiveControl"
+    ? scenario.victoryCondition
+    : undefined;
   const defender = armies.find((army) => army.id === mission.defenderArmyId) ?? armies[0];
   const attacker = armies.find((army) => army.id === mission.attackerArmyId)
     ?? armies.find((army) =>
@@ -83,6 +92,18 @@ export function MissionPanel({
           <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
         </div>
         <progress max={requiredRounds} value={mission.roundsCompleted} />
+        {scenario.victoryCondition.type === "DestroyObjects" ? (
+          <div className="missionProgressHeader">
+            <span>Zniszczone cele</span>
+            <strong>{mission.destroyedObjectiveIds?.length ?? 0}/{scenario.victoryCondition.count}</strong>
+          </div>
+        ) : null}
+        {scenario.victoryCondition.type === "ProgressiveControl" ? (
+          <div className="missionProgressHeader">
+            <span>Przełamane sektory</span>
+            <strong>{mission.objectiveStage ?? 0}/{scenario.victoryCondition.count}</strong>
+          </div>
+        ) : null}
         {scenario.victoryCondition.type === "ControlTerritory" ? (
           <div className="territoryScoreboard">
             {armies.map((army) => (
@@ -190,8 +211,41 @@ export function MissionPanel({
           value={requiredRounds}
           onChange={(event) => onRoundTargetChange(Number(event.target.value))}
         />
-        <small>Bez górnego limitu rund.</small>
+        <small>Wartość określa wymagany czas albo limit misji.</small>
       </label>
+      {progressiveCondition ? (
+        <section className="stageRoundSettings">
+          <div>
+            <strong>Limity etapów</strong>
+            <small>Ile pełnych rund można poświęcić na każdy kolejny sektor.</small>
+          </div>
+          <div className="stageRoundGrid">
+            {Array.from({ length: progressiveCondition.count }, (_, stage) => {
+              const defaults = progressiveCondition.stageRoundLimits ?? [];
+              const values = mission.stageRoundTargets ?? defaults;
+              return (
+                <label key={stage}>
+                  Sektor {stage + 1}
+                  <input
+                    disabled={gamePhase !== "Preparation"}
+                    min={1}
+                    type="number"
+                    value={values[stage] ?? requiredRounds}
+                    onChange={(event) => {
+                      const next = Array.from(
+                        { length: progressiveCondition.count },
+                        (_, index) => values[index] ?? requiredRounds,
+                      );
+                      next[stage] = Math.max(1, Math.floor(Number(event.target.value) || 1));
+                      onStageRoundTargetsChange(next);
+                    }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       <div className="missionProgressHeader">
         <span>Ukonczone rundy</span>
         <strong>{mission.roundsCompleted}/{requiredRounds}</strong>

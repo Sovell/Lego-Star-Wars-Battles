@@ -188,6 +188,43 @@
   min-height: 50px;
 }
 
+.stageRoundSettings {
+  background: rgba(12, 17, 23, 0.48);
+  border: 1px solid rgba(98, 213, 239, 0.22);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+
+.stageRoundSettings > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.stageRoundSettings small {
+  color: #9eabba;
+  font-size: 0.68rem;
+}
+
+.stageRoundGrid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stageRoundGrid label {
+  color: #9eabba;
+  display: grid;
+  font-size: 0.66rem;
+  gap: 3px;
+}
+
+.stageRoundGrid input {
+  min-width: 0;
+  width: 100%;
+}
+
 .missionStartHint {
   color: #f0b0a8;
   font-size: 0.7rem;

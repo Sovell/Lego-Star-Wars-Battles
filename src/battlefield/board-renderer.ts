@@ -14,6 +14,7 @@ export function resolveBoardRendererMode(
 
 export type BoardRendererProps = {
   deploymentZoneCells?: ReadonlySet<string>;
+  scenarioZoneCells?: ReadonlySet<string>;
   interactionDisabled: boolean;
   interactionModel: BoardInteractionModel;
   mapThemeId: MapThemeId;

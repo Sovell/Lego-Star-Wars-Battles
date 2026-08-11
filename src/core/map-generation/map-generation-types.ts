@@ -1,14 +1,8 @@
 import type { ScenarioDefinition } from "../scenario/scenario-types";
 import type { Army, BattlefieldObjectType, Board, TeamId, TerrainType } from "../../types";
+import type { MapThemeId } from "./map-theme-id";
 
-export type MapThemeId =
-  | "desert-outpost"
-  | "forest-moon"
-  | "ice-front"
-  | "volcanic-foundry"
-  | "geonosis-foundry"
-  | "felucia-wilds"
-  | "christophsis-crystal-city";
+export type { MapThemeId } from "./map-theme-id";
 
 export type MapThemeMotif =
   | "dunes"
@@ -17,7 +11,17 @@ export type MapThemeMotif =
   | "lava"
   | "spires"
   | "fungal"
-  | "crystal";
+  | "crystal"
+  | "mandalore";
+
+export type MapGenerationMotif =
+  | "open-outpost"
+  | "forest-lanes"
+  | "ice-fields"
+  | "lava-channels"
+  | "canyons"
+  | "organic-islands"
+  | "urban-grid";
 
 export type MapThemeTerrainPalette = {
   open: string;
@@ -82,6 +86,7 @@ export type MapTheme = {
     };
   };
   generation: {
+    motif: MapGenerationMotif;
     defaultTerrainDensity: number;
     clusterSize: {
       minimum: number;
@@ -110,12 +115,13 @@ export type MapGenerationConfig = {
 };
 
 export type MapGenerationRecipe = {
-  generatorVersion: 3;
+  generatorVersion: 4;
   width: number;
   height: number;
   seed: number;
   themeId: MapThemeId;
   themeVersion: number;
+  generationMotif: MapGenerationMotif;
   terrainDensity: number;
   scenarioId?: string;
   defenderArmySlot?: number;

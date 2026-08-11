@@ -36,6 +36,13 @@ const foliagePackSource = {
   licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
 } as const;
 
+const mandaloreVectorSource = {
+  name: "LEGO Star Wars Battles — Mandalore vector pack",
+  url: "/map-assets/mandalore/README.md",
+  license: "CC0 1.0",
+  licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+} as const;
+
 export const mapAssetSets: readonly MapAssetSet[] = [{
   id: "tatooine-outpost",
   sources: [sciFiRtsSource],
@@ -249,6 +256,37 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
     Generator: "/map-assets/christophsis/generator-tanks.png",
     LightFortification: "/map-assets/christophsis/light-barricade.png",
     HeavyFortification: "/map-assets/christophsis/heavy-bunker.png",
+  },
+}, {
+  id: "mandalore-city",
+  sources: [mandaloreVectorSource],
+  terrain: {
+    Impassable: ["/map-assets/mandalore/impassable-dome.svg"],
+    Hazardous: ["/map-assets/mandalore/hazardous-vent.svg"],
+    HighGround: ["/map-assets/mandalore/high-ground-platform.svg"],
+    LightCover: [
+      "/map-assets/mandalore/light-cover-a.svg",
+      "/map-assets/mandalore/light-cover-b.svg",
+    ],
+    HeavyCover: [
+      "/map-assets/mandalore/heavy-cover-a.svg",
+      "/map-assets/mandalore/heavy-cover-b.svg",
+    ],
+    DifficultTerrain: [
+      "/map-assets/mandalore/difficult-plaza-a.svg",
+      "/map-assets/mandalore/difficult-plaza-b.svg",
+    ],
+    Building: [
+      "/map-assets/mandalore/building-dome-a.svg",
+      "/map-assets/mandalore/building-dome-b.svg",
+    ],
+  },
+  objects: {
+    DefensePoint: "/map-assets/mandalore/defense-turret.svg",
+    StrategicPoint: "/map-assets/mandalore/strategic-beacon.svg",
+    Generator: "/map-assets/mandalore/generator-core.svg",
+    LightFortification: "/map-assets/mandalore/light-barricade.svg",
+    HeavyFortification: "/map-assets/mandalore/heavy-bunker.svg",
   },
 }];
 

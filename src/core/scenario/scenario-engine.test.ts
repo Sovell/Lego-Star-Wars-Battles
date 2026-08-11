@@ -5,7 +5,10 @@ import { createBattlefieldObject } from "../battlefield-objects";
 import { applyScenarioEvents, createMissionState } from "./scenario-engine";
 import {
   defendPointScenario,
+  christophsisBreakLineScenario,
   controlTerritoryScenario,
+  feluciaAmbushScenario,
+  geonosisDroidFoundryScenario,
   protectGeneratorScenario,
   survivalTestScenario,
 } from "./scenarios";
@@ -294,5 +297,149 @@ describe("scenario engine", () => {
     expect(result.mission.status).toBe("Active");
     expect(result.mission.roundTarget).toBe(12);
     expect(result.mission.roundsCompleted).toBe(6);
+  });
+
+  it("tracks multiple foundry targets and wins immediately after the last one is destroyed", () => {
+    const initial = createMissionState(geonosisDroidFoundryScenario);
+    const first = applyScenarioEvents(initial, geonosisDroidFoundryScenario, [{
+      type: "BattlefieldObjectDestroyed",
+      objectId: "generator-a",
+      objectType: "Generator",
+    }]);
+    const second = applyScenarioEvents(first.mission, geonosisDroidFoundryScenario, [{
+      type: "BattlefieldObjectDestroyed",
+      objectId: "generator-b",
+      objectType: "Generator",
+    }]);
+
+    expect(first.mission.status).toBe("Active");
+    expect(first.mission.destroyedObjectiveIds).toEqual(["generator-a"]);
+    expect(second.mission.status).toBe("Victory");
+  });
+
+  it("uses the scenario's defensive side when assigning mission roles", () => {
+    const battle = createBattle();
+    const mission = createMissionState(geonosisDroidFoundryScenario, battle.armies);
+
+    expect(mission.defenderArmyId).toBe(battle.armies[1].id);
+    expect(mission.attackerArmyId).toBe(battle.armies[0].id);
+  });
+
+  it("loses the foundry assault when its round limit expires", () => {
+    const mission = {
+      ...createMissionState(geonosisDroidFoundryScenario),
+      roundsCompleted: 5,
+    };
+    const result = applyScenarioEvents(
+      mission,
+      geonosisDroidFoundryScenario,
+      [{ type: "TurnEnded", turn: 7 }],
+    );
+
+    expect(result.mission.status).toBe("Defeat");
+  });
+
+  it("advances the Christophsis front only through consecutive objectives", () => {
+    const battle = createBattle();
+    battle.board.objects = [2, 4, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 2 })
+    );
+    battle.armies[1].units.forEach((unit) => { unit.position = null; });
+    const mission = createMissionState(christophsisBreakLineScenario, battle.armies);
+
+    battle.armies[0].units[0].position = { x: 2, y: 2 };
+    const first = applyScenarioEvents(
+      mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+    battle.armies[0].units[0].position = { x: 4, y: 2 };
+    const second = applyScenarioEvents(
+      first.mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 3 }],
+      battle,
+    );
+    battle.armies[0].units[0].position = { x: 6, y: 2 };
+    const third = applyScenarioEvents(
+      second.mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 4 }],
+      battle,
+    );
+
+    expect(first.mission.objectiveStage).toBe(1);
+    expect(second.mission.objectiveStage).toBe(2);
+    expect(third.mission.status).toBe("Victory");
+  });
+
+  it("enforces configurable limits for individual progressive sectors", () => {
+    const battle = createBattle();
+    battle.board.objects = [2, 4, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 4 })
+    );
+    battle.armies[0].units.forEach((unit) => { unit.position = null; });
+    const mission = {
+      ...createMissionState(christophsisBreakLineScenario, battle.armies),
+      stageRoundTargets: [1, 2, 3],
+    };
+
+    const result = applyScenarioEvents(
+      mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Defeat");
+    expect(result.events[0]).toEqual(expect.objectContaining({ type: "MissionCompleted" }));
+  });
+
+  it("resets the stage clock after a sector is captured", () => {
+    const battle = createBattle();
+    battle.board.objects = [2, 4, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 4 })
+    );
+    battle.armies[1].units.forEach((unit) => { unit.position = null; });
+    battle.armies[0].units[0].position = { x: 2, y: 4 };
+    const mission = {
+      ...createMissionState(christophsisBreakLineScenario, battle.armies),
+      stageRoundTargets: [1, 1, 3],
+    };
+    const first = applyScenarioEvents(
+      mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+    battle.armies[0].units[0].position = null;
+    const second = applyScenarioEvents(
+      first.mission,
+      christophsisBreakLineScenario,
+      [{ type: "TurnEnded", turn: 3 }],
+      battle,
+    );
+
+    expect(first.mission.status).toBe("Active");
+    expect(first.mission.stageStartedRound).toBe(1);
+    expect(second.mission.status).toBe("Defeat");
+  });
+
+  it("completes the Felucia ambush after survival and extraction", () => {
+    const battle = createBattle();
+    battle.armies[0].units[0].position = { x: 7, y: 4 };
+    const mission = {
+      ...createMissionState(feluciaAmbushScenario, battle.armies),
+      roundsCompleted: 1,
+    };
+    const result = applyScenarioEvents(
+      mission,
+      feluciaAmbushScenario,
+      [{ type: "TurnEnded", turn: 3 }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Victory");
   });
 });

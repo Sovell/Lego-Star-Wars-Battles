@@ -6,11 +6,20 @@ export {
 } from "./deployment-zone-generator";
 export { validateMapConnectivity, type MapConnectivity } from "./map-connectivity";
 export {
+  createMapTopologyPlan,
+  type MapClusterShape,
+  type MapTopologyPlan,
+} from "./map-topology";
+export {
   desertOutpostTheme,
+  christophsisCrystalCityTheme,
+  feluciaWildsTheme,
   forestMoonTheme,
+  geonosisFoundryTheme,
   getMapTheme,
   getMapThemeTerrainColor,
   iceFrontTheme,
+  mandaloreCityTheme,
   mapThemes,
   volcanicFoundryTheme,
 } from "./map-themes";
@@ -20,6 +29,7 @@ export type {
   MapGenerationArmy,
   MapGenerationArmyLayout,
   MapGenerationConfig,
+  MapGenerationMotif,
   MapGenerationRecipe,
   MapObjectPlacement,
   MapObjectWeight,

@@ -237,10 +237,16 @@ export function App() {
           nextArmies,
         )
       : structuredClone(scenario.scheduledEvents ?? []);
+    const currentMapGeneration = getScenarioMapGenerationState(
+      markScenarioDraftMapEdited(scenarioDraft),
+    );
     const nextMission = {
       ...createMissionState({ ...scenario, scheduledEvents }, nextArmies, defenderArmyId),
       deploymentZones,
       ...(roundTarget ? { roundTarget } : {}),
+      ...(keepsCurrentScenario && scenarioDraft.stageRoundTargets
+        ? { stageRoundTargets: structuredClone(scenarioDraft.stageRoundTargets) }
+        : {}),
     };
     const nextDraft = {
       ...markScenarioDraftMapEdited(scenarioDraft),
@@ -250,6 +256,13 @@ export function App() {
       deploymentZones,
       roundTarget,
       scheduledEvents,
+      stageRoundTargets: structuredClone(nextMission.stageRoundTargets ?? []),
+      mapGeneration: {
+        ...currentMapGeneration,
+        ...(scenario.recommendedMapThemeId
+          ? { themeId: scenario.recommendedMapThemeId }
+          : {}),
+      },
     };
     setScenarioDraft(nextDraft);
     setMission(nextMission);
@@ -290,7 +303,8 @@ export function App() {
       scenarioDraft.armies,
       `Uruchomiono scenariusz: ${nextScenario.name}.`,
       nextScenario,
-      mission.defenderArmyId,
+      scenarioDraft.armies[nextScenario.defaultDefenderArmySlot ?? 0]?.id
+        ?? mission.defenderArmyId,
     );
   }
 
@@ -458,6 +472,9 @@ export function App() {
         ),
         deploymentZones: structuredClone(activeScenario.deploymentZones),
         ...(scenarioDraft.roundTarget ? { roundTarget: scenarioDraft.roundTarget } : {}),
+        ...(scenarioDraft.stageRoundTargets
+          ? { stageRoundTargets: structuredClone(scenarioDraft.stageRoundTargets) }
+          : {}),
       };
       const startEvents = applyScheduledScenarioEvents(
         preparedBattle,
@@ -548,6 +565,7 @@ export function App() {
       loadedMission.roundTarget,
       loadedMission.deploymentZones,
       loadedMission.scheduledEvents,
+      loadedMission.stageRoundTargets,
     ));
     setMission(loadedMission);
     setLogs(savedBattle.logs);
@@ -569,6 +587,7 @@ export function App() {
         deploymentZones: nextMission.deploymentZones ?? current.deploymentZones,
         roundTarget: nextMission.roundTarget,
         scheduledEvents: structuredClone(nextMission.scheduledEvents ?? []),
+        stageRoundTargets: structuredClone(nextMission.stageRoundTargets ?? []),
       }));
     }
   }
@@ -621,6 +640,7 @@ export function App() {
       mission.roundTarget,
       mission.deploymentZones,
       mission.scheduledEvents,
+      mission.stageRoundTargets,
     );
     setScenarioDraft(nextDraft);
     setBattle(structuredClone(initialBattle));
@@ -629,6 +649,7 @@ export function App() {
       deploymentZones: structuredClone(nextDraft.deploymentZones),
       ...(nextDraft.roundTarget ? { roundTarget: nextDraft.roundTarget } : {}),
       scheduledEvents: structuredClone(nextDraft.scheduledEvents),
+      stageRoundTargets: structuredClone(nextDraft.stageRoundTargets ?? []),
       resolvedEventIds: [],
     });
     setActiveArmyId(undefined);

@@ -104,6 +104,11 @@ export function BattlefieldView({
     deploymentZoneCells: new Set(
       deploymentZoneCells?.map((cell) => `${cell.x},${cell.y}`) ?? [],
     ),
+    scenarioZoneCells: new Set(
+      scenario.zones?.flatMap((zone) =>
+        zone.cells.map((cell) => `${cell.x},${cell.y}`)
+      ) ?? [],
+    ),
     interactionDisabled,
     interactionModel,
     mapThemeId,
