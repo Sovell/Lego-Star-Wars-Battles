@@ -12,6 +12,7 @@ import {
 } from "./board-renderer";
 import { DomMapBoard } from "./DomMapBoard";
 import "./battlefield-view.css";
+import { localizeThemeName, useI18n, type Language } from "../i18n";
 
 const PixiMapBoard = lazy(async () => {
   const module = await import("./PixiMapBoard");
@@ -61,6 +62,7 @@ export function BattlefieldView({
   onCellClick: (x: number, y: number) => void;
   onSelectedUnitChange: (unitId: string) => void;
 }) {
+  const { language, text } = useI18n();
   const [renderer, setRenderer] = useState<BoardRendererMode>("pixi");
   const activeRenderer = resolveBoardRendererMode(enableRendererSwitch, renderer);
   const mapTheme = getMapTheme(mapThemeId);
@@ -111,6 +113,7 @@ export function BattlefieldView({
     ),
     interactionDisabled,
     interactionModel,
+    language,
     mapThemeId,
     selectedUnitId,
     visualEvent,
@@ -128,11 +131,11 @@ export function BattlefieldView({
           color: mapTheme.presentation.palette.accent,
         }}
       >
-        <span>{mapTheme.name}</span>
+        <span>{localizeThemeName(language, mapTheme.id, mapTheme.name)}</span>
         <small>{mapTheme.presentation.groundTextureId}</small>
       </div>
       {enableRendererSwitch ? (
-        <div className="rendererSwitch" role="group" aria-label="Renderer planszy">
+        <div className="rendererSwitch" role="group" aria-label={text("Renderer planszy", "Board renderer")}>
           <span>Renderer</span>
           <button
             className={renderer === "dom" ? "active" : ""}
@@ -146,16 +149,16 @@ export function BattlefieldView({
           >
             Pixi
           </button>
-          {renderer === "pixi" ? <small>Renderer eksperymentalny</small> : null}
+          {renderer === "pixi" ? <small>{text("Renderer eksperymentalny", "Experimental renderer")}</small> : null}
         </div>
       ) : null}
       {interactionModel.hint ? (
         <div className={`boardInteractionHint ${interactionModel.mode}`} role="status">
-          {interactionModel.hint}
+          {localizeInteractionHint(language, interactionModel.hint)}
         </div>
       ) : null}
       {activeRenderer === "pixi" ? (
-        <Suspense fallback={<div className="pixiMapLoading">Uruchamianie Pixi…</div>}>
+        <Suspense fallback={<div className="pixiMapLoading">{text("Uruchamianie Pixi…", "Starting Pixi…")}</div>}>
           <PixiMapBoard {...rendererProps} />
         </Suspense>
       ) : (
@@ -163,4 +166,16 @@ export function BattlefieldView({
       )}
     </section>
   );
+}
+
+function localizeInteractionHint(language: Language, hint: string): string {
+  if (language === "pl") return hint;
+  const translations: Record<string, string> = {
+    "Niebieskie pola: legalne wejście jednostki z rezerwy.": "Blue tiles: legal entry points for a reserve unit.",
+    "Zielone pola: legalny zasięg ruchu.": "Green tiles: legal movement range.",
+    "Zielone pola: legalny cel pozycyjny zdolności.": "Green tiles: legal positional ability targets.",
+    "Czerwone pola: legalne cele wybranej broni.": "Red tiles: legal targets for the selected weapon.",
+    "Fioletowe pola: legalne cele wybranej zdolności.": "Purple tiles: legal targets for the selected ability.",
+  };
+  return translations[hint] ?? hint;
 }

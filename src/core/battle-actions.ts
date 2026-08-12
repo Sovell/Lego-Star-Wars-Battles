@@ -25,6 +25,7 @@ import type { ScenarioDefinition } from "./scenario/scenario-types";
 
 export type BattleAction =
   | { type: "DrawActivation" }
+  | { type: "PassActivation" }
   | { type: "MoveUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "AdvanceUnit"; unitId: string; targetPosition: { x: number; y: number } }
   | { type: "DeployUnit"; unitId: string; targetPosition: { x: number; y: number } }
@@ -42,6 +43,7 @@ export type BattleAction =
 
 export type BattleEvent =
   | { type: "ActivationDrawn"; armyId: string }
+  | { type: "ActivationPassed"; armyId: string }
   | { type: "UnitMoved"; unitId: string; position: { x: number; y: number } }
   | { type: "UnitDeployed"; unitId: string; position: { x: number; y: number } }
   | { type: "OrderApplied"; unitId: string; order: OrderType }
@@ -87,6 +89,23 @@ export function applyBattleAction(
         battle: result.battle,
         events: result.token ? [{ type: "ActivationDrawn", armyId: result.token.armyId }] : [],
         log: result.log,
+      };
+    }
+
+    case "PassActivation": {
+      const activeActivation = battle.activeActivation;
+      if (!activeActivation) {
+        return {
+          battle,
+          events: [],
+          log: "Brak aktywnego rozkazu do pominięcia.",
+        };
+      }
+
+      return {
+        battle: { ...battle, activeActivation: undefined },
+        events: [{ type: "ActivationPassed", armyId: activeActivation.armyId }],
+        log: "Aktywny rozkaz został pominięty.",
       };
     }
 

@@ -62,9 +62,20 @@ import type {
   UnitInstance,
   UnitTemplate,
 } from "./types";
+import {
+  LanguageSwitcher,
+  localizeAbilityName,
+  localizeCategory,
+  localizeFaction,
+  localizeRole,
+  localizeScenarioName,
+  localizeTaskForceName,
+  localizeUnitName,
+  useI18n,
+  type Language,
+} from "./i18n";
 
 type AppView = RecoverableAppView;
-type AppTitle = Record<AppView, string>;
 type DraftCounts = Record<string, number>;
 type ComposerArmyDraft = {
   id: string;
@@ -77,15 +88,8 @@ type ComposerArmyDraft = {
 const minimumArmyCount = 2;
 const maximumArmyCount = 4;
 const composerFactions: FactionId[] = ["Republic", "Separatists"];
-const appTitles: AppTitle = {
-  home: "Menu główne",
-  setup: "Kreator scenariusza",
-  battle: "Panel dowodzenia",
-  composer: "Army Composer",
-  rules: "Rules",
-};
-
 export function App() {
+  const { language, text } = useI18n();
   const persistence = useMemo(() => createPersistenceAdapter(), []);
   const scenarioStartInProgress = useRef(false);
   const [recoveredSession] = useState(() => loadActiveSessionRecovery());
@@ -108,7 +112,7 @@ export function App() {
     recoveredSession?.mission ?? createMissionState(survivalTestScenario, []),
   );
   const [logs, setLogs] = useState<CombatLogEntry[]>(() =>
-    recoveredSession?.logs ?? [createLog(1, "Nowa rozgrywka jest gotowa do przygotowania.")]
+    recoveredSession?.logs ?? [createLog(1, text("Nowa rozgrywka jest gotowa do przygotowania.", "A new game is ready for setup."))]
   );
   const [activeArmyId, setActiveArmyId] = useState<string | undefined>(
     () => recoveredSession?.activeArmyId,
@@ -288,7 +292,7 @@ export function App() {
     setSelectedOrder("Move");
     setArmyJson("[]");
     setImportError("");
-    setLogs([createLog(1, "Rozpoczęto przygotowanie pustego scenariusza.")]);
+    setLogs([createLog(1, text("Rozpoczęto przygotowanie pustego scenariusza.", "Empty scenario setup started."))]);
     setGamePhase("Preparation");
     setView("setup");
   }
@@ -301,7 +305,7 @@ export function App() {
 
     loadArmies(
       scenarioDraft.armies,
-      `Uruchomiono scenariusz: ${nextScenario.name}.`,
+      `${text("Wybrano scenariusz", "Scenario selected")}: ${localizeScenarioName(language, nextScenario.id, nextScenario.name)}.`,
       nextScenario,
       scenarioDraft.armies[nextScenario.defaultDefenderArmySlot ?? 0]?.id
         ?? mission.defenderArmyId,
@@ -331,7 +335,9 @@ export function App() {
     setLogs((current) => [
       createLog(
         visibleBattle.turn,
-        `Role scenariusza: ${defender.faction} broni, ${attacker.faction} atakuje.`,
+        language === "pl"
+          ? `Role scenariusza: ${localizeFaction(language, defender.faction)} broni, ${localizeFaction(language, attacker.faction)} atakuje.`
+          : `Scenario roles: ${localizeFaction(language, defender.faction)} defends, ${localizeFaction(language, attacker.faction)} attacks.`,
       ),
       ...current,
     ].slice(0, 12));
@@ -484,8 +490,9 @@ export function App() {
       );
       const nextBattle = startEvents.battle;
       const nextMission = startEvents.mission;
-      const startLog = createLog(1, `Rozpoczęto scenariusz: ${activeScenario.name}.`);
-      const saveLog = createLog(1, "Utworzono automatyczny zapis początkowy.");
+      const localizedScenarioName = localizeScenarioName(language, activeScenario.id, activeScenario.name);
+      const startLog = createLog(1, `${text("Rozpoczęto scenariusz", "Scenario started")}: ${localizedScenarioName}.`);
+      const saveLog = createLog(1, text("Utworzono automatyczny zapis początkowy.", "An automatic initial save was created."));
       let nextLogs = [
         ...startEvents.events.map((event) => createLog(1, event.message)),
         saveLog,
@@ -498,13 +505,14 @@ export function App() {
           initialBattle,
           logs: nextLogs,
           mission: nextMission,
-          scenarioName: activeScenario.name,
+          scenarioName: localizedScenarioName,
+          saveNamePrefix: text("Początek", "Start"),
         }));
       } catch (error) {
         const detail = error instanceof Error ? ` ${error.message}` : "";
         nextLogs = [
           ...startEvents.events.map((event) => createLog(1, event.message)),
-          createLog(1, `Nie udało się utworzyć zapisu początkowego.${detail}`),
+          createLog(1, `${text("Nie udało się utworzyć zapisu początkowego.", "Could not create the initial save.")}${detail}`),
           startLog,
         ];
       }
@@ -625,7 +633,7 @@ export function App() {
     setLogs((current) => [
       createLog(
         1,
-        `Wygenerowano mapę ${nextDraft.mapGeneration?.themeId} (seed ${nextDraft.mapGeneration?.seed}).`,
+        `${text("Wygenerowano mapę", "Generated map")} ${nextDraft.mapGeneration?.themeId} (seed ${nextDraft.mapGeneration?.seed}).`,
       ),
       ...current,
     ].slice(0, 12));
@@ -657,7 +665,7 @@ export function App() {
     setTargetUnitId("");
     setSelectedWeaponId("");
     setArmyJson(JSON.stringify(nextDraft.armies, null, 2));
-    setLogs([createLog(1, "Misja została przywrócona do stanu początkowego.")]);
+    setLogs([createLog(1, text("Misja została przywrócona do stanu początkowego.", "The mission was restored to its initial state."))]);
     setGamePhase("Preparation");
     setView("setup");
   }
@@ -680,7 +688,7 @@ export function App() {
       setSelectedOrder("Move");
       setArmyJson("[]");
       setImportError("");
-      setLogs([createLog(1, "Rozpoczęto tworzenie armii dla nowego scenariusza.")]);
+      setLogs([createLog(1, text("Rozpoczęto tworzenie armii dla nowego scenariusza.", "Army creation started for a new scenario."))]);
       setGamePhase("Preparation");
     }
     setView("composer");
@@ -703,19 +711,26 @@ export function App() {
       <section className="commandStrip">
         <div>
           <p className="eyebrow">LEGO Star Wars Battles</p>
-          <h1>{appTitles[view]}</h1>
+          <h1>{view === "setup"
+            ? text("Kreator scenariusza", "Scenario Builder")
+            : view === "battle"
+              ? text("Panel dowodzenia", "Command Panel")
+              : view === "composer"
+                ? text("Kreator armii", "Army Composer")
+                : text("Kompendium", "Compendium")}</h1>
         </div>
-        <nav className="viewTabs" aria-label="Widoki aplikacji">
+        <nav className="viewTabs" aria-label={text("Widoki aplikacji", "Application views")}>
           <button onClick={() => setView("home")}>
             Menu
           </button>
           {view === "setup" ? (
-            <button onClick={() => openComposer("setup")}>Army Composer</button>
+            <button onClick={() => openComposer("setup")}>{text("Kreator armii", "Army Composer")}</button>
           ) : null}
           {view === "composer" ? (
-            <button onClick={() => setView("setup")}>Kreator scenariusza</button>
+            <button onClick={() => setView("setup")}>{text("Kreator scenariusza", "Scenario Builder")}</button>
           ) : null}
         </nav>
+        <LanguageSwitcher />
         {view === "setup" ? <label className="debugToggle">
           <input
             checked={debugMode}
@@ -725,15 +740,21 @@ export function App() {
           Debug
         </label> : null}
         {view === "setup" || view === "battle" ? <div className="turnCounter">
-          <span>Tura</span>
+          <span>{text("Tura", "Turn")}</span>
           <strong>{visibleBattle.turn}</strong>
         </div> : null}
         {view === "setup" || view === "battle" ? <div className="phasePill">
           {gamePhase === "Preparation"
-            ? "Preparation"
+            ? text("Przygotowanie", "Preparation")
             : mission.status === "Active"
-              ? battle.phase
-              : `Mission ${mission.status}`}
+              ? battle.phase === "Activation"
+                ? text("Aktywacja", "Activation")
+                : battle.phase === "EndTurn"
+                  ? text("Koniec tury", "End Turn")
+                  : battle.phase === "Finished"
+                    ? text("Zakończona", "Finished")
+                    : text("Przygotowanie", "Setup")
+              : `${text("Misja", "Mission")} ${mission.status === "Victory" ? text("zwycięstwo", "victory") : text("porażka", "defeat")}`}
         </div> : null}
       </section>
 
@@ -788,7 +809,7 @@ export function App() {
         <ArmyComposerView
           currentArmies={scenarioDraft.armies}
           onLoadArmies={(armies) => {
-            loadArmies(armies, "Armie z Army Composera zostały wczytane do kreatora.");
+            loadArmies(armies, text("Armie z kreatora armii zostały wczytane do scenariusza.", "Armies from Army Composer were loaded into the scenario builder."));
             setView("setup");
           }}
         />
@@ -808,8 +829,9 @@ function ArmyComposerView({
   currentArmies: Army[];
   onLoadArmies: (armies: Army[]) => void;
 }) {
+  const { language, text } = useI18n();
   const [drafts, setDrafts] = useState<ComposerArmyDraft[]>(() =>
-    createComposerArmyDrafts(currentArmies)
+    createComposerArmyDrafts(currentArmies, language)
   );
 
   const armies = useMemo(
@@ -838,6 +860,7 @@ function ArmyComposerView({
       : [...current, createEmptyComposerArmyDraft(
           current.length,
           nextAvailableArmyId(current),
+          language,
         )]
     );
   }
@@ -854,15 +877,15 @@ function ArmyComposerView({
       <div className="composerArmyArea">
         <div className="composerArmyToolbar">
           <div>
-            <p className="eyebrow">Uczestnicy</p>
-            <strong>{armies.length}/{maximumArmyCount} armii</strong>
+            <p className="eyebrow">{text("Uczestnicy", "Participants")}</p>
+            <strong>{armies.length}/{maximumArmyCount} {text("armii", "armies")}</strong>
           </div>
           <button
             className="secondaryButton"
             disabled={drafts.length >= maximumArmyCount}
             onClick={addArmy}
           >
-            Dodaj armię
+            {text("Dodaj armię", "Add army")}
           </button>
         </div>
         <div className="composerArmyGrid">
@@ -872,7 +895,7 @@ function ArmyComposerView({
               faction={draft.faction}
               key={draft.id}
               playerName={draft.playerName}
-              sideLabel={`Armia ${String.fromCharCode(65 + index)}`}
+              sideLabel={`${text("Armia", "Army")} ${String.fromCharCode(65 + index)}`}
               onCountsChange={(counts) => patchDraft(index, { counts })}
               onFactionChange={(faction) => patchDraft(index, { faction, counts: {} })}
               onPlayerNameChange={(playerName) => patchDraft(index, { playerName })}
@@ -883,12 +906,12 @@ function ArmyComposerView({
       </div>
       <aside className="composerSummary">
         <PanelTitle
-          title="Gotowa lista"
-          detail={`${armies.length} armie · ${armies.reduce((total, army) => total + getArmyCost(army), 0)} pkt`}
+          title={text("Gotowa lista", "Army list")}
+          detail={`${armies.length} ${text("armie", "armies")} · ${armies.reduce((total, army) => total + getArmyCost(army), 0)} ${text("pkt", "pts")}`}
         />
         <ArmyPreview armies={armies} />
         <details className="jsonDetails">
-          <summary>Eksport JSON</summary>
+          <summary>{text("Eksport JSON", "JSON export")}</summary>
           <textarea
             className="armyInput jsonInput composerJson"
             value={generatedJson}
@@ -898,7 +921,7 @@ function ArmyComposerView({
           />
         </details>
         <button className="primaryButton" onClick={() => onLoadArmies(armies)}>
-          Użyj armii w scenariuszu
+          {text("Użyj armii w scenariuszu", "Use armies in scenario")}
         </button>
       </aside>
     </section>
@@ -924,6 +947,7 @@ function ComposerColumn({
   onPlayerNameChange: (name: string) => void;
   onRemove?: () => void;
 }) {
+  const { language, text } = useI18n();
   const templates = unitTemplates.filter((template) => template.faction === faction);
   const factionTaskForces = taskForces.filter((taskForce) => taskForce.faction === faction);
   const cost =
@@ -945,23 +969,23 @@ function ComposerColumn({
           <h2>{playerName}</h2>
         </div>
         <div className="composerArmyHeaderActions">
-          <strong>{cost} pkt</strong>
+          <strong>{cost} {text("pkt", "pts")}</strong>
           {onRemove ? (
-            <button className="dangerButton" onClick={onRemove}>Usuń</button>
+            <button className="dangerButton" onClick={onRemove}>{text("Usuń", "Remove")}</button>
           ) : null}
         </div>
       </div>
       <div className="composerControls">
         <label>
-          Gracz
+          {text("Gracz", "Player")}
           <input value={playerName} onChange={(event) => onPlayerNameChange(event.target.value)} />
         </label>
         <label>
-          Frakcja
+          {text("Frakcja", "Faction")}
           <select value={faction} onChange={(event) => onFactionChange(event.target.value)}>
             {composerFactions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {localizeFaction(language, option)}
               </option>
             ))}
           </select>
@@ -971,19 +995,22 @@ function ComposerColumn({
         {factionTaskForces.map((taskForce) => {
           const bonus = abilities.find((ability) => ability.id === taskForce.bonusAbility);
           const unitNames = taskForce.unitIds
-            .map((templateId) => unitTemplates.find((template) => template.id === templateId)?.name)
+            .map((templateId) => {
+              const template = unitTemplates.find((candidate) => candidate.id === templateId);
+              return template ? localizeUnitName(language, template.id, template.name) : undefined;
+            })
             .filter(Boolean)
             .join(" + ");
 
           return (
             <article className="templateRow taskForceRow" key={taskForce.id}>
               <div>
-                <p className="category">TASK FORCE</p>
-                <h3>{taskForce.name}</h3>
+                <p className="category">{text("ZESPÓŁ UDERZENIOWY", "TASK FORCE")}</p>
+                <h3>{localizeTaskForceName(language, taskForce.id, taskForce.name)}</h3>
                 <p className="templateMeta">
-                  {taskForce.cost} pkt | {unitNames}
+                  {taskForce.cost} {text("pkt", "pts")} | {unitNames}
                 </p>
-                {bonus ? <p className="templateMeta">Bonus: {bonus.name}</p> : null}
+                {bonus ? <p className="templateMeta">{text("Premia", "Bonus")}: {localizeAbilityName(language, bonus)}</p> : null}
               </div>
               <div className="stepper">
                 <button onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) - 1)}>-</button>
@@ -1001,10 +1028,10 @@ function ComposerColumn({
         {templates.map((template) => (
           <article className="templateRow" key={template.id}>
             <div>
-              <p className="category">{template.category} | {template.role}</p>
-              <h3>{template.name}</h3>
+              <p className="category">{localizeCategory(language, template.category)} | {localizeRole(language, template.role)}</p>
+              <h3>{localizeUnitName(language, template.id, template.name)}</h3>
               <p className="templateMeta">
-                {template.cost} pkt | HP {template.maxHp} | MOV {template.movement} | MOR {template.morale}
+                {template.cost} {text("pkt", "pts")} | HP {template.maxHp} | MOV {template.movement} | MOR {template.morale}
               </p>
             </div>
             <div className="stepper">
@@ -1025,16 +1052,17 @@ function ComposerColumn({
 }
 
 function ArmyPreview({ armies }: { armies: Army[] }) {
+  const { language, text } = useI18n();
   return (
     <div className="armyPreviewList">
       {armies.map((army) => (
         <section className="armyPreview" key={army.id}>
           <div className="armyPreviewHeader">
             <div>
-              <p className="eyebrow">{army.faction}</p>
+              <p className="eyebrow">{localizeFaction(language, army.faction)}</p>
               <h3>{army.playerName}</h3>
             </div>
-            <strong>{getArmyCost(army)} pkt</strong>
+            <strong>{getArmyCost(army)} {text("pkt", "pts")}</strong>
           </div>
           {army.units.length > 0 ? (
             <div className="armyPreviewUnits">
@@ -1043,16 +1071,16 @@ function ArmyPreview({ armies }: { armies: Army[] }) {
 
                 return (
                   <div className="armyPreviewUnit" key={unit.id}>
-                    <span>{template.name}</span>
+                    <span>{localizeUnitName(language, template.id, template.name)}</span>
                     <small>
-                      {template.role} | HP {template.maxHp} | MOV {template.movement}
+                      {localizeRole(language, template.role)} | HP {template.maxHp} | MOV {template.movement}
                     </small>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p className="emptyPreview">Brak jednostek.</p>
+            <p className="emptyPreview">{text("Brak jednostek.", "No units.")}</p>
           )}
         </section>
       ))}
@@ -1081,7 +1109,7 @@ function countsFromArmy(army?: Army): DraftCounts {
   return counts;
 }
 
-function createComposerArmyDrafts(currentArmies: Army[]): ComposerArmyDraft[] {
+function createComposerArmyDrafts(currentArmies: Army[], language: Language): ComposerArmyDraft[] {
   const drafts = currentArmies.slice(0, maximumArmyCount).map((army, index) => ({
     id: army.id,
     playerName: army.playerName,
@@ -1095,6 +1123,7 @@ function createComposerArmyDrafts(currentArmies: Army[]): ComposerArmyDraft[] {
     drafts.push(createEmptyComposerArmyDraft(
       drafts.length,
       nextAvailableArmyId(drafts),
+      language,
     ));
   }
   return drafts;
@@ -1103,10 +1132,11 @@ function createComposerArmyDrafts(currentArmies: Army[]): ComposerArmyDraft[] {
 function createEmptyComposerArmyDraft(
   index: number,
   id = `army_player_${index + 1}`,
+  language: Language = "pl",
 ): ComposerArmyDraft {
   return {
     id,
-    playerName: `Gracz ${index + 1}`,
+    playerName: `${language === "pl" ? "Gracz" : "Player"} ${index + 1}`,
     faction: index % 2 === 0 ? "Republic" : "Separatists",
     counts: {},
     teamId: index % 2 === 0 ? 1 : 2,

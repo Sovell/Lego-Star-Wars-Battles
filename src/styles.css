@@ -50,6 +50,13 @@ button:disabled {
   max-width: 1180px;
   min-height: calc(100vh - 36px);
   padding: clamp(28px, 6vh, 72px) 0;
+  position: relative;
+}
+
+.mainMenu > .languageSwitcher {
+  position: absolute;
+  right: 0;
+  top: 18px;
 }
 
 .mainMenuHero {
@@ -1362,6 +1369,33 @@ select {
     url("/terrain-textures/difficult-terrain.png");
 }
 
+.languageSwitcher {
+  align-items: center;
+  background: #0f1115;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.languageSwitcher button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: #8793a2;
+  font-size: 0.68rem;
+  font-weight: 900;
+  min-height: 30px;
+  min-width: 34px;
+  padding: 0 8px;
+}
+
+.languageSwitcher button.active {
+  background: #ece06c;
+  color: #171816;
+}
+
 .terrainRule.Impassable {
   background-image:
     linear-gradient(rgba(18, 23, 30, 0.18), rgba(18, 23, 30, 0.84)),
@@ -1449,8 +1483,14 @@ select {
 }
 
 .unitRuleCard {
-  background: #12171e;
+  --unit-accent: #68b8d4;
+  --unit-accent-soft: rgba(104, 184, 212, 0.13);
+  --unit-accent-strong: #bcecff;
+  background:
+    linear-gradient(180deg, var(--unit-accent-soft), transparent 110px),
+    #12171e;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 3px solid var(--unit-accent);
   border-radius: 8px;
   display: grid;
   gap: 10px;
@@ -1513,10 +1553,10 @@ select {
 }
 
 .unitAbilityChips span {
-  background: rgba(95, 168, 255, 0.11);
-  border: 1px solid rgba(95, 168, 255, 0.16);
+  background: var(--unit-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 35%, transparent);
   border-radius: 999px;
-  color: #d7e8ff;
+  color: var(--unit-accent-strong);
   font-size: 0.72rem;
   font-weight: 900;
   padding: 5px 8px;
@@ -1549,6 +1589,13 @@ select {
 }
 
 .unitDetailPanel {
+  --unit-accent: #68b8d4;
+  --unit-accent-soft: rgba(104, 184, 212, 0.13);
+  --unit-accent-strong: #bcecff;
+  background:
+    linear-gradient(180deg, var(--unit-accent-soft), transparent 185px),
+    #101319;
+  border-top: 3px solid var(--unit-accent);
   gap: 10px;
 }
 
@@ -1556,8 +1603,9 @@ select {
   align-items: center;
   background:
     radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(160deg, var(--unit-accent-soft), transparent 60%),
     #0e1218;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 30%, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   display: flex;
   justify-content: center;
@@ -1578,10 +1626,10 @@ select {
 
 .unitPortraitFallback {
   align-items: center;
-  background: rgba(236, 224, 108, 0.12);
-  border: 1px solid rgba(236, 224, 108, 0.24);
+  background: var(--unit-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 42%, transparent);
   border-radius: 50%;
-  color: #f4ed9d;
+  color: var(--unit-accent-strong);
   display: flex;
   font-size: 1.4rem;
   font-weight: 900;
@@ -1705,6 +1753,54 @@ select {
   overflow: hidden;
   padding: 6px;
   position: relative;
+}
+
+.unitDetailHeader strong,
+.unitRuleCard .heroRuleHeader h3 {
+  color: var(--unit-accent-strong);
+}
+
+.unitLore {
+  background: var(--unit-accent-soft);
+  border-left: 3px solid var(--unit-accent);
+  border-radius: 0 6px 6px 0;
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+}
+
+.unitLore > strong {
+  color: var(--unit-accent-strong);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.unitLore p {
+  color: #cdd5df;
+  font-size: 0.78rem;
+  line-height: 1.48;
+  margin: 0;
+}
+
+.unitLore details {
+  border-top: 1px solid color-mix(in srgb, var(--unit-accent) 24%, transparent);
+  padding-top: 6px;
+}
+
+.unitLore summary {
+  color: var(--unit-accent-strong);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.unitLore details p {
+  margin-top: 7px;
+}
+
+.unitRuleLore {
+  min-height: 100px;
 }
 
 .mapCell.territoryRepublic {
@@ -2269,6 +2365,11 @@ select {
 
   .mainMenu {
     padding: 24px 0;
+  }
+
+  .mainMenu > .languageSwitcher {
+    justify-self: end;
+    position: static;
   }
 
   .mainMenuGrid {

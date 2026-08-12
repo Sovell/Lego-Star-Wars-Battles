@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { mapThemes, type MapThemeId } from "../../core/map-generation";
 import type { ScenarioMapGenerationState } from "../scenario-draft";
+import {
+  localizeThemeDescription,
+  localizeThemeName,
+  useI18n,
+} from "../../i18n";
 import "./MapGeneratorPanel.css";
 
 type GenerationAction = "current-seed" | "next-seed";
@@ -24,6 +29,7 @@ export function MapGeneratorPanel({
     patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
   ) => void;
 }) {
+  const { language, text } = useI18n();
   const [pendingAction, setPendingAction] = useState<GenerationAction>();
   const selectedTheme = mapThemes.find(({ id }) => id === settings.themeId) ?? mapThemes[0];
   const generated = settings.lastRecipe;
@@ -51,8 +57,8 @@ export function MapGeneratorPanel({
     <section className="mapGeneratorPanel">
       <div className="mapGeneratorHeader">
         <div>
-          <span>Motyw planetarny</span>
-          <strong>{selectedTheme.name}</strong>
+          <span>{text("Motyw planetarny", "Planetary theme")}</span>
+          <strong>{localizeThemeName(language, selectedTheme.id, selectedTheme.name)}</strong>
         </div>
         <small>{boardWidth} × {boardHeight}</small>
       </div>
@@ -66,12 +72,12 @@ export function MapGeneratorPanel({
         <span style={{ background: selectedTheme.presentation.palette.terrain.open }} />
         <span style={{ background: selectedTheme.presentation.palette.terrain.lightCover }} />
         <span style={{ background: selectedTheme.presentation.palette.terrain.difficultTerrain }} />
-        <small>{selectedTheme.description}</small>
+        <small>{localizeThemeDescription(language, selectedTheme.id, selectedTheme.description)}</small>
       </div>
-      <p>Układ uwzględni scenariusz, drużyny, obrońcę i strefy wejścia.</p>
+      <p>{text("Układ uwzględni scenariusz, drużyny, obrońcę i strefy wejścia.", "The layout will account for the scenario, teams, defender, and deployment zones.")}</p>
       <div className="mapGeneratorFields">
         <label>
-          Motyw
+          {text("Motyw", "Theme")}
           <select
             value={settings.themeId}
             onChange={(event) => onSettingsChange({
@@ -79,12 +85,12 @@ export function MapGeneratorPanel({
             })}
           >
             {mapThemes.map((theme) => (
-              <option key={theme.id} value={theme.id}>{theme.name}</option>
+              <option key={theme.id} value={theme.id}>{localizeThemeName(language, theme.id, theme.name)}</option>
             ))}
           </select>
         </label>
         <label>
-          Seed
+          {text("Ziarno", "Seed")}
           <input
             max={0xffffffff}
             min={0}
@@ -97,7 +103,7 @@ export function MapGeneratorPanel({
       </div>
       {generated ? (
         <small className="mapGeneratorRecipe">
-          Ostatnio wygenerowano seed {generated.seed} · generator v{generated.generatorVersion}
+          {text("Ostatnio wygenerowano seed", "Last generated seed")} {generated.seed} · {text("generator", "generator")} v{generated.generatorVersion}
         </small>
       ) : null}
       <div className="mapGeneratorActions">
@@ -107,7 +113,11 @@ export function MapGeneratorPanel({
           type="button"
           onClick={() => requestGeneration("current-seed")}
         >
-          {generated ? settingsChanged ? "Zastosuj seed" : "Odtwórz mapę" : "Generuj mapę"}
+          {generated
+            ? settingsChanged
+              ? text("Zastosuj seed", "Apply seed")
+              : text("Odtwórz mapę", "Recreate map")
+            : text("Generuj mapę", "Generate map")}
         </button>
         {generated ? (
           <button
@@ -116,29 +126,29 @@ export function MapGeneratorPanel({
             type="button"
             onClick={() => requestGeneration("next-seed")}
           >
-            Generuj ponownie
+            {text("Generuj ponownie", "Generate again")}
           </button>
         ) : null}
       </div>
       {!canGenerate ? (
         <small className="mapGeneratorHint">
-          Generator wymaga od 2 do 4 skonfigurowanych armii.
+          {text("Generator wymaga od 2 do 4 skonfigurowanych armii.", "The generator requires 2 to 4 configured armies.")}
         </small>
       ) : null}
       {pendingAction ? (
         <div className="mapGeneratorWarning" role="alert">
-          <strong>Zastąpić ręcznie przygotowaną mapę?</strong>
-          <span>Teren, obiekty i strefy rozmieszczenia zostaną wygenerowane od nowa.</span>
+          <strong>{text("Zastąpić ręcznie przygotowaną mapę?", "Replace the manually prepared map?")}</strong>
+          <span>{text("Teren, obiekty i strefy rozmieszczenia zostaną wygenerowane od nowa.", "Terrain, objects, and deployment zones will be generated again.")}</span>
           <div>
             <button className="dangerButton" type="button" onClick={confirmGeneration}>
-              Zastąp mapę
+              {text("Zastąp mapę", "Replace map")}
             </button>
             <button
               className="secondaryButton"
               type="button"
               onClick={() => setPendingAction(undefined)}
             >
-              Anuluj
+              {text("Anuluj", "Cancel")}
             </button>
           </div>
         </div>

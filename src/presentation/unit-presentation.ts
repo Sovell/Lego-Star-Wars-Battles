@@ -1,4 +1,5 @@
 import type { Army, UnitInstance, UnitTemplate } from "../types";
+import type { Language } from "../i18n";
 
 export function getUnitInitials(template: UnitTemplate): string {
   return template.name
@@ -23,11 +24,17 @@ export function getUnitTokenFallbackImageUrl(template: UnitTemplate): string | u
   return template.imageUrl?.startsWith(photoPrefix) ? template.imageUrl : undefined;
 }
 
-export function getUnitArmyLabel(unit: UnitInstance, armies: readonly Army[]): string {
+export function getUnitArmyLabel(
+  unit: UnitInstance,
+  armies: readonly Army[],
+  language: Language = "pl",
+): string {
   const army = armies.find((candidate) => candidate.id === unit.armyId);
-  if (!army) return "Nieznana armia";
+  if (!army) return language === "pl" ? "Nieznana armia" : "Unknown army";
 
   const armyName = army.playerName.trim() || army.faction;
-  const teamLabel = army.teamId ? `Team ${army.teamId}` : "bez teamu";
+  const teamLabel = army.teamId
+    ? `${language === "pl" ? "Drużyna" : "Team"} ${army.teamId}`
+    : language === "pl" ? "bez drużyny" : "no team";
   return `${armyName} · ${teamLabel}`;
 }

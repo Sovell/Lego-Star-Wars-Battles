@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { abilities } from "../../data";
 import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
@@ -68,6 +68,22 @@ import {
   getUnitArmyLabel,
   getUnitInitials,
 } from "../../presentation/unit-presentation";
+import { getUnitPresentationProfile } from "../../presentation/unit-profile";
+import {
+  localizeAbilityName,
+  localizeAbilityDescription,
+  localizeCategory,
+  localizeFaction,
+  localizeObjectName,
+  localizeOrder,
+  localizeRole,
+  localizeScenarioName,
+  localizeTerrainName,
+  localizeUnitName,
+  localizeUnitStatus,
+  localizeWeaponName,
+  useI18n,
+} from "../../i18n";
 
 type PendingAdvance = {
   attackerId: string;
@@ -80,6 +96,7 @@ type PendingAdvance = {
 };
 
 const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
+const unitPanelStorageKey = "lswb:battle-unit-panel-open";
 
 export function BattleScreen({
   activeArmyId,
@@ -176,6 +193,7 @@ export function BattleScreen({
   onTerrainPaint: (tile: TerrainTile) => void;
   onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
+  const { language, text } = useI18n();
   const [pendingAdvance, setPendingAdvance] = useState<PendingAdvance | null>(null);
   const [selectedAbilityId, setSelectedAbilityId] = useState("");
   const [abilityTargetUnitId, setAbilityTargetUnitId] = useState("");
@@ -184,6 +202,13 @@ export function BattleScreen({
   const [selectingMovePosition, setSelectingMovePosition] = useState(false);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unitPanelOpen, setUnitPanelOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem(unitPanelStorageKey) !== "false";
+    } catch {
+      return true;
+    }
+  });
   const [notifications, setNotifications] = useState<BattleNotification[]>([]);
   const notificationId = useRef(0);
   const [battlefieldVisualEvent, setBattlefieldVisualEvent] = useState<BattlefieldVisualEvent>();
@@ -196,6 +221,15 @@ export function BattleScreen({
   const [selectedObjectType, setSelectedObjectType] = useState<
     BattlefieldObjectType | "Remove"
   >("DefensePoint");
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(unitPanelStorageKey, String(unitPanelOpen));
+    } catch {
+      // The panel still works when persistent browser storage is unavailable.
+    }
+  }, [unitPanelOpen]);
+
   const allUnits = useMemo(() => battle.armies.flatMap((army) => army.units), [battle.armies]);
   const selectedUnit = allUnits.find((unit) => unit.id === selectedUnitId);
   const selectedTemplate = selectedUnit ? getTemplate(selectedUnit) : undefined;
@@ -326,7 +360,9 @@ export function BattleScreen({
     const units = sourceBattle.armies.flatMap((army) => army.units);
     const attackerId = attackResult?.attackerId ?? objectAttackResult!.attackerId;
     const attacker = units.find((unit) => unit.id === attackerId);
-    const attackerName = attacker ? getTemplate(attacker).name : "Atakujący";
+    const attackerName = attacker
+      ? localizeUnitName(language, getTemplate(attacker).id, getTemplate(attacker).name)
+      : text("Atakujący", "Attacker");
     const defender = attackResult
       ? units.find((unit) => unit.id === attackResult.defenderId)
       : undefined;
@@ -335,7 +371,8 @@ export function BattleScreen({
           notificationId.current,
           attackResult,
           attackerName,
-          defender ? getTemplate(defender).name : "Cel",
+          defender ? localizeUnitName(language, getTemplate(defender).id, getTemplate(defender).name) : text("Cel", "Target"),
+          language,
         )
       : createObjectAttackNotification(
           notificationId.current,
@@ -343,7 +380,8 @@ export function BattleScreen({
           attackerName,
           sourceBattle.board.objects?.find(
             (object) => object.id === objectAttackResult!.objectId,
-          )?.name ?? "Obiekt",
+          )?.name ?? text("Obiekt", "Object"),
+          language,
         );
 
     setNotifications((current) => [...current, resultNotification].slice(-2));
@@ -379,6 +417,67 @@ export function BattleScreen({
     result.missionEvents.forEach((event) => onAddLog(event.message));
     return result;
   }
+
+  function resolveActiveBotActivation(
+    sourceBattle: Battle,
+    sourceMission: MissionState,
+  ) {
+    const botArmy = sourceBattle.armies.find(
+      (army) => army.id === sourceBattle.activeActivation?.armyId,
+    );
+    if (!botArmy || getArmyControl(botArmy) !== "Bot") {
+      return { battle: sourceBattle, mission: sourceMission };
+    }
+
+    const usesDefenderStrategy = sourceMission.defenderArmyId
+      ? areArmiesAllied(sourceBattle, botArmy.id, sourceMission.defenderArmyId)
+      : false;
+    const botActivation = runBotActivation({
+      session: { battle: sourceBattle, mission: sourceMission },
+      scenario,
+      armyId: botArmy.id,
+      chooseAction: usesDefenderStrategy
+        ? chooseDefenderBotAction
+        : chooseAttackerBotAction,
+    });
+    const botLabel = `Bot ${botArmy.playerName}`;
+
+    botActivation.steps.forEach(({ decision, battleBeforeAction, result }) => {
+      onAddLog(`${botLabel}: ${decision.reason}`);
+      showCombatNotification(result, battleBeforeAction);
+      showBattlefieldVisualEvent(result, battleBeforeAction);
+      onAddLog(result.log);
+      result.missionEvents.forEach((event) => onAddLog(event.message));
+    });
+
+    if (botActivation.stopReason === "no-legal-action") {
+      onAddLog(language === "pl" ? `${botLabel} nie znalazł legalnej akcji. Aktywacja została bezpiecznie pominięta.` : `${botLabel} found no legal action. The activation was safely passed.`);
+    } else if (botActivation.stopReason === "action-rejected") {
+      onAddLog(
+        language === "pl" ? `${botLabel} nie wykonał odrzuconej akcji. Aktywacja została bezpiecznie pominięta.` : `${botLabel} submitted a rejected action. The activation was safely passed.`,
+      );
+    } else if (botActivation.stopReason === "step-limit") {
+      onAddLog(language === "pl" ? `${botLabel} nie zakończył aktywacji w limicie bezpieczeństwa. Aktywacja została pominięta.` : `${botLabel} did not finish activation within the safety limit. The activation was passed.`);
+    }
+
+    return { battle: botActivation.battle, mission: botActivation.mission };
+  }
+
+  useEffect(() => {
+    if (!missionActive) return;
+    const activeArmy = battle.armies.find(
+      (army) => army.id === battle.activeActivation?.armyId,
+    );
+    if (!activeArmy || getArmyControl(activeArmy) !== "Bot") return;
+
+    setSelectingMovePosition(false);
+    setSelectingAbilityPosition(false);
+    const resolved = resolveActiveBotActivation(battle, mission);
+    if (resolved.battle === battle && resolved.mission === mission) return;
+    onBattleChange(resolved.battle);
+    onMissionChange(resolved.mission);
+    onActiveArmyChange(resolved.battle.activeActivation?.armyId);
+  }, [battle, mission, missionActive]);
 
   function handleCellClick(x: number, y: number) {
     if (selectingAbilityPosition) {
@@ -419,7 +518,7 @@ export function BattleScreen({
 
     if (preparationActive) {
       if (!isPositionFree(battle, { x, y }, selectedUnit.id)) {
-        onAddLog(`Pole ${x}, ${y} jest już zajęte.`);
+        onAddLog(language === "pl" ? `Pole ${x}, ${y} jest już zajęte.` : `Tile ${x}, ${y} is already occupied.`);
         return;
       }
       onUnitPatch(selectedUnit.id, { position: { x, y } });
@@ -431,7 +530,7 @@ export function BattleScreen({
     }
 
     if (selectedOrder !== "Move" && selectedOrder !== "Advance") {
-      onAddLog("Aby poruszyć jednostkę, wybierz rozkaz Move albo Advance.");
+      onAddLog(text("Aby poruszyć jednostkę, wybierz rozkaz Ruch albo Natarcie.", "Choose Move or Advance to move the unit."));
       return;
     }
 
@@ -460,6 +559,8 @@ export function BattleScreen({
 
   function handleDrawActivation() {
     setPendingAdvance(null);
+    setSelectingMovePosition(false);
+    setSelectingAbilityPosition(false);
     const drawResult = applyMissionAction(
       { battle, mission },
       scenario,
@@ -471,48 +572,13 @@ export function BattleScreen({
     onAddLog(
       drawResult.events.some((event) => event.type === "ActivationDrawn")
         ? drawResult.log
-        : "Worek aktywacji jest pusty. Czas zakonczyc ture.",
+        : text("Worek aktywacji jest pusty. Czas zakończyć turę.", "The activation bag is empty. It is time to end the turn."),
     );
     drawResult.missionEvents.forEach((event) => onAddLog(event.message));
 
-    const botArmy = finalBattle.armies.find(
-      (army) => army.id === finalBattle.activeActivation?.armyId,
-    );
-    if (botArmy && getArmyControl(botArmy) === "Bot") {
-      const usesDefenderStrategy = mission.defenderArmyId
-        ? areArmiesAllied(finalBattle, botArmy.id, mission.defenderArmyId)
-        : false;
-      const botActivation = runBotActivation({
-        session: { battle: finalBattle, mission: finalMission },
-        scenario,
-        armyId: botArmy.id,
-        chooseAction: usesDefenderStrategy
-          ? chooseDefenderBotAction
-          : chooseAttackerBotAction,
-      });
-      const botLabel = `Bot ${botArmy.playerName}`;
-
-      botActivation.steps.forEach(({ decision, battleBeforeAction, result }) => {
-        onAddLog(`${botLabel}: ${decision.reason}`);
-        showCombatNotification(result, battleBeforeAction);
-        showBattlefieldVisualEvent(result, battleBeforeAction);
-        onAddLog(result.log);
-        result.missionEvents.forEach((event) => onAddLog(event.message));
-      });
-
-      if (botActivation.stopReason === "no-legal-action") {
-        onAddLog(`${botLabel} nie znalazł legalnej akcji. Token pozostaje aktywny.`);
-      } else if (botActivation.stopReason === "action-rejected") {
-        onAddLog(
-          `${botLabel} nie wykonał akcji. Aktywacja została zatrzymana, aby uniknąć pętli.`,
-        );
-      } else if (botActivation.stopReason === "step-limit") {
-        onAddLog(`${botLabel} nie zakończył aktywacji w limicie bezpieczeństwa.`);
-      }
-
-      finalBattle = botActivation.battle;
-      finalMission = botActivation.mission;
-    }
+    const botResolution = resolveActiveBotActivation(finalBattle, finalMission);
+    finalBattle = botResolution.battle;
+    finalMission = botResolution.mission;
 
     onBattleChange(finalBattle);
     onMissionChange(finalMission);
@@ -530,19 +596,19 @@ export function BattleScreen({
       setSelectingMovePosition(true);
       onAddLog(
         selectedOrder === "Advance"
-          ? "Wskaż na mapie pole ruchu dla rozkazu Advance."
-          : "Wskaż na mapie pole docelowe dla rozkazu Move.",
+          ? text("Wskaż na mapie pole ruchu dla rozkazu Natarcie.", "Select a movement tile for the Advance order.")
+          : text("Wskaż na mapie pole docelowe dla rozkazu Ruch.", "Select a destination tile for the Move order."),
       );
       return;
     }
 
     if (selectedOrder === "Attack") {
-      onAddLog("Wybierz broń i cel, a następnie użyj przycisku Atakuj.");
+      onAddLog(text("Wybierz broń i cel, a następnie użyj przycisku Atakuj.", "Select a weapon and target, then press Attack."));
       return;
     }
 
     if (!selectedLegalOrderAction) {
-      onAddLog("Ten rozkaz nie jest legalny dla wybranej jednostki.");
+      onAddLog(text("Ten rozkaz nie jest legalny dla wybranej jednostki.", "This order is not legal for the selected unit."));
       setIntelTab("logs");
       setDrawerOpen(true);
       return;
@@ -554,7 +620,7 @@ export function BattleScreen({
 
   function handleUseAbility() {
     if (!selectedUnit || !selectedAbility || !selectedLegalAbilityAction) {
-      onAddLog("Wybierz legalny cel zdolności.");
+      onAddLog(text("Wybierz legalny cel zdolności.", "Select a legal ability target."));
       return;
     }
     const result = executeMissionAction(selectedLegalAbilityAction);
@@ -571,7 +637,7 @@ export function BattleScreen({
         : `object:${action.objectId}` === targetUnitId
     );
     if (!legalAttack) {
-      onAddLog("Wybrany cel nie jest legalny dla tej jednostki i broni.");
+      onAddLog(text("Wybrany cel nie jest legalny dla tej jednostki i broni.", "The selected target is not legal for this unit and weapon."));
       return;
     }
     const result = executeMissionAction(legalAttack);
@@ -589,8 +655,8 @@ export function BattleScreen({
       if (attacker && defender) {
         setPendingAdvance({
           attackerId: attacker.id,
-          attackerName: getTemplate(attacker).name,
-          defenderName: getTemplate(defender).name,
+          attackerName: localizeUnitName(language, getTemplate(attacker).id, getTemplate(attacker).name),
+          defenderName: localizeUnitName(language, getTemplate(defender).id, getTemplate(defender).name),
           targetPosition: result.attackResult.defenderPosition,
         });
       }
@@ -599,7 +665,7 @@ export function BattleScreen({
     }
 
     if (result.battle.phase === "Finished") {
-      onAddLog(getVictoryLog(result.battle));
+      onAddLog(getVictoryLog(result.battle, language));
     }
   }
 
@@ -609,7 +675,7 @@ export function BattleScreen({
     onActiveArmyChange(result.battle.activeActivation?.armyId);
     onAddLog(result.log);
     if (result.battle.phase === "Finished") {
-      onAddLog(getVictoryLog(result.battle));
+      onAddLog(getVictoryLog(result.battle, language));
     }
   }
 
@@ -618,12 +684,12 @@ export function BattleScreen({
       setPendingAdvance(null);
       const parsed = JSON.parse(armyJson) as Army[];
       if (!Array.isArray(parsed) || parsed.length < 2 || parsed.length > 4) {
-        throw new Error("JSON musi zawierać od dwóch do czterech armii.");
+        throw new Error(text("JSON musi zawierać od dwóch do czterech armii.", "JSON must contain between two and four armies."));
       }
 
-      onLoadArmies(parsed, "Wczytano armie i przebudowano worek aktywacji.");
+      onLoadArmies(parsed, text("Wczytano armie i przebudowano worek aktywacji.", "Armies loaded and the activation bag rebuilt."));
     } catch (error) {
-      onImportError(error instanceof Error ? error.message : "Nie udalo sie wczytac armii.");
+      onImportError(error instanceof Error ? error.message : text("Nie udało się wczytać armii.", "Could not load armies."));
     }
   }
 
@@ -634,7 +700,9 @@ export function BattleScreen({
 
     onUnitPatch(pendingAdvance.attackerId, { position: pendingAdvance.targetPosition });
     onAddLog(
-      `${pendingAdvance.attackerName} zajmuje pozycje po ${pendingAdvance.defenderName}: ${pendingAdvance.targetPosition.x}, ${pendingAdvance.targetPosition.y}.`,
+      language === "pl"
+        ? `${pendingAdvance.attackerName} zajmuje pozycję po ${pendingAdvance.defenderName}: ${pendingAdvance.targetPosition.x}, ${pendingAdvance.targetPosition.y}.`
+        : `${pendingAdvance.attackerName} takes the position after defeating ${pendingAdvance.defenderName}: ${pendingAdvance.targetPosition.x}, ${pendingAdvance.targetPosition.y}.`,
     );
     setPendingAdvance(null);
   }
@@ -644,7 +712,7 @@ export function BattleScreen({
       return;
     }
 
-    onAddLog(`${pendingAdvance.attackerName} zostaje na swojej pozycji po starciu.`);
+    onAddLog(language === "pl" ? `${pendingAdvance.attackerName} zostaje na swojej pozycji po starciu.` : `${pendingAdvance.attackerName} holds position after combat.`);
     setPendingAdvance(null);
   }
 
@@ -688,11 +756,11 @@ export function BattleScreen({
               value={selectedUnitId}
               onChange={(event) => onSelectedUnitChange(event.target.value)}
             >
-              <option value="">Wybierz oddział</option>
+              <option value="">{text("Wybierz oddział", "Select unit")}</option>
               {allUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {getTemplate(unit).name} | {getUnitArmyLabel(unit, battle.armies)} |{" "}
-                  {unit.position ? `${unit.position.x},${unit.position.y}` : "rezerwa"}
+                  {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)} | {getUnitArmyLabel(unit, battle.armies, language)} |{" "}
+                  {unit.position ? `${unit.position.x},${unit.position.y}` : text("rezerwa", "reserve")}
                 </option>
               ))}
             </select>
@@ -704,24 +772,24 @@ export function BattleScreen({
               >
                 {terrainPresets.map((terrain) => (
                   <option key={terrain.terrainType} value={terrain.terrainType}>
-                    {getTerrainDefinition(terrain.terrainType)?.name ?? terrain.terrainType}
+                    {localizeTerrainName(language, terrain.terrainType, getTerrainDefinition(terrain.terrainType)?.name ?? terrain.terrainType)}
                   </option>
                 ))}
               </select>
               <div className="mapReadout">
-                <strong>{getTerrainDefinition(selectedTerrainPreset.terrainType)?.name ?? selectedTerrainPreset.terrainType}</strong>
-                <span>Obrona: +{selectedTerrainPreset.defenseBonus}</span>
-                <span>Atak: +{selectedTerrainPreset.attackBonus}</span>
+                <strong>{localizeTerrainName(language, selectedTerrainPreset.terrainType, getTerrainDefinition(selectedTerrainPreset.terrainType)?.name ?? selectedTerrainPreset.terrainType)}</strong>
+                <span>{text("Obrona", "Defense")}: +{selectedTerrainPreset.defenseBonus}</span>
+                <span>{text("Atak", "Attack")}: +{selectedTerrainPreset.attackBonus}</span>
                 <span>
-                  Koszt ruchu: {hasTerrainTrait(selectedTerrainPreset, "Impassable")
-                    ? "niedostepny"
+                  {text("Koszt ruchu", "Movement cost")}: {hasTerrainTrait(selectedTerrainPreset, "Impassable")
+                    ? text("niedostępny", "unavailable")
                     : selectedTerrainPreset.movementCost}
                 </span>
                 <span>
-                  Blokuje LOS: {selectedTerrainPreset.blocksLineOfSight ? "tak" : "nie"}
+                  {text("Blokuje LOS", "Blocks LOS")}: {selectedTerrainPreset.blocksLineOfSight ? text("tak", "yes") : text("nie", "no")}
                 </span>
                 {selectedTerrainPreset.traits?.length ? (
-                  <span>Klasy: {selectedTerrainPreset.traits.join(", ")}</span>
+                  <span>{text("Klasy", "Traits")}: {selectedTerrainPreset.traits.join(", ")}</span>
                 ) : null}
               </div>
             </>
@@ -737,15 +805,15 @@ export function BattleScreen({
               >
                 {battlefieldObjectPresets.map((object) => (
                   <option key={object.type} value={object.type}>
-                    {object.name}{object.destructible ? ` | HP ${object.maxHp}` : ""}
+                    {localizeObjectName(language, object.type, object.name)}{object.destructible ? ` | HP ${object.maxHp}` : ""}
                   </option>
                 ))}
-                <option value="Remove">Usuń obiekt z pola</option>
+                <option value="Remove">{text("Usuń obiekt z pola", "Remove object from tile")}</option>
               </select>
               <div className="mapReadout">
-                <strong>Obiekty pola bitwy</strong>
-                <span>Kliknij pole, aby postawić lub usunąć wybrany obiekt.</span>
-                <span>Osłony dodają obronę jednostkom na tym samym polu.</span>
+                <strong>{text("Obiekty pola bitwy", "Battlefield objects")}</strong>
+                <span>{text("Kliknij pole, aby postawić lub usunąć wybrany obiekt.", "Click a tile to place or remove the selected object.")}</span>
+                <span>{text("Osłony zwiększają obronę jednostek na tym samym polu.", "Fortifications improve the defense of units on the same tile.")}</span>
               </div>
             </>
           ) : (
@@ -756,17 +824,17 @@ export function BattleScreen({
               >
                 {battle.armies.map((army, armySlot) => (
                   <option key={army.id} value={army.id}>
-                    Armia {String.fromCharCode(65 + armySlot)} · {army.playerName}
+                    {text("Armia", "Army")} {String.fromCharCode(65 + armySlot)} · {army.playerName}
                   </option>
                 ))}
               </select>
               <div className="mapReadout deploymentZoneReadout">
-                <strong>Strefa wejścia</strong>
+                <strong>{text("Strefa wejścia", "Entry zone")}</strong>
                 <span>
-                  Zaznaczone pola: {selectedDeploymentZone?.cells.length ?? 0}
+                  {text("Zaznaczone pola", "Selected tiles")}: {selectedDeploymentZone?.cells.length ?? 0}
                 </span>
-                <span>Kliknij pole, aby je dodać lub usunąć.</span>
-                <span>Jedno pole może należeć tylko do jednej armii.</span>
+                <span>{text("Kliknij pole, aby je dodać lub usunąć.", "Click a tile to add or remove it.")}</span>
+                <span>{text("Jedno pole może należeć tylko do jednej armii.", "A tile may belong to only one army.")}</span>
               </div>
               <button
                 className="secondaryButton"
@@ -779,12 +847,22 @@ export function BattleScreen({
                   ),
                 )}
               >
-                Wyczyść strefę
+                {text("Wyczyść strefę", "Clear zone")}
               </button>
             </>
           )}
         </SetupToolRail>
       ) : undefined}
+      unitPanel={!preparationActive ? (
+        <UnitDetails
+          debugMode={false}
+          selectedArmy={selectedArmy}
+          selectedUnit={selectedUnit}
+          onUnitPatch={onUnitPatch}
+        />
+      ) : undefined}
+      unitPanelOpen={unitPanelOpen}
+      onUnitPanelOpenChange={setUnitPanelOpen}
       inspector={(
         <BattleInspector phase={gamePhase}>
           <MissionPanel
@@ -846,25 +924,19 @@ export function BattleScreen({
           {!preparationActive ? (
             <>
               <div className="playingSideSummary">
-                <PanelTitle title="Rozgrywka" detail={`Tura ${battle.turn}`} />
-                <span>{scenario.name}</span>
+                <PanelTitle title={text("Rozgrywka", "Battle")} detail={`${text("Tura", "Turn")} ${battle.turn}`} />
+                <span>{localizeScenarioName(language, scenario.id, scenario.name)}</span>
                 <span>
-                  Rozkazy: {remainingActivations}/{turnActivationCount} · maks. 8 na armię
+                  {text("Rozkazy", "Orders")}: {remainingActivations}/{turnActivationCount} · {text("maks. 8 na armię", "max. 8 per army")}
                 </span>
                 <span>
                   {activeArmyId
-                    ? `Aktywna: ${
+                    ? `${text("Aktywna", "Active")}: ${
                         battle.armies.find((army) => army.id === activeArmyId)?.playerName
                       }`
-                    : "Oczekiwanie na losowanie"}
+                    : text("Oczekiwanie na losowanie", "Waiting for draw")}
                 </span>
               </div>
-              <UnitDetails
-                debugMode={false}
-                selectedArmy={selectedArmy}
-                selectedUnit={selectedUnit}
-                onUnitPatch={onUnitPatch}
-              />
               <BattleSavePanel
                 battle={battle}
                 initialBattle={initialBattle}
@@ -877,7 +949,7 @@ export function BattleScreen({
 
           {preparationActive ? (
             <details className="jsonDetails">
-              <summary>Import armii JSON</summary>
+              <summary>{text("Import armii JSON", "Import army JSON")}</summary>
               <textarea
                 className="armyInput jsonInput"
                 value={armyJson}
@@ -887,7 +959,7 @@ export function BattleScreen({
               />
               {importError ? <p className="errorText">{importError}</p> : null}
               <button className="secondaryButton" onClick={handleLoadArmies}>
-                Wczytaj armie
+                {text("Wczytaj armie", "Load armies")}
               </button>
             </details>
           ) : null}
@@ -902,39 +974,39 @@ export function BattleScreen({
                 disabled={Boolean(battle.activeActivation) || remainingActivations === 0}
                 onClick={handleDrawActivation}
               >
-                Losuj rozkaz
+                {text("Losuj rozkaz", "Draw order")}
               </button>
               <span>
                 {activeArmyId
                   ? battle.armies.find((army) => army.id === activeArmyId)?.playerName
-                  : `${remainingActivations} pozostało`}
+                  : `${remainingActivations} ${text("pozostało", "remaining")}`}
               </span>
             </div>
 
             <label>
-              Jednostka
+              {text("Jednostka", "Unit")}
               <select
                 value={selectedUnitId}
                 onChange={(event) => onSelectedUnitChange(event.target.value)}
               >
-                <option value="">Kliknij jednostkę lub wybierz</option>
+                <option value="">{text("Kliknij jednostkę lub wybierz", "Click a unit or select one")}</option>
                 {allUnits.map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {getTemplate(unit).name} | {getUnitArmyLabel(unit, battle.armies)} |{" "}
-                    {unit.status}
+                    {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)} | {getUnitArmyLabel(unit, battle.armies, language)} |{" "}
+                    {localizeUnitStatus(language, unit.status)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label>
-              Rozkaz
+              {text("Rozkaz", "Order")}
               <select
                 value={selectedOrder}
                 onChange={(event) => onOrderChange(event.target.value as OrderType)}
               >
                 {orders.map((order) => (
-                  <option key={order} value={order}>{order}</option>
+                  <option key={order} value={order}>{localizeOrder(language, order)}</option>
                 ))}
               </select>
             </label>
@@ -950,53 +1022,53 @@ export function BattleScreen({
               {!selectedUnit?.position &&
               (selectedOrder === "Move" || selectedOrder === "Advance")
                 ? selectingMovePosition
-                  ? "Kliknij pole wejścia…"
-                  : "Wskaż wejście"
+                  ? text("Kliknij pole wejścia…", "Click an entry tile…")
+                  : text("Wskaż wejście", "Select entry")
                 : selectingMovePosition &&
               (selectedOrder === "Move" || selectedOrder === "Advance")
-                ? "Kliknij pole…"
+                ? text("Kliknij pole…", "Click a tile…")
                 : selectedOrder === "Move"
-                  ? "Wskaż pole"
+                  ? text("Wskaż pole", "Select tile")
                 : selectedOrder === "Advance" &&
                     selectedUnit?.activeEffects?.includes("advance_pending")
-                  ? "Zakończ Advance"
+                  ? text("Zakończ Natarcie", "Finish Advance")
                   : selectedOrder === "Advance"
-                    ? "Wskaż pole"
+                    ? text("Wskaż pole", "Select tile")
                     : selectedOrder === "Attack"
-                      ? "Wybierz cel"
-                      : "Wykonaj"}
+                      ? text("Wybierz cel", "Select target")
+                      : text("Wykonaj", "Execute")}
             </button>
 
             <label>
-              Broń
+              {text("Broń", "Weapon")}
               <select
                 value={activeWeaponId}
                 disabled={!selectedUnitId}
                 onChange={(event) => onSelectedWeaponChange(event.target.value)}
               >
-                <option value="">Wybierz broń</option>
+                <option value="">{text("Wybierz broń", "Select weapon")}</option>
                 {availableWeapons.map((weapon) => (
                   <option key={weapon.id} value={weapon.id}>
-                    {weapon.name} | R{weapon.range} A{weapon.attacks}
+                    {localizeWeaponName(language, weapon.id, weapon.name)} | R{weapon.range} A{weapon.attacks}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Cel
+              {text("Cel", "Target")}
               <select
                 value={targetUnitId}
                 onChange={(event) => onTargetUnitChange(event.target.value)}
               >
-                <option value="">Wybierz cel</option>
+                <option value="">{text("Wybierz cel", "Select target")}</option>
                 {availableTargets.map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {getTemplate(unit).name}
+                    {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
                   </option>
                 ))}
                 {availableObjectTargets.map((object) => (
                   <option key={object.id} value={`object:${object.id}`}>
-                    {object.name} | {object.currentHp} HP
+                    {localizeObjectName(language, object.type, object.name)} | {object.currentHp} HP
                   </option>
                 ))}
               </select>
@@ -1006,11 +1078,11 @@ export function BattleScreen({
               disabled={!selectedUnitId || !activeArmyId || !activeWeaponId || !targetIsLegal}
               onClick={handleAttack}
             >
-              Atakuj
+              {text("Atakuj", "Attack")}
             </button>
 
             <details className="hudAbility">
-              <summary>Zdolność{selectedAbility ? `: ${selectedAbility.name}` : ""}</summary>
+              <summary>{text("Zdolność", "Ability")}{selectedAbility ? `: ${localizeAbilityName(language, selectedAbility)}` : ""}</summary>
               {activeAbilities.length > 0 ? (
                 <div className="hudAbilityControls">
                   <select
@@ -1024,7 +1096,7 @@ export function BattleScreen({
                   >
                     {activeAbilities.map((ability) => (
                       <option key={ability.id} value={ability.id}>
-                        {ability.name} | CD{" "}
+                          {localizeAbilityName(language, ability)} | CD{" "}
                         {selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}
                       </option>
                     ))}
@@ -1033,10 +1105,10 @@ export function BattleScreen({
                     value={abilityTargetUnitId}
                     onChange={(event) => setAbilityTargetUnitId(event.target.value)}
                   >
-                    <option value="">Brak celu jednostkowego</option>
+                    <option value="">{text("Brak celu jednostkowego", "No unit target")}</option>
                     {availableAbilityTargets.map((unit) => (
                         <option key={unit.id} value={unit.id}>
-                          {getTemplate(unit).name}
+                          {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
                         </option>
                       ))}
                   </select>
@@ -1046,10 +1118,10 @@ export function BattleScreen({
                     onClick={() => setSelectingAbilityPosition((current) => !current)}
                   >
                     {selectingAbilityPosition
-                      ? "Kliknij pole"
+                      ? text("Kliknij pole", "Click tile")
                       : abilityTargetPosition
                         ? `${abilityTargetPosition.x}, ${abilityTargetPosition.y}`
-                        : "Cel pola"}
+                        : text("Cel pola", "Tile target")}
                   </button>
                   <button
                     className="primaryButton"
@@ -1060,11 +1132,11 @@ export function BattleScreen({
                     }
                     onClick={handleUseAbility}
                   >
-                    Użyj
+                    {text("Użyj", "Use")}
                   </button>
                 </div>
               ) : (
-                <p>Brak aktywnych zdolności.</p>
+                <p>{text("Brak aktywnych zdolności.", "No active abilities.")}</p>
               )}
             </details>
 
@@ -1074,8 +1146,8 @@ export function BattleScreen({
               onClick={handleEndTurn}
             >
               {remainingActivations > 0
-                ? `${remainingActivations} rozkazów`
-                : "Koniec tury"}
+                ? `${remainingActivations} ${text("rozkazów", "orders")}`
+                : text("Koniec tury", "End turn")}
             </button>
           </section>
         </BattleActionBar>
@@ -1113,14 +1185,16 @@ export function BattleScreen({
           {pendingAdvance ? (
             <div className="decisionPanel compactDecision">
               <p>
-                {pendingAdvance.attackerName} pokonał {pendingAdvance.defenderName}.
+                {language === "pl"
+                  ? `${pendingAdvance.attackerName} pokonał ${pendingAdvance.defenderName}.`
+                  : `${pendingAdvance.attackerName} defeated ${pendingAdvance.defenderName}.`}
               </p>
               <div className="decisionActions">
                 <button className="primaryButton" onClick={handleAdvanceAfterCombat}>
-                  Zajmij pozycję
+                  {text("Zajmij pozycję", "Take position")}
                 </button>
                 <button className="secondaryButton" onClick={handleHoldAfterCombat}>
-                  Zostań
+                  {text("Zostań", "Hold")}
                 </button>
               </div>
             </div>
@@ -1183,37 +1257,39 @@ function MissionSummary({
   mission: MissionState;
   scenario: ScenarioDefinition;
 }) {
+  const { text } = useI18n();
   const outcomeMessage = mission.status === "Victory"
-    ? "Cel scenariusza zostal wykonany."
-    : "Warunek porazki scenariusza zostal spelniony.";
+    ? text("Cel scenariusza został wykonany.", "The scenario objective has been completed.")
+    : text("Warunek porażki scenariusza został spełniony.", "A scenario defeat condition has been met.");
 
   return (
     <section className="battleSummary">
       <PanelTitle
-        title="Podsumowanie misji"
-        detail={mission.status === "Victory" ? "Zwyciestwo" : "Porazka"}
+        title={text("Podsumowanie misji", "Mission summary")}
+        detail={mission.status === "Victory" ? text("Zwycięstwo", "Victory") : text("Porażka", "Defeat")}
       />
       <p className="tokenReadout">
-        {outcomeMessage} Ukonczono {mission.roundsCompleted} z{" "}
+        {outcomeMessage} {text("Ukończono", "Completed")} {mission.roundsCompleted} {text("z", "of")}{" "}
         {mission.roundTarget ?? (
           "rounds" in scenario.victoryCondition
             ? scenario.victoryCondition.rounds
             : scenario.victoryCondition.roundLimit
-        )} rund.
+        )} {text("rund.", "rounds.")}
       </p>
     </section>
   );
 }
 
 function BattleSummary({ battle }: { battle: Battle }) {
+  const { language, text } = useI18n();
   const victory = getVictoryState(battle);
   const winner = battle.armies.find((army) => army.id === victory.winnerArmyId);
 
   return (
     <section className="battleSummary">
       <PanelTitle
-        title="Podsumowanie bitwy"
-        detail={winner ? `Zwyciezca: ${winner.playerName}` : "Brak zwyciezcy"}
+        title={text("Podsumowanie bitwy", "Battle summary")}
+        detail={winner ? `${text("Zwycięzca", "Winner")}: ${winner.playerName}` : text("Brak zwycięzcy", "No winner")}
       />
       <div className="summaryGrid">
         {battle.armies.map((army) => {
@@ -1229,23 +1305,23 @@ function BattleSummary({ battle }: { battle: Battle }) {
             >
               <div className="summaryArmyHeader">
                 <div>
-                  <p className="eyebrow">{army.faction}</p>
+                  <p className="eyebrow">{localizeFaction(language, army.faction)}</p>
                   <h3>{army.playerName}</h3>
                 </div>
-                <strong>{army.id === victory.winnerArmyId ? "Victory" : "Defeated"}</strong>
+                <strong>{army.id === victory.winnerArmyId ? text("Zwycięstwo", "Victory") : text("Pokonana", "Defeated")}</strong>
               </div>
               <div className="summaryStats">
-                <span>Ocalałe: {survivingUnits.length}</span>
-                <span>Straty: {destroyedUnits.length}</span>
+                <span>{text("Ocalałe", "Surviving")}: {survivingUnits.length}</span>
+                <span>{text("Straty", "Losses")}: {destroyedUnits.length}</span>
                 <span>HP: {remainingHp}</span>
-                <span>Suppression: {suppression}</span>
+                <span>{text("Przygwożdżenie", "Suppression")}: {suppression}</span>
               </div>
               <div className="summaryUnits">
                 {army.units.map((unit) => (
                   <div className="summaryUnit" key={unit.id}>
-                    <span>{getTemplate(unit).name}</span>
+                    <span>{localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}</span>
                     <small>
-                      {unit.status} | HP {unit.currentHp}/{getTemplate(unit).maxHp} | SUP{" "}
+                      {localizeUnitStatus(language, unit.status)} | HP {unit.currentHp}/{getTemplate(unit).maxHp} | SUP{" "}
                       {unit.suppression}
                     </small>
                   </div>
@@ -1270,24 +1346,31 @@ function UnitDetails({
   selectedUnit?: UnitInstance;
   onUnitPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
+  const { language, text } = useI18n();
   if (!selectedUnit) {
     return (
       <div className="mapReadout">
-        <span>Wybierz oddzial z listy albo kliknij token na mapie.</span>
+        <span>{text("Wybierz oddział z listy albo kliknij token na mapie.", "Select a unit from the list or click a token on the map.")}</span>
       </div>
     );
   }
 
   const template = getTemplate(selectedUnit);
+  const presentation = getUnitPresentationProfile(template.id, template.faction);
+  const themeStyle = {
+    "--unit-accent": presentation.theme.accent,
+    "--unit-accent-soft": presentation.theme.accentSoft,
+    "--unit-accent-strong": presentation.theme.accentStrong,
+  } as CSSProperties;
 
   return (
-    <div className="mapReadout unitDetailPanel">
+    <div className="mapReadout unitDetailPanel" style={themeStyle}>
       <div className="unitPortrait">
         {template.imageUrl ? (
           <img
             key={template.imageUrl}
             src={template.imageUrl}
-            alt={template.name}
+            alt={localizeUnitName(language, template.id, template.name)}
             onLoad={(event) => {
               event.currentTarget.hidden = false;
             }}
@@ -1299,26 +1382,38 @@ function UnitDetails({
         <div className="unitPortraitFallback">{getUnitInitials(template)}</div>
       </div>
       <div className="unitDetailHeader">
-        <strong>{template.name}</strong>
-        <span>{selectedArmy?.faction ?? "Unknown"} | {template.role}</span>
+        <strong>{localizeUnitName(language, template.id, template.name)}</strong>
+        <span>{selectedArmy ? localizeFaction(language, selectedArmy.faction) : text("Nieznana", "Unknown")} | {localizeRole(language, template.role)}</span>
       </div>
+      {presentation.lore ? (
+        <section className="unitLore">
+          <strong>{presentation.lore.subtitle[language]}</strong>
+          <p>{presentation.lore.summary[language]}</p>
+          {presentation.lore.details ? (
+            <details>
+              <summary>{text("Więcej lore", "More lore")}</summary>
+              <p>{presentation.lore.details[language]}</p>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
       <div className="unitDetailStats">
         <span>HP {selectedUnit.currentHp}/{template.maxHp}</span>
         <span>SUP {selectedUnit.suppression}</span>
         <span>MOV {template.movement}</span>
         <span>SV {template.armorSave ? `${template.armorSave}+` : "-"}</span>
       </div>
-      <span>Stan: {selectedUnit.position ? "na mapie" : "rezerwa / posilki"}</span>
+      <span>{text("Stan", "Status")}: {selectedUnit.position ? text("na mapie", "on map") : text("rezerwa / posiłki", "reserve / reinforcements")}</span>
       <span>
-        Pole:{" "}
+        {text("Pole", "Tile")}:{" "}
         {selectedUnit.position
           ? `${selectedUnit.position.x}, ${selectedUnit.position.y}`
-          : "poza mapa"}
+          : text("poza mapą", "off map")}
       </span>
       <div className="unitWeaponList">
         {template.weapons.map((weapon) => (
           <span key={weapon.id}>
-            {weapon.name} | R{weapon.range} A{weapon.attacks} D{weapon.damage}
+            {localizeWeaponName(language, weapon.id, weapon.name)} | R{weapon.range} A{weapon.attacks} D{weapon.damage}
           </span>
         ))}
       </div>
@@ -1329,7 +1424,7 @@ function UnitDetails({
             disabled={!selectedUnit.position}
             onClick={() => onUnitPatch(selectedUnit.id, { position: null })}
           >
-            Przenies do rezerw
+            {text("Przenieś do rezerw", "Move to reserves")}
           </button>
         </>
       ) : null}
@@ -1350,14 +1445,15 @@ function ArmyColumn({
   onSelect: (unitId: string) => void;
   onPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
+  const { language, text } = useI18n();
   return (
     <section className={`armyColumn ${army.faction.toLowerCase().replaceAll(" ", "-")}`}>
       <div className="armyHeader">
         <div>
-          <p className="eyebrow">{army.faction}</p>
+          <p className="eyebrow">{localizeFaction(language, army.faction)}</p>
           <h2>{army.playerName}</h2>
         </div>
-        <strong>{getArmyCost(army)} pkt</strong>
+        <strong>{getArmyCost(army)} {text("pkt", "pts")}</strong>
       </div>
 
       <div className="unitList">
@@ -1389,6 +1485,7 @@ function UnitCard({
   onSelect: () => void;
   onPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
 }) {
+  const { language, text } = useI18n();
   const template = getTemplate(unit);
   const unitAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
 
@@ -1396,10 +1493,10 @@ function UnitCard({
     <article className={`unitCard ${selected ? "selected" : ""}`} onClick={onSelect}>
       <div className="unitTopline">
         <div>
-          <p className="category">{template.category} | {template.role}</p>
-          <h3>{template.name}</h3>
+          <p className="category">{localizeCategory(language, template.category)} | {localizeRole(language, template.role)}</p>
+          <h3>{localizeUnitName(language, template.id, template.name)}</h3>
         </div>
-        <span className={`status ${unit.status.toLowerCase()}`}>{unit.status}</span>
+        <span className={`status ${unit.status.toLowerCase()}`}>{localizeUnitStatus(language, unit.status)}</span>
       </div>
 
       <div className="statGrid">
@@ -1424,7 +1521,7 @@ function UnitCard({
             />
           </label>
           <label>
-            Suppression
+            {text("Przygwożdżenie", "Suppression")}
             <input
               type="number"
               min="0"
@@ -1437,22 +1534,22 @@ function UnitCard({
       ) : (
         <div className="readOnlyTracks">
           <span>HP {unit.currentHp}/{template.maxHp}</span>
-          <span>Suppression {unit.suppression}</span>
+          <span>{text("Przygwożdżenie", "Suppression")} {unit.suppression}</span>
         </div>
       )}
 
       <div className="abilityList">
         {template.weapons.map((weapon) => (
           <span
-            title={`Range ${weapon.range}, attacks ${weapon.attacks}, damage ${weapon.damage}`}
+            title={`${text("Zasięg", "Range")} ${weapon.range}, ${text("ataki", "attacks")} ${weapon.attacks}, ${text("obrażenia", "damage")} ${weapon.damage}`}
             key={weapon.id}
           >
-            {weapon.name}
+            {localizeWeaponName(language, weapon.id, weapon.name)}
           </span>
         ))}
         {unitAbilities.map((ability) => (
-          <span title={ability.description} key={ability.id}>
-            {ability.name}
+          <span title={localizeAbilityDescription(language, ability)} key={ability.id}>
+            {localizeAbilityName(language, ability)}
             {ability.type === "active" && ability.cooldown ? ` CD${ability.cooldown}` : ""}
           </span>
         ))}
@@ -1478,11 +1575,16 @@ function positionsEqual(
   return left.x === right.x && left.y === right.y;
 }
 
-function getVictoryLog(battle: Battle): string {
+function getVictoryLog(battle: Battle, language: "pl" | "en"): string {
   const victory = getVictoryState(battle);
   const winner = battle.armies.find((army) => army.id === victory.winnerArmyId);
 
+  if (language === "en") {
+    return winner
+      ? `Battle finished. ${winner.playerName} (${winner.faction}) wins.`
+      : "Battle finished. No army remains on the battlefield.";
+  }
   return winner
-    ? `Bitwa zakonczona. Zwycieza ${winner.playerName} (${winner.faction}).`
-    : "Bitwa zakonczona. Na polu walki nie zostala zadna armia.";
+    ? `Bitwa zakończona. Zwycięża ${winner.playerName} (${localizeFaction(language, winner.faction)}).`
+    : "Bitwa zakończona. Na polu walki nie została żadna armia.";
 }

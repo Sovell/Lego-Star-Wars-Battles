@@ -6,7 +6,7 @@ Suggested filenames:
 - jedi-task-force.png
 - laat-patrol.png
 - b1-droid.png
-- droideka.png
+- dwarf-spider-droid.png
 - b2-super-battle-droid.png
 - aat-battle-tank.png
 
@@ -48,7 +48,7 @@ Source mapping:
 - `IMG_0994.jpeg` -> `photos/yoda.jpg`
 - `IMG_0995.jpeg` -> `photos/stap-patrol.jpg`
 - `IMG_0996.jpeg` -> `photos/at-rt-scout-walker.jpg`
-- `IMG_0997.jpeg` -> `photos/droideka.jpg`
+- `IMG_0997.jpeg` -> `photos/droideka.jpg` (legacy source; no longer used by the roster)
 
 ## Token crops
 

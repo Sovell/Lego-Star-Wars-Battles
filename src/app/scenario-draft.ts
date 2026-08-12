@@ -286,13 +286,14 @@ export function remapScheduledEventsByArmy(
 function resetArmies(armies: Army[]): Army[] {
   return structuredClone(armies).map((army) => ({
     ...army,
-    units: army.units.map(resetUnit),
+    units: army.units.map((unit) => resetUnit(unit, army.id)),
   }));
 }
 
-function resetUnit(unit: UnitInstance): UnitInstance {
+function resetUnit(unit: UnitInstance, armyId: string): UnitInstance {
   return {
     ...unit,
+    armyId,
     currentHp: getTemplate(unit).maxHp,
     suppression: 0,
     abilityCooldowns: {},

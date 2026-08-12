@@ -43,6 +43,7 @@ export type BotActivationStep = {
 export type BotActivationResult = MissionSessionState & {
   steps: BotActivationStep[];
   stopReason: BotActivationStopReason;
+  fallbackResult?: MissionActionResult;
 };
 
 export type RunBotActivationOptions = {
@@ -105,10 +106,18 @@ export function runBotActivation({
       decisionContext,
     );
     if (!decision) {
+      const fallbackResult = passActiveBotActivation(
+        currentSession,
+        scenario,
+        armyId,
+        actionContext,
+      );
       return {
-        ...currentSession,
+        battle: fallbackResult.battle,
+        mission: fallbackResult.mission,
         steps,
         stopReason: "no-legal-action",
+        fallbackResult,
       };
     }
 
@@ -123,19 +132,65 @@ export function runBotActivation({
     currentSession = { battle: result.battle, mission: result.mission };
 
     if (result.battle === battleBeforeAction) {
+      const fallbackResult = passActiveBotActivation(
+        currentSession,
+        scenario,
+        armyId,
+        actionContext,
+      );
       return {
-        ...currentSession,
+        battle: fallbackResult.battle,
+        mission: fallbackResult.mission,
         steps,
         stopReason: "action-rejected",
+        fallbackResult,
       };
     }
+  }
+
+  if (currentSession.battle.activeActivation?.armyId === armyId) {
+    const fallbackResult = passActiveBotActivation(
+      currentSession,
+      scenario,
+      armyId,
+      actionContext,
+    );
+    return {
+      battle: fallbackResult.battle,
+      mission: fallbackResult.mission,
+      steps,
+      stopReason: "step-limit",
+      fallbackResult,
+    };
   }
 
   return {
     ...currentSession,
     steps,
-    stopReason: currentSession.battle.activeActivation?.armyId === armyId
-      ? "step-limit"
-      : "activation-completed",
+    stopReason: "activation-completed",
   };
+}
+
+function passActiveBotActivation(
+  session: MissionSessionState,
+  scenario: ScenarioDefinition,
+  armyId: string,
+  actionContext: MissionActionContext | undefined,
+): MissionActionResult {
+  if (session.battle.activeActivation?.armyId !== armyId) {
+    return {
+      battle: session.battle,
+      mission: session.mission,
+      events: [],
+      missionEvents: [],
+      log: "Aktywacja bota jest już zakończona.",
+    };
+  }
+
+  return applyMissionAction(
+    session,
+    scenario,
+    { type: "PassActivation" },
+    actionContext,
+  );
 }

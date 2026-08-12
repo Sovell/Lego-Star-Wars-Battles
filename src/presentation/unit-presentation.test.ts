@@ -42,7 +42,8 @@ describe("unit token presentation", () => {
       units: [unit],
     };
 
-    expect(getUnitArmyLabel(unit, [army])).toBe("Gracz 3 · Team 1");
+    expect(getUnitArmyLabel(unit, [army])).toBe("Gracz 3 · Drużyna 1");
+    expect(getUnitArmyLabel(unit, [army], "en")).toBe("Gracz 3 · Team 1");
   });
 
   it("handles a unit whose army is missing from legacy data", () => {

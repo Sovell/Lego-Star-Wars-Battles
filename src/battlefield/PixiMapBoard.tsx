@@ -41,6 +41,7 @@ import { getBoardCellInteraction, type BoardCellInteraction } from "./board-inte
 import type { BattlefieldVisualEvent } from "./battlefield-visual-events";
 import { boardPositionKey, type BoardTokenViewModel, type BoardViewModel } from "./board-view-model";
 import type { BoardRendererProps } from "./board-renderer";
+import { localizeTerrainShortLabel } from "../i18n";
 
 const loadedPixiTextures = new Map<string, Texture>();
 const pendingPixiTextures = new Map<string, Promise<Texture>>();
@@ -118,7 +119,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
 
   return (
     <div
-      aria-label="Interaktywna plansza Pixi"
+      aria-label={props.language === "pl" ? "Interaktywna plansza Pixi" : "Interactive Pixi board"}
       className="pixiMapBoard"
       onPointerCancel={stopDragging}
       onPointerDown={handlePointerDown}
@@ -140,9 +141,9 @@ export function PixiMapBoard(props: BoardRendererProps) {
       >
         <PixiBoardScene {...props} camera={camera} height={size.height} width={size.width} />
       </Application>
-      <div className="pixiCameraControls" aria-label="Sterowanie kamerą">
+      <div className="pixiCameraControls" aria-label={props.language === "pl" ? "Sterowanie kamerą" : "Camera controls"}>
         <button
-          aria-label="Oddal planszę"
+          aria-label={props.language === "pl" ? "Oddal planszę" : "Zoom out"}
           onClick={() => setCamera((current) => zoomCameraAtPoint(
             current,
             clamp(current.zoom - 0.15, MIN_ZOOM, MAX_ZOOM),
@@ -153,11 +154,11 @@ export function PixiMapBoard(props: BoardRendererProps) {
         <button
           className="pixiCameraReset"
           onClick={() => setCamera({ zoom: 1, x: 0, y: 0 })}
-          title="Wyśrodkuj planszę"
+          title={props.language === "pl" ? "Wyśrodkuj planszę" : "Center board"}
           type="button"
         >{Math.round(camera.zoom * 100)}%</button>
         <button
-          aria-label="Przybliż planszę"
+          aria-label={props.language === "pl" ? "Przybliż planszę" : "Zoom in"}
           onClick={() => setCamera((current) => zoomCameraAtPoint(
             current,
             clamp(current.zoom + 0.15, MIN_ZOOM, MAX_ZOOM),
@@ -166,7 +167,7 @@ export function PixiMapBoard(props: BoardRendererProps) {
           type="button"
         >+</button>
       </div>
-      <small className="pixiCameraHint">Kółko: zoom pod kursorem · środkowy przycisk: przesuń</small>
+      <small className="pixiCameraHint">{props.language === "pl" ? "Kółko: zoom pod kursorem · środkowy przycisk: przesuń" : "Wheel: zoom under cursor · middle button: pan"}</small>
     </div>
   );
 }
@@ -177,6 +178,7 @@ function PixiBoardScene({
   height,
   interactionDisabled,
   interactionModel,
+  language,
   mapThemeId,
   scenarioZoneCells,
   selectedUnitId,
@@ -209,6 +211,7 @@ function PixiBoardScene({
         />
         <TerrainLayer
           cellSize={cellSize}
+          language={language}
           mapThemeId={mapThemeId}
           stride={stride}
           viewModel={viewModel}
@@ -379,11 +382,13 @@ function ScenarioZoneLayer({
 
 function TerrainLayer({
   cellSize,
+  language,
   mapThemeId,
   stride,
   viewModel,
 }: {
   cellSize: number;
+  language: "pl" | "en";
   mapThemeId: MapThemeId;
   stride: number;
   viewModel: BoardViewModel;
@@ -397,6 +402,7 @@ function TerrainLayer({
             cellSize={cellSize}
             gridX={x}
             gridY={y}
+            language={language}
             key={`${x},${y}`}
             mapThemeId={mapThemeId}
             terrainType={tile?.terrainType ?? "Open"}
@@ -438,6 +444,7 @@ function TerrainCell({
   cellSize,
   gridX,
   gridY,
+  language,
   mapThemeId,
   terrainType,
   x,
@@ -446,6 +453,7 @@ function TerrainCell({
   cellSize: number;
   gridX: number;
   gridY: number;
+  language: "pl" | "en";
   mapThemeId: MapThemeId;
   terrainType: TerrainType;
   x: number;
@@ -497,7 +505,7 @@ function TerrainCell({
         style={{ fill: 0xd7e4f2, fontFamily: "Arial", fontSize: 9, fontWeight: "700" }}
       />
       <pixiText
-        text={getTerrainLabel(terrainType)}
+        text={localizeTerrainShortLabel(language, terrainType)}
         x={6}
         y={cellSize - 16}
         style={{ fill: accentColor, fontFamily: "Arial", fontSize: 8, fontWeight: "700" }}
@@ -1072,19 +1080,6 @@ function getTerrainTextureUrl(terrainType: TerrainType): string {
     case "Hazardous": return "/terrain-textures/hazardous.png";
     case "HighGround": return "/terrain-textures/high-ground.png";
     default: return "/terrain-textures/open.png";
-  }
-}
-
-function getTerrainLabel(terrainType: TerrainType): string {
-  switch (terrainType) {
-    case "LightCover": return "OSŁONA";
-    case "HeavyCover": return "CIĘŻKA";
-    case "Building": return "BUDYNEK";
-    case "DifficultTerrain": return "TRUDNY";
-    case "Impassable": return "NIEDOST.";
-    case "Hazardous": return "RYZYKO";
-    case "HighGround": return "WYSOKI";
-    default: return "OTWARTY";
   }
 }
 

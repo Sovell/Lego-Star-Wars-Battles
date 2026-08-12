@@ -3,6 +3,7 @@ import { createPersistenceAdapter } from "../../core/persistence/create-persiste
 import { createSavedBattle, type SavedBattleSummary } from "../../core/persistence/save-types";
 import type { MissionState } from "../../core/scenario/scenario-types";
 import type { Battle, CombatLogEntry } from "../../types";
+import { useI18n } from "../../i18n";
 
 export function BattleSavePanel({
   battle,
@@ -22,7 +23,8 @@ export function BattleSavePanel({
     initialBattle?: Battle,
   ) => void;
 }) {
-  const [saveName, setSaveName] = useState<string>("Bitwa treningowa");
+  const { locale, text } = useI18n();
+  const [saveName, setSaveName] = useState<string>(() => text("Bitwa treningowa", "Training battle"));
   const [saveStatus, setSaveStatus] = useState<string>("");
   const [savedBattles, setSavedBattles] = useState<SavedBattleSummary[]>([]);
   const [selectedSaveId, setSelectedSaveId] = useState<string>("");
@@ -38,14 +40,14 @@ export function BattleSavePanel({
       setSavedBattles(summaries);
       setSelectedSaveId((current) => current || summaries[0]?.id || "");
     } catch (error) {
-      setSaveStatus(error instanceof Error ? error.message : "Nie udalo sie odczytac zapisow.");
+      setSaveStatus(error instanceof Error ? error.message : text("Nie udało się odczytać zapisów.", "Could not read saved games."));
     }
   }
 
   async function handleSaveBattle() {
     const trimmedName = saveName.trim();
     if (!trimmedName) {
-      setSaveStatus("Podaj nazwe zapisu.");
+      setSaveStatus(text("Podaj nazwę zapisu.", "Enter a save name."));
       return;
     }
 
@@ -60,24 +62,24 @@ export function BattleSavePanel({
 
     try {
       await persistence.saveBattle(savedBattle);
-      setSaveStatus(`Zapisano: ${trimmedName}.`);
+      setSaveStatus(`${text("Zapisano", "Saved")}: ${trimmedName}.`);
       await refreshSavedBattles();
       setSelectedSaveId(savedBattle.id);
     } catch (error) {
-      setSaveStatus(error instanceof Error ? error.message : "Nie udalo sie zapisac bitwy.");
+      setSaveStatus(error instanceof Error ? error.message : text("Nie udało się zapisać bitwy.", "Could not save the battle."));
     }
   }
 
   async function handleLoadSavedBattle() {
     if (!selectedSaveId) {
-      setSaveStatus("Wybierz zapis do wczytania.");
+      setSaveStatus(text("Wybierz zapis do wczytania.", "Select a save to load."));
       return;
     }
 
     try {
       const savedBattle = await persistence.loadBattle(selectedSaveId);
       if (!savedBattle) {
-        setSaveStatus("Ten zapis nie istnieje.");
+        setSaveStatus(text("Ten zapis nie istnieje.", "This save does not exist."));
         await refreshSavedBattles();
         return;
       }
@@ -89,60 +91,60 @@ export function BattleSavePanel({
         savedBattle.initialBattle,
       );
       setSaveName(savedBattle.name);
-      setSaveStatus(`Wczytano: ${savedBattle.name}.`);
+      setSaveStatus(`${text("Wczytano", "Loaded")}: ${savedBattle.name}.`);
     } catch (error) {
-      setSaveStatus(error instanceof Error ? error.message : "Nie udalo sie wczytac bitwy.");
+      setSaveStatus(error instanceof Error ? error.message : text("Nie udało się wczytać bitwy.", "Could not load the battle."));
     }
   }
 
   async function handleDeleteSavedBattle() {
     if (!selectedSaveId) {
-      setSaveStatus("Wybierz zapis do usuniecia.");
+      setSaveStatus(text("Wybierz zapis do usunięcia.", "Select a save to delete."));
       return;
     }
 
     try {
       await persistence.deleteBattle(selectedSaveId);
-      setSaveStatus("Usunieto zapis bitwy.");
+      setSaveStatus(text("Usunięto zapis bitwy.", "Battle save deleted."));
       setSelectedSaveId("");
       await refreshSavedBattles();
     } catch (error) {
-      setSaveStatus(error instanceof Error ? error.message : "Nie udalo sie usunac zapisu.");
+      setSaveStatus(error instanceof Error ? error.message : text("Nie udało się usunąć zapisu.", "Could not delete the save."));
     }
   }
 
   return (
     <details className="savePanel">
       <summary className="savePanelSummary">
-        <strong>Zapis bitwy</strong>
-        <small>{savedBattles.length} lokalnie</small>
+        <strong>{text("Zapis bitwy", "Battle save")}</strong>
+        <small>{savedBattles.length} {text("lokalnie", "local")}</small>
       </summary>
       <div className="savePanelBody">
         <input
           value={saveName}
           onChange={(event) => setSaveName(event.target.value)}
-          placeholder="Nazwa zapisu"
+          placeholder={text("Nazwa zapisu", "Save name")}
         />
         <button className="primaryButton" onClick={handleSaveBattle}>
-          Zapisz bitwę
+          {text("Zapisz bitwę", "Save battle")}
         </button>
         <select
           value={selectedSaveId}
           onChange={(event) => setSelectedSaveId(event.target.value)}
         >
-          <option value="">Wybierz zapis</option>
+          <option value="">{text("Wybierz zapis", "Select save")}</option>
           {savedBattles.map((savedBattle) => (
             <option key={savedBattle.id} value={savedBattle.id}>
-              {savedBattle.name} | T{savedBattle.turn} | {formatDateTime(savedBattle.updatedAt)}
+              {savedBattle.name} | T{savedBattle.turn} | {formatDateTime(savedBattle.updatedAt, locale)}
             </option>
           ))}
         </select>
         <div className="saveActions">
           <button className="secondaryButton" disabled={!selectedSaveId} onClick={handleLoadSavedBattle}>
-            Wczytaj
+            {text("Wczytaj", "Load")}
           </button>
           <button className="dangerButton" disabled={!selectedSaveId} onClick={handleDeleteSavedBattle}>
-            Usuń
+            {text("Usuń", "Delete")}
           </button>
         </div>
         {saveStatus ? <p className="saveStatus">{saveStatus}</p> : null}
@@ -151,8 +153,8 @@ export function BattleSavePanel({
   );
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("pl-PL", {
+function formatDateTime(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",

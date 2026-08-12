@@ -2,6 +2,11 @@ import { taskForces, unitTemplates } from "../../data";
 import type { Army, Battle, UnitInstance, UnitTemplate } from "../../types";
 
 export const templateById = new Map(unitTemplates.map((template) => [template.id, template]));
+const dwarfSpiderDroid = templateById.get("dwarf_spider_droid");
+if (dwarfSpiderDroid) {
+  // Compatibility for battles and scenario events saved before the roster replacement.
+  templateById.set("droideka_cell", dwarfSpiderDroid);
+}
 
 export function getTemplate(unit: UnitInstance): UnitTemplate {
   const template = templateById.get(unit.templateId);

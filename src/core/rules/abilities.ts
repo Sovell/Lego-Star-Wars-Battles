@@ -30,6 +30,8 @@ export function getAttackDiceBonus(
 
   if (attacker.movedThisTurn) {
     bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_if_moved");
+  } else {
+    bonus += getNumericAbilityEffect(attackerTemplate, "attack_bonus_if_stationary");
   }
 
   bonus += getAttackBonusAgainstTarget(attackerTemplate, getTemplate(defender));

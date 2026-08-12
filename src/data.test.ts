@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { abilities, board, unitTemplates } from "./data";
+import { getTemplate } from "./core/rules/state";
+import type { UnitInstance } from "./types";
 
 describe("operational board scale", () => {
   it("uses an 8 by 8 battlefield", () => {
@@ -68,5 +70,66 @@ describe("Ahsoka Tano", () => {
       cost: 34,
       abilities: ["ataru_momentum", "jar_kai_mastery", "force_prediction"],
     });
+  });
+});
+
+describe("Clone Wars roster expansion", () => {
+  it("includes all requested heroes and squads", () => {
+    const ids = new Set(unitTemplates.map((template) => template.id));
+
+    expect([...ids]).toEqual(expect.arrayContaining([
+      "count_dooku",
+      "general_grievous",
+      "magnaguard_squad",
+      "b1_battle_droid_commander_squad",
+      "mace_windu",
+      "hardcase",
+      "dwarf_spider_droid",
+    ]));
+  });
+
+  it("replaces the Droideka roster card with the Dwarf Spider Droid", () => {
+    expect(unitTemplates.some((template) => template.id === "droideka_cell")).toBe(false);
+    expect(unitTemplates.find((template) => template.id === "dwarf_spider_droid"))
+      .toMatchObject({
+        faction: "Separatists",
+        category: "vehicle",
+        abilities: ["heavy_cannon", "reinforced_chassis"],
+      });
+  });
+
+  it("loads legacy Droideka instances as the replacement unit", () => {
+    const legacyUnit: UnitInstance = {
+      id: "legacy-droideka",
+      templateId: "droideka_cell",
+      armyId: "legacy-army",
+      currentHp: 4,
+      suppression: 0,
+      position: null,
+      status: "Ready",
+      hidden: false,
+    };
+
+    expect(getTemplate(legacyUnit).id)
+      .toBe("dwarf_spider_droid");
+  });
+
+  it("defines every ability referenced by the expanded roster", () => {
+    const abilityIds = new Set(abilities.map((ability) => ability.id));
+    const expandedTemplateIds = new Set([
+      "count_dooku",
+      "general_grievous",
+      "magnaguard_squad",
+      "b1_battle_droid_commander_squad",
+      "mace_windu",
+      "hardcase",
+      "dwarf_spider_droid",
+    ]);
+
+    for (const template of unitTemplates.filter(({ id }) => expandedTemplateIds.has(id))) {
+      for (const abilityId of template.abilities) {
+        expect(abilityIds.has(abilityId), `${template.name}: ${abilityId}`).toBe(true);
+      }
+    }
   });
 });

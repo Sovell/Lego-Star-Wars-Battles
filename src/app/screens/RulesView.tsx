@@ -1,21 +1,37 @@
+import type { CSSProperties } from "react";
 import { abilities, taskForces, unitTemplates } from "../../data";
 import { terrainPresets } from "../../core/terrain-presets";
 import { getTerrainDefinition, hasTerrainTrait } from "../../core/terrain-definitions";
 import type { TerrainTile, TerrainType, UnitTemplate } from "../../types";
+import { getUnitPresentationProfile } from "../../presentation/unit-profile";
 import { PanelTitle } from "../components/PanelTitle";
-
-const statGlossary = [
-  { label: "HP", value: "Hit Points", description: "Wytrzymalosc jednostki. Po spadku do 0 jednostka zostaje zniszczona." },
-  { label: "MOV", value: "Movement", description: "Bazowy zasieg ruchu po planszy przed uwzglednieniem kosztu terenu." },
-  { label: "MOR", value: "Morale", description: "Prog odpornosci na suppression i przypiecie jednostki." },
-  { label: "CMD", value: "Command", description: "Potencjal dowodzenia jednostki; pole przygotowane pod szersze rozkazy." },
-  { label: "WPN", value: "Weapons", description: "Liczba profili broni dostepnych dla jednostki." },
-  { label: "SUP", value: "Suppression", description: "Presja bojowa. Utrudnia trafianie i bedzie podstawa testow morale." },
-  { label: "CD", value: "Cooldown", description: "Liczba tur oczekiwania przed ponownym uzyciem aktywnej zdolnosci." },
-  { label: "LOS", value: "Line of Sight", description: "Linia widzenia wymagana do ataku dystansowego." },
-];
+import {
+  localizeAbilityDescription,
+  localizeAbilityName,
+  localizeCategory,
+  localizeFaction,
+  localizeRole,
+  localizeTaskForceName,
+  localizeTerrainDescription,
+  localizeTerrainName,
+  localizeUnitName,
+  localizeWeaponName,
+  useI18n,
+  type Language,
+} from "../../i18n";
 
 export function RulesView() {
+  const { language, text } = useI18n();
+  const statGlossary = [
+    { label: "HP", value: text("Punkty wytrzymałości", "Hit Points"), description: text("Wytrzymałość jednostki. Po spadku do 0 jednostka zostaje zniszczona.", "A unit's durability. At 0 HP the unit is destroyed.") },
+    { label: "MOV", value: text("Ruch", "Movement"), description: text("Bazowy zasięg ruchu przed uwzględnieniem kosztu terenu.", "Base movement range before terrain cost is applied.") },
+    { label: "MOR", value: text("Morale", "Morale"), description: text("Próg odporności na suppression i przygwożdżenie jednostki.", "Resistance threshold against suppression and pinning.") },
+    { label: "CMD", value: text("Dowodzenie", "Command"), description: text("Potencjał dowodzenia jednostki, przygotowany pod szersze reguły rozkazów.", "The unit's command potential, prepared for broader order rules.") },
+    { label: "WPN", value: text("Uzbrojenie", "Weapons"), description: text("Liczba profili broni dostępnych dla jednostki.", "Number of weapon profiles available to the unit.") },
+    { label: "SUP", value: text("Przygwożdżenie", "Suppression"), description: text("Presja bojowa utrudniająca trafianie i wpływająca na morale.", "Combat pressure that hinders attacks and affects morale.") },
+    { label: "CD", value: text("Czas odnowienia", "Cooldown"), description: text("Liczba tur oczekiwania przed ponownym użyciem aktywnej zdolności.", "Turns to wait before an active ability can be used again.") },
+    { label: "LOS", value: text("Linia widzenia", "Line of Sight"), description: text("Linia widzenia wymagana do ataku dystansowego.", "Visibility line required for a ranged attack.") },
+  ];
   const heroTemplates = unitTemplates.filter((template) => template.category === "hero");
   const unitFactions = Array.from(new Set(unitTemplates.map((template) => template.faction)));
   const taskForceBonuses = taskForces
@@ -29,7 +45,7 @@ export function RulesView() {
     <section className="rulesLayout">
       <div className="rulesGrid">
         <section className="rulesPanel">
-          <PanelTitle title="Skroty" detail="statystyki" />
+          <PanelTitle title={text("Skróty", "Abbreviations")} detail={text("statystyki", "stats")} />
           <div className="glossaryList">
             {statGlossary.map((item) => (
               <article className="glossaryItem" key={item.label}>
@@ -44,21 +60,21 @@ export function RulesView() {
         </section>
 
         <section className="rulesPanel">
-          <PanelTitle title="Teren" detail={`${terrainPresets.length} typow`} />
+          <PanelTitle title={text("Teren", "Terrain")} detail={`${terrainPresets.length} ${text("typów", "types")}`} />
           <div className="terrainRulesList">
             {terrainPresets.map((terrain) => (
               <article className={`terrainRule ${terrain.terrainType}`} key={terrain.terrainType}>
                 <div>
                   <p className="category">{terrain.terrainType}</p>
-                  <h3>{getTerrainRuleName(terrain.terrainType)}</h3>
+                  <h3>{getTerrainRuleName(terrain.terrainType, language)}</h3>
                 </div>
                 <div className="ruleMetaGrid">
-                  <span>Obrona +{terrain.defenseBonus}</span>
-                  <span>Atak +{terrain.attackBonus}</span>
-                  <span>Ruch {hasTerrainTrait(terrain, "Impassable") ? "niedostepny" : `x${terrain.movementCost}`}</span>
-                  <span>LOS {terrain.blocksLineOfSight ? "blokuje" : "nie blokuje"}</span>
+                  <span>{text("Obrona", "Defense")} +{terrain.defenseBonus}</span>
+                  <span>{text("Atak", "Attack")} +{terrain.attackBonus}</span>
+                  <span>{text("Ruch", "Move")} {hasTerrainTrait(terrain, "Impassable") ? text("niedostępny", "unavailable") : `x${terrain.movementCost}`}</span>
+                  <span>LOS {terrain.blocksLineOfSight ? text("blokuje", "blocked") : text("nie blokuje", "clear")}</span>
                 </div>
-                <p>{getTerrainRuleDescription(terrain)}</p>
+                <p>{getTerrainRuleDescription(terrain, language)}</p>
               </article>
             ))}
           </div>
@@ -66,7 +82,7 @@ export function RulesView() {
       </div>
 
       <section className="rulesPanel">
-        <PanelTitle title="Bohaterowie" detail={`${heroTemplates.length} kart`} />
+        <PanelTitle title={text("Bohaterowie", "Heroes")} detail={`${heroTemplates.length} ${text("kart", "cards")}`} />
         <div className="heroRulesGrid">
           {heroTemplates.map((template) => {
             const templateAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
@@ -75,10 +91,10 @@ export function RulesView() {
               <article className="heroRuleCard" key={template.id}>
                 <div className="heroRuleHeader">
                   <div>
-                    <p className="category">{template.faction} | {template.role}</p>
-                    <h3>{template.name}</h3>
+                    <p className="category">{localizeFaction(language, template.faction)} | {localizeRole(language, template.role)}</p>
+                    <h3>{localizeUnitName(language, template.id, template.name)}</h3>
                   </div>
-                  <strong>{template.cost} pkt</strong>
+                  <strong>{template.cost} {text("pkt", "pts")}</strong>
                 </div>
                 <div className="ruleMetaGrid">
                   <span>HP {template.maxHp}</span>
@@ -90,10 +106,10 @@ export function RulesView() {
                   {templateAbilities.map((ability) => (
                     <article className="abilityRule" key={ability.id}>
                       <div>
-                        <h4>{ability.name}</h4>
-                        <span>{formatAbilityMeta(ability)}</span>
+                        <h4>{localizeAbilityName(language, ability)}</h4>
+                        <span>{formatAbilityMeta(ability, language)}</span>
                       </div>
-                      <p>{ability.description}</p>
+                      <p>{localizeAbilityDescription(language, ability)}</p>
                     </article>
                   ))}
                 </div>
@@ -104,13 +120,13 @@ export function RulesView() {
       </section>
 
       <section className="rulesPanel">
-        <PanelTitle title="Karty jednostek" detail={`${unitTemplates.length} kart`} />
+        <PanelTitle title={text("Karty jednostek", "Unit cards")} detail={`${unitTemplates.length} ${text("kart", "cards")}`} />
         <div className="unitRulesByFaction">
           {unitFactions.map((faction) => (
             <section className="unitRulesFaction" key={faction}>
               <div className="rulesSectionHeader">
-                <p className="eyebrow">{faction}</p>
-                <h3>{unitTemplates.filter((template) => template.faction === faction).length} jednostek</h3>
+                <p className="eyebrow">{localizeFaction(language, faction)}</p>
+                <h3>{unitTemplates.filter((template) => template.faction === faction).length} {text("jednostek", "units")}</h3>
               </div>
               <div className="unitRulesGrid">
                 {unitTemplates
@@ -125,15 +141,15 @@ export function RulesView() {
       </section>
 
       <section className="rulesPanel">
-        <PanelTitle title="Task Force" detail={`${taskForceBonuses.length} bonusow`} />
+        <PanelTitle title={text("Zespoły uderzeniowe", "Task Forces")} detail={`${taskForceBonuses.length} ${text("premii", "bonuses")}`} />
         <div className="taskForceRulesGrid">
           {taskForceBonuses.map(({ taskForce, bonus }) => (
             <article className="abilityRule" key={taskForce.id}>
               <div>
-                <h4>{taskForce.name}</h4>
-                <span>{bonus ? formatAbilityMeta(bonus) : "bonus"}</span>
+                <h4>{localizeTaskForceName(language, taskForce.id, taskForce.name)}</h4>
+                <span>{bonus ? formatAbilityMeta(bonus, language) : text("premia", "bonus")}</span>
               </div>
-              <p>{bonus?.description}</p>
+              <p>{bonus ? localizeAbilityDescription(language, bonus) : null}</p>
             </article>
           ))}
         </div>
@@ -143,17 +159,36 @@ export function RulesView() {
 }
 
 function UnitRulesCard({ template }: { template: UnitTemplate }) {
+  const { language, text } = useI18n();
   const templateAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
+  const presentation = getUnitPresentationProfile(template.id, template.faction);
+  const themeStyle = {
+    "--unit-accent": presentation.theme.accent,
+    "--unit-accent-soft": presentation.theme.accentSoft,
+    "--unit-accent-strong": presentation.theme.accentStrong,
+  } as CSSProperties;
 
   return (
-    <article className="unitRuleCard">
+    <article className="unitRuleCard" style={themeStyle}>
       <div className="heroRuleHeader">
         <div>
-          <p className="category">{template.category} | {template.role}</p>
-          <h3>{template.name}</h3>
+          <p className="category">{localizeCategory(language, template.category)} | {localizeRole(language, template.role)}</p>
+          <h3>{localizeUnitName(language, template.id, template.name)}</h3>
         </div>
-        <strong>{template.cost} pkt</strong>
+        <strong>{template.cost} {text("pkt", "pts")}</strong>
       </div>
+      {presentation.lore ? (
+        <section className="unitLore unitRuleLore">
+          <strong>{presentation.lore.subtitle[language]}</strong>
+          <p>{presentation.lore.summary[language]}</p>
+          {presentation.lore.details ? (
+            <details>
+              <summary>{text("Więcej lore", "More lore")}</summary>
+              <p>{presentation.lore.details[language]}</p>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
       <div className="ruleMetaGrid">
         <span>HP {template.maxHp}</span>
         <span>MOV {template.movement}</span>
@@ -163,7 +198,7 @@ function UnitRulesCard({ template }: { template: UnitTemplate }) {
       <div className="weaponRulesList">
         {template.weapons.map((weapon) => (
           <article className="weaponRule" key={weapon.id}>
-            <strong>{weapon.name}</strong>
+            <strong>{localizeWeaponName(language, weapon.id, weapon.name)}</strong>
             <span>RNG {weapon.range} | ATK {weapon.attacks} | DMG {weapon.damage}</span>
             {weapon.keywords.length ? <small>{weapon.keywords.join(", ")}</small> : null}
           </article>
@@ -172,33 +207,36 @@ function UnitRulesCard({ template }: { template: UnitTemplate }) {
       <div className="unitAbilityChips">
         {templateAbilities.length ? (
           templateAbilities.map((ability) => (
-            <span title={ability.description} key={ability.id}>
-              {ability.name}
+            <span title={localizeAbilityDescription(language, ability)} key={ability.id}>
+              {localizeAbilityName(language, ability)}
             </span>
           ))
         ) : (
-          <span>Brak zdolnosci</span>
+          <span>{text("Brak zdolności", "No abilities")}</span>
         )}
       </div>
     </article>
   );
 }
 
-function formatAbilityMeta(ability: (typeof abilities)[number]): string {
+function formatAbilityMeta(ability: (typeof abilities)[number], language: Language): string {
   const parts = [
-    ability.type ?? "passive",
-    ability.range ? `range ${ability.range}` : "",
+    ability.type ? (language === "pl" ? ({ passive: "pasywna", active: "aktywna", aura: "aura" } as const)[ability.type] : ability.type) : (language === "pl" ? "pasywna" : "passive"),
+    ability.range ? `${language === "pl" ? "zasięg" : "range"} ${ability.range}` : "",
     ability.cooldown ? `CD ${ability.cooldown}` : "",
   ].filter(Boolean);
 
   return parts.join(" | ");
 }
 
-function getTerrainRuleName(terrainType: TerrainType): string {
-  return getTerrainDefinition(terrainType)?.name ?? terrainType;
+function getTerrainRuleName(terrainType: TerrainType, language: Language): string {
+  return localizeTerrainName(language, terrainType, getTerrainDefinition(terrainType)?.name ?? terrainType);
 }
 
-function getTerrainRuleDescription(terrain: TerrainTile): string {
-  return getTerrainDefinition(terrain.terrainType)?.description ??
-    `Pole terenowe: obrona +${terrain.defenseBonus}, koszt ruchu ${terrain.movementCost}.`;
+function getTerrainRuleDescription(terrain: TerrainTile, language: Language): string {
+  const fallback = getTerrainDefinition(terrain.terrainType)?.description ??
+    (language === "pl"
+      ? `Pole terenowe: obrona +${terrain.defenseBonus}, koszt ruchu ${terrain.movementCost}.`
+      : `Terrain tile: defense +${terrain.defenseBonus}, movement cost ${terrain.movementCost}.`);
+  return localizeTerrainDescription(language, terrain.terrainType, fallback);
 }

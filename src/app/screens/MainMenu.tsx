@@ -4,6 +4,7 @@ import type {
   SavedBattle,
   SavedBattleSummary,
 } from "../../core/persistence/save-types";
+import { LanguageSwitcher, useI18n } from "../../i18n";
 
 export function MainMenu({
   onLoadBattle,
@@ -18,6 +19,7 @@ export function MainMenu({
   onOpenRules: () => void;
   onResumeBattle?: () => void;
 }) {
+  const { text } = useI18n();
   const persistence = useMemo(() => createPersistenceAdapter(), []);
   const [savedBattles, setSavedBattles] = useState<SavedBattleSummary[]>([]);
   const [selectedSaveId, setSelectedSaveId] = useState("");
@@ -33,76 +35,79 @@ export function MainMenu({
       setSavedBattles(saves);
       setSelectedSaveId((current) => current || saves[0]?.id || "");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nie udało się odczytać zapisów.");
+      setStatus(error instanceof Error ? error.message : text("Nie udało się odczytać zapisów.", "Could not read saved games."));
     }
   }
 
   async function handleLoad() {
     if (!selectedSaveId) {
-      setStatus("Wybierz zapis gry.");
+      setStatus(text("Wybierz zapis gry.", "Select a saved game."));
       return;
     }
 
     try {
       const savedBattle = await persistence.loadBattle(selectedSaveId);
       if (!savedBattle) {
-        setStatus("Wybrany zapis już nie istnieje.");
+        setStatus(text("Wybrany zapis już nie istnieje.", "The selected save no longer exists."));
         await refreshSaves();
         return;
       }
       onLoadBattle(savedBattle);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nie udało się wczytać gry.");
+      setStatus(error instanceof Error ? error.message : text("Nie udało się wczytać gry.", "Could not load the game."));
     }
   }
 
   return (
     <section className="mainMenu">
+      <LanguageSwitcher />
       <section className="mainMenuHero">
         <p className="eyebrow">LEGO Star Wars Battles</p>
-        <h1>Dowodzenie zaczyna się tutaj</h1>
+        <h1>{text("Dowodzenie zaczyna się tutaj", "Command begins here")}</h1>
         <p>
-          Zbuduj pole walki, wybierz armie i scenariusz, a następnie przejdź do
-          właściwego interfejsu bitwy.
+          {text(
+            "Zbuduj pole walki, wybierz armie i scenariusz, a następnie przejdź do właściwego interfejsu bitwy.",
+            "Build a battlefield, choose armies and a scenario, then enter the command interface.",
+          )}
         </p>
       </section>
 
       <section className="mainMenuGrid">
         {onResumeBattle ? (
           <button className="menuCard menuCardResume" onClick={onResumeBattle}>
-            <span>W toku</span>
-            <strong>Wróć do bieżącej bitwy</strong>
-            <small>Rozgrywka pozostaje otwarta w pamięci aplikacji.</small>
+            <span>{text("W toku", "In progress")}</span>
+            <strong>{text("Wróć do bieżącej bitwy", "Return to current battle")}</strong>
+            <small>{text("Rozgrywka pozostaje otwarta w pamięci aplikacji.", "The battle remains open in application memory.")}</small>
           </button>
         ) : null}
         <button className="menuCard menuCardPrimary" onClick={onNewScenario}>
-          <span>Nowa rozgrywka</span>
-          <strong>Rozegraj nowy scenariusz</strong>
-          <small>Mapa → scenariusz → armie → rozmieszczenie → start</small>
+          <span>{text("Nowa rozgrywka", "New game")}</span>
+          <strong>{text("Rozegraj nowy scenariusz", "Play a new scenario")}</strong>
+          <small>{text("Mapa → scenariusz → armie → rozmieszczenie → start", "Map → scenario → armies → deployment → start")}</small>
         </button>
 
         <button className="menuCard" onClick={onOpenComposer}>
-          <span>Armie</span>
-          <strong>Army Composer</strong>
-          <small>Zbuduj składy, które później wybierzesz w kreatorze scenariusza.</small>
+          <span>{text("Armie", "Armies")}</span>
+          <strong>{text("Kreator armii", "Army Composer")}</strong>
+          <small>{text("Zbuduj składy, które później wybierzesz w kreatorze scenariusza.", "Build rosters to use later in the scenario builder.")}</small>
         </button>
 
         <button className="menuCard" onClick={onOpenRules}>
-          <span>Kompendium</span>
-          <strong>Zasady i jednostki</strong>
-          <small>Statystyki, zdolności, teren i task force.</small>
+          <span>{text("Kompendium", "Compendium")}</span>
+          <strong>{text("Zasady i jednostki", "Rules and units")}</strong>
+          <small>{text("Statystyki, zdolności, teren i zespoły uderzeniowe.", "Stats, abilities, terrain, and task forces.")}</small>
         </button>
 
         <section className="menuLoadCard">
           <div>
-            <span>Kontynuuj</span>
-            <strong>Wczytaj grę</strong>
+            <span>{text("Kontynuuj", "Continue")}</span>
+            <strong>{text("Wczytaj grę", "Load game")}</strong>
           </div>
           <select
             value={selectedSaveId}
             onChange={(event) => setSelectedSaveId(event.target.value)}
           >
-            <option value="">Wybierz zapis</option>
+            <option value="">{text("Wybierz zapis", "Select save")}</option>
             {savedBattles.map((savedBattle) => (
               <option key={savedBattle.id} value={savedBattle.id}>
                 {savedBattle.name} | T{savedBattle.turn}
@@ -114,10 +119,10 @@ export function MainMenu({
             disabled={!selectedSaveId}
             onClick={handleLoad}
           >
-            Kontynuuj bitwę
+            {text("Kontynuuj bitwę", "Continue battle")}
           </button>
           {savedBattles.length === 0 ? (
-            <small>Brak lokalnych zapisów.</small>
+            <small>{text("Brak lokalnych zapisów.", "No local saves.")}</small>
           ) : null}
           {status ? <p className="errorText">{status}</p> : null}
         </section>

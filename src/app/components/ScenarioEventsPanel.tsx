@@ -1,6 +1,13 @@
 import { unitTemplates } from "../../data";
 import type { ScenarioScheduledEvent } from "../../core/scenario/scenario-types";
 import type { Army } from "../../types";
+import {
+  localizeEventName,
+  localizeFaction,
+  localizeUnitName,
+  useI18n,
+  type Language,
+} from "../../i18n";
 import "./ScenarioEventsPanel.css";
 
 export function ScenarioEventsPanel({
@@ -18,6 +25,7 @@ export function ScenarioEventsPanel({
   resolvedEventIds?: string[];
   onChange?: (events: ScenarioScheduledEvent[]) => void;
 }) {
+  const { language, text } = useI18n();
   if (!editable) {
     if (events.length === 0) return null;
     const resolved = new Set(resolvedEventIds);
@@ -28,7 +36,7 @@ export function ScenarioEventsPanel({
     return (
       <section className="scenarioEventsPanel scenarioEventsTimeline">
         <div className="scenarioEventsHeader">
-          <h3>Nadchodzące wydarzenia</h3>
+          <h3>{text("Nadchodzące wydarzenia", "Upcoming events")}</h3>
           <span>{upcoming.length}</span>
         </div>
         {upcoming.length > 0 ? (
@@ -38,24 +46,24 @@ export function ScenarioEventsPanel({
               return (
                 <article className="scenarioEventCard upcoming" key={event.id}>
                   <div>
-                    <strong>{announced ? event.name : "Nieznane zdarzenie"}</strong>
-                    <small>{formatTrigger(event)}</small>
+                    <strong>{announced ? localizeEventName(language, event.id, event.name) : text("Nieznane zdarzenie", "Unknown event")}</strong>
+                    <small>{formatTrigger(event, language)}</small>
                   </div>
                   <p>
                     {announced
-                      ? formatReinforcements(event, armies)
-                      : "Szczegóły pozostają ukryte."}
+                      ? formatReinforcements(event, armies, language)
+                      : text("Szczegóły pozostają ukryte.", "Details remain hidden.")}
                   </p>
                 </article>
               );
             })}
           </div>
         ) : (
-          <p className="scenarioEventsEmpty">Wszystkie zaplanowane wydarzenia już nastąpiły.</p>
+          <p className="scenarioEventsEmpty">{text("Wszystkie zaplanowane wydarzenia już nastąpiły.", "All scheduled events have already occurred.")}</p>
         )}
         {upcoming.some((event) => event.trigger.round < currentRound) ? (
           <small className="scenarioEventWarning">
-            Niewykonane zdarzenie ma termin wcześniejszy niż bieżąca runda.
+            {text("Niewykonane zdarzenie ma termin wcześniejszy niż bieżąca runda.", "An unresolved event was scheduled before the current round.")}
           </small>
         ) : null}
       </section>
@@ -73,7 +81,7 @@ export function ScenarioEventsPanel({
     const eventIndex = events.length + 1;
     onChange?.([...events, {
       id: crypto.randomUUID(),
-      name: `Fala wsparcia ${eventIndex}`,
+      name: `${text("Fala wsparcia", "Reinforcement wave")} ${eventIndex}`,
       trigger: { type: "RoundStarted", round: 2 },
       effect: {
         type: "DeployReinforcements",
@@ -88,8 +96,8 @@ export function ScenarioEventsPanel({
     <section className="scenarioEventsPanel">
       <div className="scenarioEventsHeader">
         <div>
-          <h3>Zdarzenia misji</h3>
-          <small>Fale wsparcia uruchamiane między rundami.</small>
+          <h3>{text("Zdarzenia misji", "Mission events")}</h3>
+          <small>{text("Fale wsparcia uruchamiane między rundami.", "Reinforcement waves triggered between rounds.")}</small>
         </div>
         <button
           className="secondaryButton"
@@ -97,11 +105,11 @@ export function ScenarioEventsPanel({
           type="button"
           onClick={addEvent}
         >
-          + Dodaj
+          + {text("Dodaj", "Add")}
         </button>
       </div>
       {events.length === 0 ? (
-        <p className="scenarioEventsEmpty">Brak zaplanowanych zdarzeń.</p>
+        <p className="scenarioEventsEmpty">{text("Brak zaplanowanych zdarzeń.", "No scheduled events.")}</p>
       ) : (
         <div className="scenarioEventList">
           {[...events].sort(compareEvents).map((event) => {
@@ -113,14 +121,14 @@ export function ScenarioEventsPanel({
               <details className="scenarioEventCard" key={event.id}>
                 <summary>
                   <span>
-                    <strong>{event.name}</strong>
-                    <small>{formatTrigger(event)}</small>
+                    <strong>{localizeEventName(language, event.id, event.name)}</strong>
+                    <small>{formatTrigger(event, language)}</small>
                   </span>
-                  <span className="scenarioEventBadge">Wsparcie</span>
+                  <span className="scenarioEventBadge">{text("Wsparcie", "Reinforcements")}</span>
                 </summary>
                 <div className="scenarioEventEditor">
                   <label>
-                    Nazwa
+                    {text("Nazwa", "Name")}
                     <input
                       value={event.name}
                       onChange={(change) => updateEvent(event.id, {
@@ -131,7 +139,7 @@ export function ScenarioEventsPanel({
                   </label>
                   <div className="scenarioEventFieldGrid">
                     <label>
-                      Moment
+                      {text("Moment", "Timing")}
                       <select
                         value={event.trigger.type}
                         onChange={(change) => updateEvent(event.id, {
@@ -142,12 +150,12 @@ export function ScenarioEventsPanel({
                           },
                         })}
                       >
-                        <option value="RoundStarted">Początek rundy</option>
-                        <option value="RoundEnded">Koniec rundy</option>
+                        <option value="RoundStarted">{text("Początek rundy", "Round start")}</option>
+                        <option value="RoundEnded">{text("Koniec rundy", "Round end")}</option>
                       </select>
                     </label>
                     <label>
-                      Runda
+                      {text("Runda", "Round")}
                       <input
                         min={1}
                         type="number"
@@ -163,7 +171,7 @@ export function ScenarioEventsPanel({
                     </label>
                   </div>
                   <label>
-                    Armia
+                    {text("Armia", "Army")}
                     <select
                       value={event.effect.armyId}
                       onChange={(change) => {
@@ -190,13 +198,13 @@ export function ScenarioEventsPanel({
                     >
                       {armies.map((candidate) => (
                         <option key={candidate.id} value={candidate.id}>
-                          {candidate.playerName} · {candidate.faction}
+                          {candidate.playerName} · {localizeFaction(language, candidate.faction)}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label>
-                    Zapowiedź
+                    {text("Zapowiedź", "Visibility")}
                     <select
                       value={event.visibility}
                       onChange={(change) => updateEvent(event.id, {
@@ -204,12 +212,12 @@ export function ScenarioEventsPanel({
                         visibility: change.target.value as ScenarioScheduledEvent["visibility"],
                       })}
                     >
-                      <option value="Announced">Widoczna od początku</option>
-                      <option value="Hidden">Ukryta do aktywacji</option>
+                      <option value="Announced">{text("Widoczna od początku", "Visible from the start")}</option>
+                      <option value="Hidden">{text("Ukryta do aktywacji", "Hidden until triggered")}</option>
                     </select>
                   </label>
                   <div className="scenarioEventUnitsHeader">
-                    <strong>Jednostki</strong>
+                    <strong>{text("Jednostki", "Units")}</strong>
                     <button
                       className="secondaryButton"
                       disabled={availableTemplates.length === 0}
@@ -225,14 +233,14 @@ export function ScenarioEventsPanel({
                         },
                       })}
                     >
-                      + Jednostka
+                      + {text("Jednostka", "Unit")}
                     </button>
                   </div>
                   <div className="scenarioEventUnits">
                     {event.effect.units.map((unit, unitIndex) => (
                       <div className="scenarioEventUnitRow" key={`${unitIndex}-${unit.templateId}`}>
                         <select
-                          aria-label={`Jednostka wsparcia ${unitIndex + 1}`}
+                          aria-label={`${text("Jednostka wsparcia", "Reinforcement unit")} ${unitIndex + 1}`}
                           value={unit.templateId}
                           onChange={(change) => updateEvent(event.id, {
                             ...event,
@@ -247,11 +255,11 @@ export function ScenarioEventsPanel({
                           })}
                         >
                           {availableTemplates.map((template) => (
-                            <option key={template.id} value={template.id}>{template.name}</option>
+                            <option key={template.id} value={template.id}>{localizeUnitName(language, template.id, template.name)}</option>
                           ))}
                         </select>
                         <input
-                          aria-label={`Liczba jednostek wsparcia ${unitIndex + 1}`}
+                          aria-label={`${text("Liczba jednostek wsparcia", "Reinforcement unit count")} ${unitIndex + 1}`}
                           min={1}
                           type="number"
                           value={unit.count}
@@ -271,7 +279,7 @@ export function ScenarioEventsPanel({
                           })}
                         />
                         <button
-                          aria-label={`Usuń jednostkę wsparcia ${unitIndex + 1}`}
+                          aria-label={`${text("Usuń jednostkę wsparcia", "Remove reinforcement unit")} ${unitIndex + 1}`}
                           className="dangerButton"
                           type="button"
                           onClick={() => updateEvent(event.id, {
@@ -288,7 +296,7 @@ export function ScenarioEventsPanel({
                     ))}
                     {event.effect.units.length === 0 ? (
                       <small className="scenarioEventWarning">
-                        Dodaj przynajmniej jedną jednostkę, aby uruchomić scenariusz.
+                        {text("Dodaj przynajmniej jedną jednostkę, aby uruchomić scenariusz.", "Add at least one unit before starting the scenario.")}
                       </small>
                     ) : null}
                   </div>
@@ -297,7 +305,7 @@ export function ScenarioEventsPanel({
                     type="button"
                     onClick={() => onChange?.(events.filter((candidate) => candidate.id !== event.id))}
                   >
-                    Usuń zdarzenie
+                    {text("Usuń zdarzenie", "Delete event")}
                   </button>
                 </div>
               </details>
@@ -319,15 +327,18 @@ function triggerOrder(event: ScenarioScheduledEvent): number {
   return event.trigger.type === "RoundStarted" ? 0 : 1;
 }
 
-function formatTrigger(event: ScenarioScheduledEvent): string {
+function formatTrigger(event: ScenarioScheduledEvent, language: Language): string {
+  if (language === "en") {
+    return `${event.trigger.type === "RoundStarted" ? "Start" : "End"} of round ${event.trigger.round}`;
+  }
   return `${event.trigger.type === "RoundStarted" ? "Początek" : "Koniec"} rundy ${event.trigger.round}`;
 }
 
-function formatReinforcements(event: ScenarioScheduledEvent, armies: Army[]): string {
+function formatReinforcements(event: ScenarioScheduledEvent, armies: Army[], language: Language): string {
   const army = armies.find((candidate) => candidate.id === event.effect.armyId);
   const units = event.effect.units.map((unit) => {
     const template = unitTemplates.find((candidate) => candidate.id === unit.templateId);
-    return `${template?.name ?? unit.templateId} ×${unit.count}`;
+    return `${template ? localizeUnitName(language, template.id, template.name) : unit.templateId} ×${unit.count}`;
   }).join(", ");
-  return `${army?.playerName ?? "Nieznana armia"}: ${units || "brak jednostek"}`;
+  return `${army?.playerName ?? (language === "pl" ? "Nieznana armia" : "Unknown army")}: ${units || (language === "pl" ? "brak jednostek" : "no units")}`;
 }

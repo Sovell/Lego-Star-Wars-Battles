@@ -49,6 +49,26 @@ describe("applyBattleAction", () => {
     expect(result.log).toContain("aktualnie wylosowany token");
   });
 
+  it("passes an active token without changing unit readiness", () => {
+    const battle = applyBattleAction(
+      createBattle(),
+      { type: "DrawActivation" },
+      { randomSource: createSeededRandomSource(42) },
+    ).battle;
+    const activeArmyId = battle.activeActivation!.armyId;
+    const statusesBefore = battle.armies
+      .find((army) => army.id === activeArmyId)!
+      .units.map((unit) => unit.status);
+
+    const result = applyBattleAction(battle, { type: "PassActivation" });
+
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(result.events).toEqual([{ type: "ActivationPassed", armyId: activeArmyId }]);
+    expect(result.battle.armies
+      .find((army) => army.id === activeArmyId)!
+      .units.map((unit) => unit.status)).toEqual(statusesBefore);
+  });
+
   it("moves an activated unit and emits a movement event", () => {
     const battle = readyBattle({
       attacker: { id: "rep_unit_1", position: { x: 1, y: 2 } },

@@ -7,6 +7,7 @@ import {
   runBotActivation,
   type BotActionSelector,
 } from "./bot-controller";
+import { chooseDefenderBotAction } from "./defender-bot";
 
 const attackerArmyId = "army_separatists";
 
@@ -77,7 +78,7 @@ describe("bot controller", () => {
     expect(result.battle.activeActivation).toBeUndefined();
   });
 
-  it("stops without changing state when the strategy finds no action", () => {
+  it("safely passes the token when the strategy finds no action", () => {
     const battle = readyAttackerBattle();
     const session = createSession(battle);
 
@@ -90,8 +91,13 @@ describe("bot controller", () => {
 
     expect(result.stopReason).toBe("no-legal-action");
     expect(result.steps).toEqual([]);
-    expect(result.battle).toBe(battle);
+    expect(result.battle).not.toBe(battle);
+    expect(result.battle.activeActivation).toBeUndefined();
     expect(result.mission).toBe(session.mission);
+    expect(result.fallbackResult?.events).toEqual([{
+      type: "ActivationPassed",
+      armyId: attackerArmyId,
+    }]);
   });
 
   it("stops after the engine rejects a strategy decision", () => {
@@ -109,7 +115,11 @@ describe("bot controller", () => {
 
     expect(result.stopReason).toBe("action-rejected");
     expect(result.steps).toHaveLength(1);
-    expect(result.battle).toBe(battle);
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(result.fallbackResult?.events).toEqual([{
+      type: "ActivationPassed",
+      armyId: attackerArmyId,
+    }]);
   });
 
   it("stops a multi-step activation at the configured safety limit", () => {
@@ -132,7 +142,11 @@ describe("bot controller", () => {
 
     expect(result.stopReason).toBe("step-limit");
     expect(result.steps).toHaveLength(1);
-    expect(result.battle.activeActivation?.armyId).toBe(attackerArmyId);
+    expect(result.battle.activeActivation).toBeUndefined();
+    expect(result.fallbackResult?.events).toEqual([{
+      type: "ActivationPassed",
+      armyId: attackerArmyId,
+    }]);
   });
 
   it("does not call the strategy for another army's activation", () => {
@@ -152,6 +166,57 @@ describe("bot controller", () => {
     expect(result.stopReason).toBe("inactive-army");
     expect(strategyCalled).toBe(false);
     expect(result.steps).toEqual([]);
+  });
+
+  it("completes an activation for a third army allied with the defender", () => {
+    const baseBattle = createBattle();
+    const defender = baseBattle.armies[0];
+    const allyId = "army_republic_ally";
+    const alliedBot = {
+      ...structuredClone(defender),
+      id: allyId,
+      playerName: "Player 3",
+      teamId: 1 as const,
+      control: "Bot" as const,
+      units: defender.units.map((unit, index) => ({
+        ...structuredClone(unit),
+        id: `${allyId}_unit_${index + 1}`,
+        armyId: allyId,
+        position: null,
+        status: index === 0 ? "Pinned" as const : "Activated" as const,
+        suppression: index === 0 ? 2 : 0,
+      })),
+    };
+    const battle: Battle = {
+      ...baseBattle,
+      armies: [...baseBattle.armies, alliedBot],
+      activeActivation: {
+        id: "ally-token",
+        armyId: allyId,
+        faction: alliedBot.faction,
+        used: true,
+      },
+    };
+    const mission = createMissionState(
+      survivalTestScenario,
+      battle.armies,
+      defender.id,
+    );
+
+    const result = runBotActivation({
+      session: { battle, mission },
+      scenario: survivalTestScenario,
+      armyId: allyId,
+      chooseAction: chooseDefenderBotAction,
+    });
+
+    expect(result.stopReason).toBe("activation-completed");
+    expect(result.steps[0].decision.action).toEqual({
+      type: "ApplyOrder",
+      unitId: `${allyId}_unit_1`,
+      order: "Rally",
+    });
+    expect(result.battle.activeActivation).toBeUndefined();
   });
 });
 

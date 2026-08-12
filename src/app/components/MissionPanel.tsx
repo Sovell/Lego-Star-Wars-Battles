@@ -9,6 +9,13 @@ import type { ScenarioMapGenerationState } from "../scenario-draft";
 import { MapGeneratorPanel } from "./MapGeneratorPanel";
 import { PanelTitle } from "./PanelTitle";
 import { ScenarioEventsPanel } from "./ScenarioEventsPanel";
+import {
+  localizeControl,
+  localizeFaction,
+  localizeScenarioDescription,
+  localizeScenarioName,
+  useI18n,
+} from "../../i18n";
 import "./MissionPanel.css";
 
 export function MissionPanel({
@@ -63,6 +70,7 @@ export function MissionPanel({
   onRestart: () => void;
   onStart: () => void;
 }) {
+  const { language, text } = useI18n();
   const requiredRounds = mission.roundTarget ?? (
     "rounds" in scenario.victoryCondition
       ? scenario.victoryCondition.rounds
@@ -77,30 +85,32 @@ export function MissionPanel({
       defender && !areArmiesAllied({ armies }, army.id, defender.id)
     );
   const statusLabel = mission.status === "Active"
-    ? gamePhase === "Preparation" ? "przygotowanie" : "w toku"
+    ? gamePhase === "Preparation" ? text("przygotowanie", "setup") : text("w toku", "in progress")
     : mission.status === "Victory"
-      ? "zwyciestwo"
-      : "porazka";
+      ? text("zwycięstwo", "victory")
+      : text("porażka", "defeat");
+  const scenarioName = localizeScenarioName(language, scenario.id, scenario.name);
+  const scenarioDescription = localizeScenarioDescription(language, scenario.id, scenario.description);
 
   if (gamePhase === "Playing") {
     return (
       <section className={`missionPanel missionInPlay ${mission.status.toLowerCase()}`}>
-        <PanelTitle title={scenario.name} detail={statusLabel} />
-        <p>{scenario.description}</p>
+        <PanelTitle title={scenarioName} detail={statusLabel} />
+        <p>{scenarioDescription}</p>
         <div className="missionProgressHeader">
-          <span>Rundy</span>
+          <span>{text("Rundy", "Rounds")}</span>
           <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
         </div>
         <progress max={requiredRounds} value={mission.roundsCompleted} />
         {scenario.victoryCondition.type === "DestroyObjects" ? (
           <div className="missionProgressHeader">
-            <span>Zniszczone cele</span>
+            <span>{text("Zniszczone cele", "Destroyed targets")}</span>
             <strong>{mission.destroyedObjectiveIds?.length ?? 0}/{scenario.victoryCondition.count}</strong>
           </div>
         ) : null}
         {scenario.victoryCondition.type === "ProgressiveControl" ? (
           <div className="missionProgressHeader">
-            <span>Przełamane sektory</span>
+            <span>{text("Przełamane sektory", "Captured sectors")}</span>
             <strong>{mission.objectiveStage ?? 0}/{scenario.victoryCondition.count}</strong>
           </div>
         ) : null}
@@ -108,8 +118,8 @@ export function MissionPanel({
           <div className="territoryScoreboard">
             {armies.map((army) => (
               <span key={army.id}>
-                {army.faction}
-                <strong>{mission.territoryScores?.[army.id] ?? 0} pkt</strong>
+                {localizeFaction(language, army.faction)}
+                <strong>{mission.territoryScores?.[army.id] ?? 0} {text("pkt", "VP")}</strong>
               </span>
             ))}
           </div>
@@ -122,8 +132,8 @@ export function MissionPanel({
           resolvedEventIds={mission.resolvedEventIds}
         />
         <div className="missionCombatants">
-          <span>Obrońca: <strong>{defender?.faction ?? "Brak"}</strong></span>
-          <span>Atakujący: <strong>{attacker?.faction ?? "Brak"}</strong></span>
+          <span>{text("Obrońca", "Defender")}: <strong>{defender ? localizeFaction(language, defender.faction) : text("Brak", "None")}</strong></span>
+          <span>{text("Atakujący", "Attacker")}: <strong>{attacker ? localizeFaction(language, attacker.faction) : text("Brak", "None")}</strong></span>
         </div>
         <ArmySideConfiguration
           activationCounts={activationCounts}
@@ -135,7 +145,7 @@ export function MissionPanel({
           onArmyConfigChange={onArmyConfigChange}
         />
         <button className="secondaryButton" onClick={onRestart}>
-          Zakończ i przejdź do kreatora
+          {text("Zakończ i przejdź do kreatora", "End and return to builder")}
         </button>
       </section>
     );
@@ -143,16 +153,16 @@ export function MissionPanel({
 
   return (
     <section className={`missionPanel ${mission.status.toLowerCase()}`}>
-      <PanelTitle title="Misja" detail={statusLabel} />
+      <PanelTitle title={text("Misja", "Mission")} detail={statusLabel} />
       <label className="missionSelector">
-        Tryb scenariusza
+        {text("Tryb scenariusza", "Scenario type")}
         <select
           disabled={gamePhase !== "Preparation"}
           value={scenario.id}
           onChange={(event) => onScenarioChange(event.target.value)}
         >
           {scenarios.map((option) => (
-            <option key={option.id} value={option.id}>{option.name}</option>
+            <option key={option.id} value={option.id}>{localizeScenarioName(language, option.id, option.name)}</option>
           ))}
         </select>
       </label>
@@ -167,7 +177,7 @@ export function MissionPanel({
       />
       <div className="missionRoles">
         <label className="missionSelector">
-          Frakcja broniąca
+          {text("Frakcja broniąca", "Defending faction")}
           <select
             disabled={gamePhase !== "Preparation"}
             value={defender?.id ?? ""}
@@ -175,14 +185,14 @@ export function MissionPanel({
           >
             {armies.map((army) => (
               <option key={army.id} value={army.id}>
-                {army.faction} — {army.playerName}
+                {localizeFaction(language, army.faction)} — {army.playerName}
               </option>
             ))}
           </select>
         </label>
         <div className="missionRoleReadout">
-          <span>Frakcja atakująca</span>
-          <strong>{attacker ? `${attacker.faction} — ${attacker.playerName}` : "Brak"}</strong>
+          <span>{text("Frakcja atakująca", "Attacking faction")}</span>
+          <strong>{attacker ? `${localizeFaction(language, attacker.faction)} — ${attacker.playerName}` : text("Brak", "None")}</strong>
         </div>
       </div>
       <ArmySideConfiguration
@@ -200,10 +210,10 @@ export function MissionPanel({
         events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
         onChange={onScheduledEventsChange}
       />
-      <h3>{scenario.name}</h3>
-      <p>{scenario.description}</p>
+      <h3>{scenarioName}</h3>
+      <p>{scenarioDescription}</p>
       <label className="missionSelector">
-        Wymagane rundy
+        {text("Wymagane rundy", "Required rounds")}
         <input
           type="number"
           min="1"
@@ -211,13 +221,13 @@ export function MissionPanel({
           value={requiredRounds}
           onChange={(event) => onRoundTargetChange(Number(event.target.value))}
         />
-        <small>Wartość określa wymagany czas albo limit misji.</small>
+        <small>{text("Wartość określa wymagany czas albo limit misji.", "This value sets the required duration or mission limit.")}</small>
       </label>
       {progressiveCondition ? (
         <section className="stageRoundSettings">
           <div>
-            <strong>Limity etapów</strong>
-            <small>Ile pełnych rund można poświęcić na każdy kolejny sektor.</small>
+            <strong>{text("Limity etapów", "Stage limits")}</strong>
+            <small>{text("Ile pełnych rund można poświęcić na każdy kolejny sektor.", "How many full rounds may be spent on each consecutive sector.")}</small>
           </div>
           <div className="stageRoundGrid">
             {Array.from({ length: progressiveCondition.count }, (_, stage) => {
@@ -225,7 +235,7 @@ export function MissionPanel({
               const values = mission.stageRoundTargets ?? defaults;
               return (
                 <label key={stage}>
-                  Sektor {stage + 1}
+                  {text("Sektor", "Sector")} {stage + 1}
                   <input
                     disabled={gamePhase !== "Preparation"}
                     min={1}
@@ -247,7 +257,7 @@ export function MissionPanel({
         </section>
       ) : null}
       <div className="missionProgressHeader">
-        <span>Ukonczone rundy</span>
+        <span>{text("Ukończone rundy", "Completed rounds")}</span>
         <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
       </div>
       <progress max={requiredRounds} value={mission.roundsCompleted} />
@@ -255,17 +265,17 @@ export function MissionPanel({
         <div className="territoryScoreboard">
           {armies.map((army) => (
             <span key={army.id}>
-              {army.faction}
-              <strong>{mission.territoryScores?.[army.id] ?? 0} pkt</strong>
+              {localizeFaction(language, army.faction)}
+              <strong>{mission.territoryScores?.[army.id] ?? 0} {text("pkt", "VP")}</strong>
             </span>
           ))}
         </div>
       ) : null}
       {mission.status === "Victory" ? (
-        <p className="missionOutcome">Cel wykonany. Misja zakonczona zwyciestwem.</p>
+        <p className="missionOutcome">{text("Cel wykonany. Misja zakończona zwycięstwem.", "Objective complete. Mission victory.")}</p>
       ) : null}
       {mission.status === "Defeat" ? (
-        <p className="missionOutcome">Warunek porażki został spełniony. Misja przegrana.</p>
+        <p className="missionOutcome">{text("Warunek porażki został spełniony. Misja przegrana.", "A defeat condition has been met. Mission failed.")}</p>
       ) : null}
       {gamePhase === "Preparation" ? (
         <>
@@ -274,17 +284,17 @@ export function MissionPanel({
             disabled={!canStart}
             onClick={onStart}
           >
-            Rozegraj scenariusz
+            {text("Rozegraj scenariusz", "Play scenario")}
           </button>
           {!canStart ? (
             <small className="missionStartHint">
-              Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.
+              {text("Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.", "Prepare 2–4 armies, deployment zones, and complete mission events.")}
             </small>
           ) : null}
         </>
       ) : (
         <button className="secondaryButton" onClick={onRestart}>
-          Zakończ i przygotuj nową rozgrywkę
+          {text("Zakończ i przygotuj nową rozgrywkę", "End and prepare a new game")}
         </button>
       )}
     </section>
@@ -311,9 +321,10 @@ function ArmySideConfiguration({
     patch: Partial<Pick<Army, "teamId" | "control">>,
   ) => void;
 }) {
+  const { language, text } = useI18n();
   return (
     <div className="missionSideConfig">
-      <h3>Drużyny i sterowanie</h3>
+      <h3>{text("Drużyny i sterowanie", "Teams and control")}</h3>
       {armies.map((army, index) => {
         const teamId = army.teamId ?? (index === 0 ? 1 : 2);
         const defenderSide = defenderArmyId
@@ -325,20 +336,20 @@ function ArmySideConfiguration({
             <div>
               <strong>{army.playerName}</strong>
               <small>
-                {army.faction} · {defenderSide ? "obrona" : "atak"} · strefa:{" "}
-                {deploymentZones.find((zone) => zone.armySlot === index)?.cells.length ?? 0} pól
+                {localizeFaction(language, army.faction)} · {defenderSide ? text("obrona", "defense") : text("atak", "attack")} · {text("strefa", "zone")}: {" "}
+                {deploymentZones.find((zone) => zone.armySlot === index)?.cells.length ?? 0} {text("pól", "tiles")}
               </small>
               {activationCounts?.[army.id] ? (
                 <small>
-                  Rozkazy: {activationCounts[army.id].remaining}/{activationCounts[army.id].total}
-                  {" · "}rezerwa: {army.units.filter((unit) =>
+                  {text("Rozkazy", "Orders")}: {activationCounts[army.id].remaining}/{activationCounts[army.id].total}
+                  {" · "}{text("rezerwa", "reserve")}: {army.units.filter((unit) =>
                     unit.status !== "Destroyed" && !unit.position
                   ).length}
                 </small>
               ) : null}
             </div>
             <label>
-              Drużyna
+              {text("Drużyna", "Team")}
               <select
                 disabled={teamEditingDisabled}
                 value={teamId}
@@ -346,12 +357,12 @@ function ArmySideConfiguration({
                   teamId: Number(event.target.value) as TeamId,
                 })}
               >
-                <option value={1}>Team 1</option>
-                <option value={2}>Team 2</option>
+                <option value={1}>{text("Drużyna 1", "Team 1")}</option>
+                <option value={2}>{text("Drużyna 2", "Team 2")}</option>
               </select>
             </label>
             <label>
-              Sterowanie
+              {text("Sterowanie", "Control")}
               <select
                 disabled={controlEditingDisabled}
                 value={getArmyControl(army)}
@@ -359,8 +370,8 @@ function ArmySideConfiguration({
                   control: event.target.value as ArmyControl,
                 })}
               >
-                <option value="Human">Gracz</option>
-                <option value="Bot">Bot</option>
+                <option value="Human">{localizeControl(language, "Human")}</option>
+                <option value="Bot">{localizeControl(language, "Bot")}</option>
               </select>
             </label>
           </div>

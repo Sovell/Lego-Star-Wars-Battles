@@ -12,11 +12,13 @@ import {
 import { boardPositionKey } from "./board-view-model";
 import { getBoardCellInteraction } from "./board-interaction-model";
 import type { BoardRendererProps } from "./board-renderer";
+import { localizeFaction, localizeObjectName, localizeTerrainName, localizeUnitStatus } from "../i18n";
 
 export function DomMapBoard({
   deploymentZoneCells,
   interactionDisabled,
   interactionModel,
+  language,
   mapThemeId,
   scenarioZoneCells,
   selectedUnitId,
@@ -65,7 +67,7 @@ export function DomMapBoard({
 
         return (
           <button
-            aria-label={`Pole ${x}, ${y}: ${getInteractionLabel(cellInteraction)}`}
+            aria-label={`${language === "pl" ? "Pole" : "Tile"} ${x}, ${y}: ${getInteractionLabel(cellInteraction, language)}`}
             className={`mapCell ${tile?.terrainType ?? "Open"} interaction-${cellInteraction} ${
               deploymentZoneCells?.has(key) ? "deploymentZoneCell" : ""
             } ${
@@ -99,19 +101,19 @@ export function DomMapBoard({
             <span className="cellCoords">
               {x},{y}
             </span>
-            {tile ? <span className="terrainTag">{tile.terrainType}</span> : null}
+            {tile ? <span className="terrainTag">{localizeTerrainName(language, tile.terrainType)}</span> : null}
             {battlefieldObject ? (
               <span
                 className={`battlefieldObject ${battlefieldObject.type} ${
                   battlefieldObject.status.toLowerCase()
                 }`}
-                title={battlefieldObject.name}
+                title={localizeObjectName(language, battlefieldObject.type, battlefieldObject.name)}
               >
                 <strong>{getObjectCode(battlefieldObject.type)}</strong>
                 <small>
                   {battlefieldObject.destructible
                     ? `${battlefieldObject.currentHp}/${battlefieldObject.maxHp} HP`
-                    : "CEL"}
+                    : language === "pl" ? "CEL" : "TARGET"}
                 </small>
               </span>
             ) : null}
@@ -127,7 +129,7 @@ export function DomMapBoard({
                       event.stopPropagation();
                       onSelectedUnitChange(token.unitId);
                     }}
-                    title={`${token.name} | ${token.faction ?? "Unknown"} | HP ${token.currentHp}/${token.maxHp} | ${token.status}`}
+                    title={`${token.name} | ${token.faction ? localizeFaction(language, token.faction) : language === "pl" ? "Nieznana" : "Unknown"} | HP ${token.currentHp}/${token.maxHp} | ${localizeUnitStatus(language, token.status)}`}
                   >
                     {token.imageUrl ? (
                       <img
@@ -158,7 +160,7 @@ export function DomMapBoard({
                       {getStatusCode(token.status)}
                     </span>
                     <span
-                      aria-label={`HP ${token.currentHp} z ${token.maxHp}`}
+                      aria-label={`HP ${token.currentHp} ${language === "pl" ? "z" : "of"} ${token.maxHp}`}
                       className="tokenHealthTrack"
                       role="meter"
                     >
@@ -187,7 +189,17 @@ function getStatusCode(status: "Ready" | "Activated" | "Destroyed" | "Pinned"): 
   }
 }
 
-function getInteractionLabel(interaction: ReturnType<typeof getBoardCellInteraction>): string {
+function getInteractionLabel(interaction: ReturnType<typeof getBoardCellInteraction>, language: "pl" | "en"): string {
+  if (language === "en") {
+    switch (interaction) {
+      case "legal": return "legal move";
+      case "reserve": return "legal reserve entry";
+      case "target": return "legal target";
+      case "invalid": return "invalid tile";
+      case "selected": return "selected tile";
+      default: return "board tile";
+    }
+  }
   switch (interaction) {
     case "legal": return "legalny ruch";
     case "reserve": return "legalne wejście z rezerwy";
@@ -215,7 +227,9 @@ function getTokenClass(template: UnitTemplate, faction?: FactionId): string {
       : faction === "Separatists"
         ? "tokenSeparatists"
         : "tokenNeutral";
-  const bodyClass = template.keywords.includes("SuperBattleDroid")
+  const bodyClass = template.keywords.includes("SpiderDroid")
+    ? "tokenVehicle"
+    : template.keywords.includes("SuperBattleDroid")
     ? "tokenSuperBattleDroid"
     : template.abilities.includes("shield_generators") || template.keywords.includes("Shielded")
       ? "tokenDroideka"

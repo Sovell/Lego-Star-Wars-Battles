@@ -106,6 +106,16 @@ describe("scenario draft flow", () => {
     expect(battle.armies[0].units[0].position).not.toBeNull();
   });
 
+  it("repairs imported unit ownership when starting a battle", () => {
+    const importedArmies = structuredClone(starterArmies);
+    importedArmies[0].units[0].armyId = importedArmies[1].id;
+    const battle = startBattleFromDraft(createScenarioDraft("survival_test", {
+      armies: importedArmies,
+    }));
+
+    expect(battle.armies[0].units[0].armyId).toBe(battle.armies[0].id);
+  });
+
   it("restores initial unit and object health and status on restart", () => {
     const started = startBattleFromDraft(createScenarioDraft("survival_test", {
       armies: starterArmies,

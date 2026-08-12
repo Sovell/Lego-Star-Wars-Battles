@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useI18n } from "../../i18n";
 
 export type SetupToolMode = "units" | "terrain" | "objects" | "deployment";
 
@@ -11,32 +12,33 @@ export function SetupToolRail({
   mode: SetupToolMode;
   onModeChange: (mode: SetupToolMode) => void;
 }) {
+  const { text } = useI18n();
   return (
-    <aside className="setupToolRail" aria-label="Narzędzia przygotowania mapy">
+    <aside className="setupToolRail" aria-label={text("Narzędzia przygotowania mapy", "Map setup tools")}>
       <div className="setupToolRailHeader">
-        <span>Przygotowanie</span>
+        <span>{text("Przygotowanie", "Setup")}</span>
         <strong>
           {mode === "units"
-            ? "Jednostki"
+            ? text("Jednostki", "Units")
             : mode === "terrain"
-              ? "Teren"
+              ? text("Teren", "Terrain")
               : mode === "objects"
-                ? "Obiekty"
-                : "Strefy"}
+                ? text("Obiekty", "Objects")
+                : text("Strefy", "Zones")}
         </strong>
       </div>
       <div className="segmented setupToolModes">
         <button className={mode === "units" ? "active" : ""} onClick={() => onModeChange("units")}>
-          Jednostki
+          {text("Jednostki", "Units")}
         </button>
         <button className={mode === "terrain" ? "active" : ""} onClick={() => onModeChange("terrain")}>
-          Teren
+          {text("Teren", "Terrain")}
         </button>
         <button className={mode === "objects" ? "active" : ""} onClick={() => onModeChange("objects")}>
-          Obiekty
+          {text("Obiekty", "Objects")}
         </button>
         <button className={mode === "deployment" ? "active" : ""} onClick={() => onModeChange("deployment")}>
-          Strefy
+          {text("Strefy", "Zones")}
         </button>
       </div>
       <div className="setupToolRailContent">{children}</div>

@@ -1,4 +1,5 @@
 import type { AttackResult, ObjectAttackResult } from "../../types";
+import { useI18n, type Language } from "../../i18n";
 
 export type BattleNotification = {
   id: number;
@@ -12,21 +13,24 @@ export function createUnitAttackNotification(
   result: AttackResult,
   attackerName: string,
   defenderName: string,
+  language: Language = "pl",
 ): BattleNotification {
   const title = result.destroyed
-    ? `${defenderName} zniszczony`
+    ? `${defenderName} ${language === "pl" ? "zniszczony" : "destroyed"}`
     : result.damage > 0
-      ? `${defenderName} traci ${result.damage} PW`
-      : "Atak odparty";
+      ? `${defenderName} ${language === "pl" ? "traci" : "loses"} ${result.damage} ${language === "pl" ? "PW" : "HP"}`
+      : language === "pl" ? "Atak odparty" : "Attack repelled";
   const retreat = result.retreatedTo
-    ? ` Odwrót na ${result.retreatedTo.x},${result.retreatedTo.y}.`
+    ? ` ${language === "pl" ? "Odwrót na" : "Retreat to"} ${result.retreatedTo.x},${result.retreatedTo.y}.`
     : "";
 
   return {
     id,
     tone: result.destroyed ? "danger" : result.damage > 0 ? "success" : "neutral",
     title,
-    detail: `${attackerName} · ${result.weaponName}: ${result.hits} traf., ${result.unsavedHits} przeb., ${result.damage} obraż.${retreat}`,
+    detail: language === "pl"
+      ? `${attackerName} · ${result.weaponName}: ${result.hits} traf., ${result.unsavedHits} przeb., ${result.damage} obraż.${retreat}`
+      : `${attackerName} · ${result.weaponName}: ${result.hits} hits, ${result.unsavedHits} unsaved, ${result.damage} damage.${retreat}`,
   };
 }
 
@@ -35,16 +39,19 @@ export function createObjectAttackNotification(
   result: ObjectAttackResult,
   attackerName: string,
   objectName: string,
+  language: Language = "pl",
 ): BattleNotification {
   return {
     id,
     tone: result.destroyed ? "danger" : result.damage > 0 ? "success" : "neutral",
     title: result.destroyed
-      ? `${objectName} zniszczony`
+      ? `${objectName} ${language === "pl" ? "zniszczony" : "destroyed"}`
       : result.damage > 0
-        ? `${objectName} traci ${result.damage} PW`
-        : "Atak bez skutku",
-    detail: `${attackerName} · ${result.weaponName}: ${result.hits} traf., ${result.unsavedHits} przeb., ${result.damage} obraż.`,
+        ? `${objectName} ${language === "pl" ? "traci" : "loses"} ${result.damage} ${language === "pl" ? "PW" : "HP"}`
+        : language === "pl" ? "Atak bez skutku" : "Attack ineffective",
+    detail: language === "pl"
+      ? `${attackerName} · ${result.weaponName}: ${result.hits} traf., ${result.unsavedHits} przeb., ${result.damage} obraż.`
+      : `${attackerName} · ${result.weaponName}: ${result.hits} hits, ${result.unsavedHits} unsaved, ${result.damage} damage.`,
   };
 }
 
@@ -55,12 +62,13 @@ export function BattleNotifications({
   notifications: BattleNotification[];
   onDismiss: (id: number) => void;
 }) {
+  const { text } = useI18n();
   if (notifications.length === 0) {
     return null;
   }
 
   return (
-    <div className="battleNotifications" aria-live="polite" aria-label="Komunikaty bitwy">
+    <div className="battleNotifications" aria-live="polite" aria-label={text("Komunikaty bitwy", "Battle notifications")}>
       {notifications.map((notification) => (
         <article
           className={`battleNotification ${notification.tone}`}
@@ -72,7 +80,7 @@ export function BattleNotifications({
             <small>{notification.detail}</small>
           </div>
           <button
-            aria-label="Zamknij komunikat"
+            aria-label={text("Zamknij komunikat", "Dismiss notification")}
             onClick={() => onDismiss(notification.id)}
             type="button"
           >

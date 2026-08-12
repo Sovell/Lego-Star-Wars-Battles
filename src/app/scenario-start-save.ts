@@ -8,6 +8,7 @@ export function createScenarioStartSave({
   logs,
   mission,
   scenarioName,
+  saveNamePrefix = "Początek",
   now,
 }: {
   battle: Battle;
@@ -15,11 +16,12 @@ export function createScenarioStartSave({
   logs: CombatLogEntry[];
   mission: MissionState;
   scenarioName: string;
+  saveNamePrefix?: string;
   now?: string;
 }): SavedBattle {
   return createSavedBattle({
     id: battle.id,
-    name: `Początek — ${scenarioName}`,
+    name: `${saveNamePrefix} — ${scenarioName}`,
     battle: structuredClone(battle),
     initialBattle: structuredClone(initialBattle),
     logs: structuredClone(logs),
