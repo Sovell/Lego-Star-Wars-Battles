@@ -93,6 +93,41 @@ function pick(language: Language, value: Localized | undefined, fallback: string
 }
 
 const scenarioText: Record<string, { name: Localized; description: Localized }> = {
+  "christophsis-last-landing": {
+    name: { pl: "Christophsis: Ostatnie lądowisko", en: "Christophsis: Last Landing Zone" },
+    description: {
+      pl: "Utrzymaj lądowisko do czasu przybycia kanonierki LAAT i odeprzyj kolejne fale droidów.",
+      en: "Hold the landing zone until the LAAT gunship arrives and repel successive droid waves.",
+    },
+  },
+  "geonosis-heart-of-factory": {
+    name: { pl: "Geonosis: Serce fabryki", en: "Geonosis: Heart of the Factory" },
+    description: {
+      pl: "Przedrzyj się przez fabrykę, zniszcz generator osłon i rdzeń linii produkcyjnej.",
+      en: "Fight through the foundry, destroy the shield generator, and disable the production core.",
+    },
+  },
+  "felucia-surrounded": {
+    name: { pl: "Felucia: Okrążeni!", en: "Felucia: Surrounded!" },
+    description: {
+      pl: "Przetrwaj sześć rund w grzybowych ostępach, odpierając coraz cięższe fale droidów.",
+      en: "Survive six rounds in the fungal wilds against increasingly heavy droid waves.",
+    },
+  },
+  "mandalore-hunt-in-sundari": {
+    name: { pl: "Mandalore: Polowanie w Sundari", en: "Mandalore: Hunt in Sundari" },
+    description: {
+      pl: "Odszukaj Dartha Maula w sektorach Sundari i pokonaj go, zanim zdoła się wymknąć.",
+      en: "Find Darth Maul in the Sundari sectors and defeat him before he can escape.",
+    },
+  },
+  "christophsis-crystal-data": {
+    name: { pl: "Christophsis: Kryształowe dane", en: "Christophsis: Crystal Data" },
+    description: {
+      pl: "Zabezpiecz przekaźnik archiwum, a następnie przebij się do nadajnika ewakuacyjnego.",
+      en: "Secure the archive relay, then break through to the extraction transmitter.",
+    },
+  },
   "survival-test": {
     name: { pl: "Ostatni bastion", en: "Last Stand" },
     description: {

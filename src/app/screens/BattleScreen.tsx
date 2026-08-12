@@ -21,10 +21,8 @@ import {
   type ScenarioMapGenerationState,
 } from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
-import { chooseAttackerBotAction } from "../../core/ai/attacker-bot";
-import { runBotActivation } from "../../core/ai/bot-controller";
-import { chooseDefenderBotAction } from "../../core/ai/defender-bot";
-import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
+import { runBotTurn } from "../../core/ai/bot-turn-runner";
+import { getArmyControl } from "../../core/army-relations";
 import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
 import type { BattleAction } from "../../core/battle-actions";
 import { getLegalAbilityActions } from "../../core/legal-actions/get-legal-ability-actions";
@@ -305,6 +303,7 @@ export function BattleScreen({
   const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active" && gamePhase === "Playing";
   const preparationActive = gamePhase === "Preparation";
+  const mapEditingLocked = Boolean(scenario.mapPreset);
   const selectedDeploymentArmySlot = battle.armies.findIndex(
     (army) => army.id === selectedDeploymentArmyId,
   );
@@ -330,6 +329,10 @@ export function BattleScreen({
       setSelectedDeploymentArmyId(battle.armies[0]?.id ?? "");
     }
   }, [battle.armies, selectedDeploymentArmyId]);
+
+  useEffect(() => {
+    if (mapEditingLocked && mapMode !== "units") setMapMode("units");
+  }, [mapEditingLocked, mapMode]);
 
   useEffect(() => {
     if (notifications.length === 0) {
@@ -429,16 +432,11 @@ export function BattleScreen({
       return { battle: sourceBattle, mission: sourceMission };
     }
 
-    const usesDefenderStrategy = sourceMission.defenderArmyId
-      ? areArmiesAllied(sourceBattle, botArmy.id, sourceMission.defenderArmyId)
-      : false;
-    const botActivation = runBotActivation({
+    const botActivation = runBotTurn({
       session: { battle: sourceBattle, mission: sourceMission },
       scenario,
       armyId: botArmy.id,
-      chooseAction: usesDefenderStrategy
-        ? chooseDefenderBotAction
-        : chooseAttackerBotAction,
+      profile: sourceMission.botProfiles?.[botArmy.id],
     });
     const botLabel = `Bot ${botArmy.playerName}`;
 
@@ -487,6 +485,7 @@ export function BattleScreen({
     }
 
     if (mapMode === "deployment") {
+      if (mapEditingLocked) return;
       if (!preparationActive || selectedDeploymentArmySlot < 0) return;
       onDeploymentZonesChange(toggleDeploymentZoneCell(
         scenario.deploymentZones,
@@ -498,12 +497,14 @@ export function BattleScreen({
     }
 
     if (mapMode === "terrain") {
+      if (mapEditingLocked) return;
       if (!preparationActive) return;
       onTerrainPaint({ ...selectedTerrainPreset, x, y });
       return;
     }
 
     if (mapMode === "objects") {
+      if (mapEditingLocked) return;
       if (!preparationActive) return;
       onBattlefieldObjectPlace(
         selectedObjectType === "Remove" ? undefined : selectedObjectType,
@@ -750,7 +751,11 @@ export function BattleScreen({
     <BattleShell
       phase={gamePhase}
       setupTools={preparationActive ? (
-        <SetupToolRail mode={mapMode} onModeChange={setMapMode}>
+        <SetupToolRail
+          mapEditingLocked={mapEditingLocked}
+          mode={mapMode}
+          onModeChange={setMapMode}
+        >
           {mapMode === "units" ? (
             <select
               value={selectedUnitId}

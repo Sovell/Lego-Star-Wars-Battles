@@ -5,10 +5,12 @@ export type SetupToolMode = "units" | "terrain" | "objects" | "deployment";
 
 export function SetupToolRail({
   children,
+  mapEditingLocked = false,
   mode,
   onModeChange,
 }: {
   children: ReactNode;
+  mapEditingLocked?: boolean;
   mode: SetupToolMode;
   onModeChange: (mode: SetupToolMode) => void;
 }) {
@@ -31,15 +33,19 @@ export function SetupToolRail({
         <button className={mode === "units" ? "active" : ""} onClick={() => onModeChange("units")}>
           {text("Jednostki", "Units")}
         </button>
-        <button className={mode === "terrain" ? "active" : ""} onClick={() => onModeChange("terrain")}>
-          {text("Teren", "Terrain")}
-        </button>
-        <button className={mode === "objects" ? "active" : ""} onClick={() => onModeChange("objects")}>
-          {text("Obiekty", "Objects")}
-        </button>
-        <button className={mode === "deployment" ? "active" : ""} onClick={() => onModeChange("deployment")}>
-          {text("Strefy", "Zones")}
-        </button>
+        {!mapEditingLocked ? (
+          <>
+            <button className={mode === "terrain" ? "active" : ""} onClick={() => onModeChange("terrain")}>
+              {text("Teren", "Terrain")}
+            </button>
+            <button className={mode === "objects" ? "active" : ""} onClick={() => onModeChange("objects")}>
+              {text("Obiekty", "Objects")}
+            </button>
+            <button className={mode === "deployment" ? "active" : ""} onClick={() => onModeChange("deployment")}>
+              {text("Strefy", "Zones")}
+            </button>
+          </>
+        ) : null}
       </div>
       <div className="setupToolRailContent">{children}</div>
     </aside>

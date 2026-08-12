@@ -1,7 +1,9 @@
 import type { Battle, BattlefieldObject, UnitInstance } from "../../types";
 import { areArmiesAllied, areArmiesEnemies } from "../army-relations";
 import { isPositionFree } from "../rules/occupancy";
-import { distance, type GridPosition } from "../rules/geometry";
+import type { GridPosition } from "../rules/geometry";
+import { getPathCost } from "../rules/pathfinding";
+import { getTemplate } from "../rules/state";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 import type { BotDoctrine } from "./bot-doctrine";
 import type { BotDecisionContext } from "./bot-controller";
@@ -91,7 +93,6 @@ function findTerritoryTarget(
   armyId: string,
   policy: BotDoctrine["objectivePolicy"],
 ): GridPosition | undefined {
-  const origins = units.flatMap((unit) => unit.position ? [unit.position] : []);
   const candidates: GridPosition[] = [];
   for (let y = 0; y < battle.board.height; y += 1) {
     for (let x = 0; x < battle.board.width; x += 1) {
@@ -105,11 +106,14 @@ function findTerritoryTarget(
     }
   }
 
-  const target = candidates.sort((left, right) => {
+  const reachableCandidates = candidates.filter((candidate) =>
+    nearestPathDistance(battle, units, candidate) < Number.MAX_SAFE_INTEGER
+  );
+  const target = reachableCandidates.sort((left, right) => {
     const strategicDifference = Number(isStrategicPosition(battle, right)) -
       Number(isStrategicPosition(battle, left));
     if (strategicDifference !== 0) return strategicDifference;
-    return nearestDistance(origins, left) - nearestDistance(origins, right) ||
+    return nearestPathDistance(battle, units, left) - nearestPathDistance(battle, units, right) ||
       left.y - right.y || left.x - right.x;
   })[0];
   if (target || policy === "Assault") return target;
@@ -117,7 +121,7 @@ function findTerritoryTarget(
   return battle.board.objects
     ?.filter((object) => object.type === "StrategicPoint" && object.status === "Active")
     .sort((left, right) =>
-      nearestDistance(origins, left.position) - nearestDistance(origins, right.position)
+      nearestPathDistance(battle, units, left.position) - nearestPathDistance(battle, units, right.position)
     )[0]?.position;
 }
 
@@ -126,16 +130,20 @@ function findNearestEnemyPosition(
   units: UnitInstance[],
   armyId: string,
 ): GridPosition | undefined {
-  const origins = units.flatMap((unit) => unit.position ? [unit.position] : []);
   return battle.armies
     .filter((army) => areArmiesEnemies(battle, army.id, armyId))
     .flatMap((army) => army.units)
     .filter((unit) => unit.status !== "Destroyed" && unit.position)
-    .map((unit) => unit.position!)
+    .map((unit) => ({
+      position: unit.position!,
+      pathCost: nearestPathDistance(battle, units, unit.position!, true),
+    }))
+    .filter(({ pathCost }) => pathCost < Number.MAX_SAFE_INTEGER)
     .sort((left, right) =>
-      nearestDistance(origins, left) - nearestDistance(origins, right) ||
-      left.y - right.y || left.x - right.x
-    )[0];
+      left.pathCost - right.pathCost ||
+      left.position.y - right.position.y ||
+      left.position.x - right.position.x
+    )[0]?.position;
 }
 
 function isTerritoryOwnedByTeam(
@@ -158,8 +166,26 @@ function isStrategicPosition(battle: Battle, position: GridPosition): boolean {
   ));
 }
 
-function nearestDistance(origins: GridPosition[], target: GridPosition): number {
-  return origins.length > 0
-    ? Math.min(...origins.map((origin) => distance(origin, target)))
-    : Number.MAX_SAFE_INTEGER;
+function nearestPathDistance(
+  battle: Battle,
+  units: UnitInstance[],
+  target: GridPosition,
+  allowOccupiedTarget = false,
+): number {
+  const costs = units.flatMap((unit) => {
+    if (!unit.position) return [];
+    const movementBudget = Math.max(1, getUnitMovementBudget(unit));
+    const cost = getPathCost(battle, unit.position, target, {
+      unitId: unit.id,
+      movementBudget,
+      allowOccupiedTarget,
+    });
+    return cost === undefined ? [] : [cost];
+  });
+  return costs.length > 0 ? Math.min(...costs) : Number.MAX_SAFE_INTEGER;
+}
+
+function getUnitMovementBudget(unit: UnitInstance): number {
+  const template = getTemplate(unit);
+  return template.movement + (unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0);
 }

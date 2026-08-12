@@ -24,6 +24,16 @@ export function createMissionState(
     scenarioId: scenario.id,
     status: "Active",
     roundsCompleted: 0,
+    ...(armies.length > 0
+      ? {
+          initialArmyStrength: Object.fromEntries(
+            armies.map((army) => [
+              army.id,
+              army.units.reduce((total, unit) => total + Math.max(0, unit.currentHp), 0),
+            ]),
+          ),
+        }
+      : {}),
     ...(scenario.scheduledEvents?.length
       ? { scheduledEvents: structuredClone(scenario.scheduledEvents), resolvedEventIds: [] }
       : {}),
@@ -166,6 +176,22 @@ export function applyScenarioEvents(
       battle,
       completedRounds,
     );
+  }
+
+  if (scenario.victoryCondition.type === "Scripted") {
+    const roundsCompleted = mission.roundsCompleted + completedRounds;
+    const roundLimit = mission.roundTarget ?? scenario.victoryCondition.roundLimit;
+    if (roundsCompleted < roundLimit) {
+      return { mission: { ...mission, roundsCompleted }, events: [] };
+    }
+    return {
+      mission: { ...mission, status: "Defeat", roundsCompleted: roundLimit },
+      events: [{
+        type: "MissionCompleted",
+        status: "Defeat",
+        message: "Misja zakończona porażką: upłynął limit rund.",
+      }],
+    };
   }
 
   let roundsCompleted = mission.roundsCompleted + completedRounds;

@@ -89,7 +89,12 @@
 .scenarioEventFieldGrid {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) 82px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.scenarioEventEditor textarea {
+  min-height: 72px;
+  resize: vertical;
 }
 
 .scenarioEventUnitsHeader,

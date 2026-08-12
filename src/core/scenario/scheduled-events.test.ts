@@ -103,11 +103,19 @@ describe("scheduled scenario events", () => {
     expect(validateScheduledScenarioEvents([roundOneReinforcements], battle.armies)).toBe(true);
     expect(validateScheduledScenarioEvents([{
       ...roundOneReinforcements,
-      effect: { ...roundOneReinforcements.effect, units: [] },
+      effect: {
+        type: "DeployReinforcements",
+        armyId: "army_republic",
+        units: [],
+      },
     }], battle.armies)).toBe(false);
     expect(validateScheduledScenarioEvents([{
       ...roundOneReinforcements,
-      effect: { ...roundOneReinforcements.effect, armyId: "missing-army" },
+      effect: {
+        type: "DeployReinforcements",
+        armyId: "missing-army",
+        units: [{ templateId: "clone_trooper_battalion", count: 2 }],
+      },
     }], battle.armies)).toBe(false);
   });
 
@@ -118,7 +126,8 @@ describe("scheduled scenario events", () => {
         id: "end-one",
         trigger: { type: "RoundEnded", round: 1 },
         effect: {
-          ...roundOneReinforcements.effect,
+          type: "DeployReinforcements",
+          armyId: "army_republic",
           units: [{ templateId: "clone_trooper_battalion", count: 1 }],
         },
       },
@@ -127,7 +136,8 @@ describe("scheduled scenario events", () => {
         id: "start-two",
         trigger: { type: "RoundStarted", round: 2 },
         effect: {
-          ...roundOneReinforcements.effect,
+          type: "DeployReinforcements",
+          armyId: "army_republic",
           units: [{ templateId: "clone_trooper_battalion", count: 1 }],
         },
       },

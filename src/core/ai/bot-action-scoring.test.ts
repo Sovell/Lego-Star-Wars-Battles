@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Battle, TerrainTile, UnitInstance } from "../../types";
 import { createBattle } from "../battle-state";
+import { createTerrainTile } from "../terrain-definitions";
 import type { LegalPositionAction } from "../legal-actions";
 import { getTemplate } from "../rules/state";
 import { chooseBestBotAction } from "./bot-action-scoring";
@@ -91,6 +92,39 @@ describe("bot action scoring", () => {
     );
 
     expect(new Set(choices)).toEqual(new Set(["Rally"]));
+  });
+
+  it("scores movement by the real route around a wall", () => {
+    let battle = createBattle();
+    battle = {
+      ...battle,
+      board: {
+        width: 5,
+        height: 5,
+        objects: [],
+        tiles: Array.from(
+          { length: 4 },
+          (_, y) => createTerrainTile("Impassable", 2, y),
+        ),
+      },
+      armies: battle.armies.map((army) => ({
+        ...army,
+        units: army.units.map((unit) => ({ ...unit, position: null })),
+      })),
+    };
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 2 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 4, y: 2 } });
+
+    const best = chooseBestBotAction([
+      { type: "MoveUnit", unitId: "rep_unit_1", targetPosition: { x: 1, y: 2 } },
+      { type: "MoveUnit", unitId: "rep_unit_1", targetPosition: { x: 1, y: 3 } },
+    ], {
+      battle,
+      doctrine: aggressiveBotDoctrine,
+      movementTarget: { x: 4, y: 2 },
+    });
+
+    expect(best?.action).toMatchObject({ targetPosition: { x: 1, y: 3 } });
   });
 });
 

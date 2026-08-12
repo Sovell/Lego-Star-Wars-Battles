@@ -2,6 +2,306 @@ import type { ScenarioDefinition } from "./scenario-types";
 
 const standardDeploymentZones = createEdgeDeploymentZones(8, 8, 2);
 
+export const christophsisLastLandingScenario: ScenarioDefinition = {
+  id: "christophsis-last-landing",
+  name: "Christophsis: Ostatnie lądowisko",
+  description: "Utrzymaj lądowisko do czasu przybycia kanonierki LAAT i odeprzyj kolejne fale droidów.",
+  experience: "NarrativeMission",
+  planet: "Christophsis",
+  recommendedMapThemeId: "christophsis-crystal-city",
+  mapPreset: {
+    themeId: "christophsis-crystal-city",
+    seed: 3277,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.38,
+  },
+  defaultDefenderArmySlot: 0,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "hold-landing-zone",
+    name: "Utrzymaj lądowisko",
+    description: "Kontroluj punkt obrony przez pięć pełnych rund.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "last-landing-b1-wave",
+    name: "Pierwsza fala B1",
+    trigger: { type: "RoundStarted", round: 2 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "b1_droid_regiment", count: 2 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "last-landing-b2-wave",
+    name: "Ciężkie droidy w natarciu",
+    trigger: { type: "RoundStarted", round: 3 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "super_battle_droid_squad", count: 1 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "last-landing-objective-profile",
+    name: "Droidy uderzają na lądowisko",
+    trigger: { type: "RoundStarted", round: 4 },
+    effect: {
+      type: "ChangeAIProfile",
+      armyId: "army_separatists",
+      profile: "objective",
+    },
+    visibility: "Announced",
+  }, {
+    id: "last-landing-laat-relief",
+    name: "Wsparcie z powietrza",
+    trigger: { type: "RoundStarted", round: 5 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_republic",
+      units: [{ templateId: "laat_patrol", count: 1 }],
+    },
+    visibility: "Announced",
+  }],
+  victoryCondition: {
+    type: "DefendPoint",
+    rounds: 5,
+    defenderArmySlot: 0,
+    objectiveType: "DefensePoint",
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const geonosisHeartOfFactoryScenario: ScenarioDefinition = {
+  id: "geonosis-heart-of-factory",
+  name: "Geonosis: Serce fabryki",
+  description: "Przedrzyj się przez fabrykę, zniszcz generator osłon i rdzeń linii produkcyjnej.",
+  experience: "NarrativeMission",
+  planet: "Geonosis",
+  recommendedMapThemeId: "geonosis-foundry",
+  mapPreset: {
+    themeId: "geonosis-foundry",
+    seed: 21202,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.44,
+  },
+  defaultDefenderArmySlot: 1,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "sabotage-foundry",
+    name: "Sabotuj fabrykę",
+    description: "Zniszcz dwa generatory przed końcem siódmej rundy.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "heart-foundry-first-generator",
+    name: "Osłony fabryki wyłączone",
+    trigger: { type: "ObjectDestroyed", objectType: "Generator" },
+    effect: {
+      type: "ChangeObjective",
+      objectiveId: "destroy-production-core",
+      name: "Zniszcz rdzeń produkcyjny",
+      description: "Pierwszy generator padł. Dotrzyj do drugiego i zakończ sabotaż.",
+    },
+    visibility: "Announced",
+  }, {
+    id: "heart-foundry-reserve",
+    name: "Fabryczny odwód B1",
+    trigger: { type: "RoundStarted", round: 3 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "b1_droid_regiment", count: 2 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "heart-foundry-lockdown",
+    name: "Alarm w rdzeniu fabryki",
+    trigger: { type: "RoundStarted", round: 5 },
+    effect: {
+      type: "ChangeAIProfile",
+      armyId: "army_separatists",
+      profile: "defensive",
+    },
+    visibility: "Announced",
+  }],
+  victoryCondition: {
+    type: "DestroyObjects",
+    objectType: "Generator",
+    count: 2,
+    roundLimit: 7,
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const feluciaSurroundedScenario: ScenarioDefinition = {
+  id: "felucia-surrounded",
+  name: "Felucia: Okrążeni!",
+  description: "Przetrwaj sześć rund w grzybowych ostępach, odpierając coraz cięższe fale droidów.",
+  experience: "NarrativeMission",
+  planet: "Felucia",
+  recommendedMapThemeId: "felucia-wilds",
+  mapPreset: {
+    themeId: "felucia-wilds",
+    seed: 501501,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.52,
+  },
+  defaultDefenderArmySlot: 0,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "survive-encirclement",
+    name: "Przetrwaj okrążenie",
+    description: "Utrzymaj oddział w walce do końca szóstej rundy.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "felucia-surrounded-b1",
+    name: "Droidy wychodzą z dżungli",
+    trigger: { type: "RoundStarted", round: 2 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "b1_droid_regiment", count: 2 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "felucia-surrounded-b2",
+    name: "Nadciągają superdroidy",
+    trigger: { type: "RoundStarted", round: 4 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "super_battle_droid_squad", count: 1 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "felucia-surrounded-spider",
+    name: "Droid pająk na flance",
+    trigger: { type: "RoundStarted", round: 5 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "dwarf_spider_droid", count: 1 }],
+    },
+    visibility: "Announced",
+  }],
+  victoryCondition: { type: "SurviveRounds", rounds: 6 },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const mandaloreHuntInSundariScenario: ScenarioDefinition = {
+  id: "mandalore-hunt-in-sundari",
+  name: "Mandalore: Polowanie w Sundari",
+  description: "Odszukaj Dartha Maula w sektorach Sundari i pokonaj go, zanim zdoła się wymknąć.",
+  experience: "NarrativeMission",
+  planet: "Mandalore",
+  recommendedMapThemeId: "mandalore-city",
+  mapPreset: {
+    themeId: "mandalore-city",
+    seed: 10519,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.41,
+  },
+  defaultDefenderArmySlot: 1,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "defeat-maul",
+    name: "Dopadnij Maula",
+    description: "Pokonaj Dartha Maula przed końcem ósmej rundy.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "sundari-maul-enters",
+    name: "Maul pojawia się w Sundari",
+    trigger: { type: "RoundStarted", round: 1 },
+    effect: {
+      type: "SpawnUnits",
+      armyId: "army_separatists",
+      units: [{ templateId: "darth_maul", count: 1 }],
+      positions: [{ x: 6, y: 3 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "sundari-maul-hunt",
+    name: "Maul przejmuje inicjatywę",
+    trigger: { type: "RoundStarted", round: 2 },
+    effect: {
+      type: "ChangeAIProfile",
+      armyId: "army_separatists",
+      profile: "hunter",
+    },
+    visibility: "Announced",
+  }, {
+    id: "sundari-maul-defeated",
+    name: "Maul pokonany",
+    trigger: { type: "UnitDestroyed", templateId: "darth_maul" },
+    effect: { type: "Victory", message: "Darth Maul został pokonany. Sundari jest bezpieczne." },
+    visibility: "Announced",
+  }],
+  victoryCondition: { type: "Scripted", roundLimit: 8 },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const christophsisCrystalDataScenario: ScenarioDefinition = {
+  id: "christophsis-crystal-data",
+  name: "Christophsis: Kryształowe dane",
+  description: "Zabezpiecz przekaźnik archiwum, a następnie przebij się do nadajnika ewakuacyjnego.",
+  experience: "NarrativeMission",
+  planet: "Christophsis",
+  recommendedMapThemeId: "christophsis-crystal-city",
+  mapPreset: {
+    themeId: "christophsis-crystal-city",
+    seed: 66707,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.37,
+  },
+  defaultDefenderArmySlot: 1,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "recover-crystal-data",
+    name: "Odzyskaj kryształowe dane",
+    description: "Przejmij kolejno przekaźnik i punkt transmisyjny.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "crystal-data-intercepted",
+    name: "Separatyści wykryli transmisję",
+    trigger: { type: "RoundStarted", round: 3 },
+    effect: {
+      type: "ChangeAIProfile",
+      armyId: "army_separatists",
+      profile: "hunter",
+    },
+    visibility: "Announced",
+  }, {
+    id: "crystal-data-reinforcements",
+    name: "Droidy odcinają drogę odwrotu",
+    trigger: { type: "RoundStarted", round: 4 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "b1_droid_regiment", count: 1 }],
+    },
+    visibility: "Announced",
+  }],
+  victoryCondition: {
+    type: "ProgressiveControl",
+    objectiveType: "StrategicPoint",
+    count: 2,
+    attackerArmySlot: 0,
+    roundLimit: 7,
+    stageRoundLimits: [3, 4],
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
 export const survivalTestScenario: ScenarioDefinition = {
   id: "survival-test",
   name: "Ostatni bastion",
@@ -181,7 +481,15 @@ export const mandaloreBattleForSectorsScenario: ScenarioDefinition = {
   victoryCondition: { type: "ControlTerritory", rounds: 6 },
 };
 
-export const scenarios: ScenarioDefinition[] = [
+export const narrativeMissions: ScenarioDefinition[] = [
+  christophsisLastLandingScenario,
+  geonosisHeartOfFactoryScenario,
+  feluciaSurroundedScenario,
+  mandaloreHuntInSundariScenario,
+  christophsisCrystalDataScenario,
+];
+
+export const customScenarioTemplates: ScenarioDefinition[] = [
   survivalTestScenario,
   defendPointScenario,
   protectGeneratorScenario,
@@ -191,6 +499,17 @@ export const scenarios: ScenarioDefinition[] = [
   feluciaAmbushScenario,
   mandaloreBattleForSectorsScenario,
 ];
+
+export const scenarios: ScenarioDefinition[] = [
+  ...narrativeMissions,
+  ...customScenarioTemplates,
+];
+
+export function isNarrativeMission(
+  scenario: Pick<ScenarioDefinition, "experience">,
+): boolean {
+  return scenario.experience === "NarrativeMission";
+}
 
 function createEdgeDeploymentZones(
   width: number,

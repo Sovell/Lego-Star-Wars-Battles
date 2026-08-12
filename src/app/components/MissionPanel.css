@@ -88,6 +88,86 @@
   padding: 8px;
 }
 
+.scenarioExperiencePicker {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scenarioExperiencePicker button {
+  background: rgba(12, 17, 23, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #9eabba;
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 8px;
+  text-align: left;
+}
+
+.scenarioExperiencePicker button.active {
+  background: rgba(98, 213, 239, 0.13);
+  border-color: rgba(98, 213, 239, 0.58);
+  color: #f0f3f7;
+}
+
+.scenarioExperiencePicker strong {
+  font-size: 0.73rem;
+}
+
+.scenarioExperiencePicker span {
+  color: #8f9aa7;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.missionMapPreset {
+  background: linear-gradient(135deg, rgba(98, 213, 239, 0.12), rgba(12, 17, 23, 0.58));
+  border: 1px solid rgba(98, 213, 239, 0.3);
+  border-radius: 8px;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px;
+}
+
+.missionMapPreset > div {
+  display: grid;
+  gap: 3px;
+}
+
+.missionMapPreset > div > span {
+  color: #8f9aa7;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.missionMapPreset > div > strong {
+  color: #eafaff;
+  font-size: 0.76rem;
+}
+
+.missionMapPreset small {
+  color: #9eabba;
+  font-size: 0.66rem;
+  grid-column: 1 / -1;
+  line-height: 1.35;
+}
+
+.missionMapLock {
+  align-self: start;
+  background: rgba(236, 224, 108, 0.14);
+  border: 1px solid rgba(236, 224, 108, 0.3);
+  border-radius: 999px;
+  color: #ece06c;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
 .missionSideRow > div {
   grid-column: 1 / -1;
 }
@@ -141,6 +221,9 @@
 }
 
 @media (max-width: 1180px) {
+  .scenarioExperiencePicker {
+    grid-template-columns: 1fr;
+  }
   .missionRoles {
     grid-template-columns: 1fr;
   }

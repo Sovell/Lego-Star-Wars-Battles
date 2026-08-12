@@ -3,6 +3,7 @@ import { abilities, taskForces, unitTemplates } from "./data";
 import { createNewGameBattle } from "./app/new-game-state";
 import {
   alignDeploymentZones,
+  applyScenarioMapPreset,
   createInitialBattleSnapshot,
   createPreparationBattle,
   createScenarioDraft,
@@ -234,39 +235,50 @@ export function App() {
           nextArmies,
         )
       : alignDeploymentZones(scenario.deploymentZones, nextArmies.length);
-    const scheduledEvents = keepsCurrentScenario
-      ? remapScheduledEventsByArmy(
-          scenario.scheduledEvents ?? scenarioDraft.scheduledEvents,
+    const eventDefinitions = keepsCurrentScenario
+      ? scenario.scheduledEvents ?? scenarioDraft.scheduledEvents
+      : scenario.scheduledEvents ?? [];
+    const scheduledEvents = nextArmies.length === 0
+      ? structuredClone(eventDefinitions)
+      : remapScheduledEventsByArmy(
+          eventDefinitions,
           scenarioDraft.armies,
           nextArmies,
-        )
-      : structuredClone(scenario.scheduledEvents ?? []);
+        );
     const currentMapGeneration = getScenarioMapGenerationState(
       markScenarioDraftMapEdited(scenarioDraft),
     );
-    const nextMission = {
-      ...createMissionState({ ...scenario, scheduledEvents }, nextArmies, defenderArmyId),
-      deploymentZones,
-      ...(roundTarget ? { roundTarget } : {}),
-      ...(keepsCurrentScenario && scenarioDraft.stageRoundTargets
-        ? { stageRoundTargets: structuredClone(scenarioDraft.stageRoundTargets) }
-        : {}),
-    };
-    const nextDraft = {
+    const missionRoles = createMissionState(
+      { ...scenario, scheduledEvents },
+      nextArmies,
+      defenderArmyId,
+    );
+    const draftBeforePreset = {
       ...markScenarioDraftMapEdited(scenarioDraft),
       armies: nextArmies,
       scenarioId: scenario.id,
-      defenderArmyId: nextMission.defenderArmyId,
+      defenderArmyId: missionRoles.defenderArmyId,
       deploymentZones,
       roundTarget,
       scheduledEvents,
-      stageRoundTargets: structuredClone(nextMission.stageRoundTargets ?? []),
+      stageRoundTargets: structuredClone(missionRoles.stageRoundTargets ?? []),
       mapGeneration: {
         ...currentMapGeneration,
         ...(scenario.recommendedMapThemeId
           ? { themeId: scenario.recommendedMapThemeId }
           : {}),
       },
+    };
+    const nextDraft = scenario.mapPreset
+      ? applyScenarioMapPreset(draftBeforePreset, scenario)
+      : draftBeforePreset;
+    const nextMission = {
+      ...missionRoles,
+      deploymentZones: structuredClone(nextDraft.deploymentZones),
+      ...(roundTarget ? { roundTarget } : {}),
+      ...(keepsCurrentScenario && scenarioDraft.stageRoundTargets
+        ? { stageRoundTargets: structuredClone(scenarioDraft.stageRoundTargets) }
+        : {}),
     };
     setScenarioDraft(nextDraft);
     setMission(nextMission);
@@ -376,7 +388,7 @@ export function App() {
 
     if (gamePhase === "Preparation") {
       setScenarioDraft((current) => ({
-        ...markScenarioDraftMapEdited(current),
+        ...(baseScenario.mapPreset ? current : markScenarioDraftMapEdited(current)),
         armies: updateArmies(current.armies),
       }));
       setMission((current) => {
@@ -398,7 +410,7 @@ export function App() {
   }
 
   function handleTerrainPaint(tile: TerrainTile) {
-    if (gamePhase !== "Preparation") {
+    if (gamePhase !== "Preparation" || baseScenario.mapPreset) {
       return;
     }
     setScenarioDraft((current) => {
@@ -421,7 +433,7 @@ export function App() {
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
   ) {
-    if (gamePhase !== "Preparation") {
+    if (gamePhase !== "Preparation" || baseScenario.mapPreset) {
       return;
     }
     setScenarioDraft((current) => {
@@ -603,6 +615,7 @@ export function App() {
   function handleDeploymentZonesChange(
     deploymentZones: ScenarioDefinition["deploymentZones"],
   ) {
+    if (baseScenario.mapPreset) return;
     setScenarioDraft((current) => ({
       ...markScenarioDraftMapEdited(current),
       deploymentZones: structuredClone(deploymentZones),
@@ -616,10 +629,12 @@ export function App() {
   function handleMapGenerationSettingsChange(
     patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
   ) {
+    if (baseScenario.mapPreset) return;
     setScenarioDraft((current) => updateScenarioMapGenerationState(current, patch));
   }
 
   function handleGenerateMap(useNextSeed: boolean) {
+    if (baseScenario.mapPreset) return;
     const nextDraft = generateScenarioDraftMap(
       scenarioDraft,
       baseScenario,

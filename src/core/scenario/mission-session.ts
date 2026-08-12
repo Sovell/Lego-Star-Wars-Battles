@@ -6,7 +6,11 @@ import {
   type BattleActionResult,
 } from "../battle-actions";
 import { applyScenarioEvents } from "./scenario-engine";
-import { applyScheduledScenarioEvents } from "./scheduled-events";
+import {
+  applyScenarioTriggerEffects,
+  deriveScenarioTriggerSignals,
+  type ScenarioTriggerSignal,
+} from "./scheduled-events";
 import type { MissionEvent, MissionState, ScenarioDefinition } from "./scenario-types";
 
 export type MissionSessionState = {
@@ -52,32 +56,41 @@ export function applyMissionAction(
     battleResult.battle,
   );
   const completedTurn = battleResult.events.find((event) => event.type === "TurnEnded");
-  const scheduledResult = completedTurn && scenarioResult.mission.status === "Active"
-    ? applyScheduledScenarioEvents(
-        battleResult.battle,
-        scenarioResult.mission,
-        scenario,
-        [
-          { type: "RoundEnded", round: session.battle.turn },
-          { type: "RoundStarted", round: completedTurn.turn },
-        ],
-      )
+  const roundSignals: ScenarioTriggerSignal[] = completedTurn
+    ? [
+        { type: "RoundEnded", round: session.battle.turn },
+        { type: "RoundStarted", round: completedTurn.turn },
+      ]
+    : [];
+  const triggerSignals = deriveScenarioTriggerSignals({
+    battleBefore: session.battle,
+    battleAfter: battleResult.battle,
+    missionBefore: session.mission,
+    missionAfter: scenarioResult.mission,
+    scenario,
+    battleEvents: battleResult.events,
+    roundSignals: roundSignals.filter(
+      (signal): signal is Extract<ScenarioTriggerSignal, { type: "RoundStarted" | "RoundEnded" }> =>
+        signal.type === "RoundStarted" || signal.type === "RoundEnded",
+    ),
+  });
+  const triggeredResult = applyScenarioTriggerEffects(
+    battleResult.battle,
+    scenarioResult.mission,
+    scenario,
+    triggerSignals,
+  );
+  const battle = triggeredResult.mission.status === "Active"
+    ? triggeredResult.battle
     : {
-        battle: battleResult.battle,
-        mission: scenarioResult.mission,
-        events: [],
-      };
-  const battle = scheduledResult.mission.status === "Active"
-    ? scheduledResult.battle
-    : {
-        ...scheduledResult.battle,
+        ...triggeredResult.battle,
         activeActivation: undefined,
       };
 
   return {
     ...battleResult,
     battle,
-    mission: scheduledResult.mission,
-    missionEvents: [...scenarioResult.events, ...scheduledResult.events],
+    mission: triggeredResult.mission,
+    missionEvents: [...scenarioResult.events, ...triggeredResult.events],
   };
 }

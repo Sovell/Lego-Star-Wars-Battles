@@ -6,7 +6,11 @@ import { findUnit, getTemplate } from "../rules/state";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 import { chooseBestBotAction, estimateMaximumDamage } from "./bot-action-scoring";
 import type { BotDecision, BotDecisionContext } from "./bot-controller";
-import type { BotDoctrine } from "./bot-doctrine";
+import {
+  getBotDoctrine,
+  type BotDoctrine,
+  type BotProfileId,
+} from "./bot-doctrine";
 import {
   createBotStrategyContext,
   type BotStrategyContext,
@@ -39,6 +43,25 @@ export function chooseDoctrineBotAction(
   );
   const best = chooseBestBotAction(actions, context);
   return best ? describeDecision(best.action, context) : undefined;
+}
+
+/** Neutral entry point used by every bot role and scenario. */
+export function chooseBotAction(
+  battle: Battle,
+  scenario: ScenarioDefinition,
+  armyId: string,
+  profile: BotProfileId,
+  mission?: MissionState,
+  decisionContext?: BotDecisionContext,
+): BotDecision | undefined {
+  return chooseDoctrineBotAction(
+    battle,
+    scenario,
+    armyId,
+    getBotDoctrine(profile),
+    mission,
+    decisionContext,
+  );
 }
 
 function describeDecision(

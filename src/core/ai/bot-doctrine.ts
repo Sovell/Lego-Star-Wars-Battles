@@ -1,5 +1,5 @@
 export type BotDoctrine = {
-  id: "aggressive" | "defensive";
+  id: BotProfileId;
   name: string;
   objectivePolicy: "Assault" | "Hold";
   attackBaseScore: number;
@@ -23,6 +23,13 @@ export type BotDoctrine = {
   overwatchScore: number;
   finishAdvanceScore: number;
 };
+
+export type BotProfileId =
+  | "aggressive"
+  | "defensive"
+  | "objective"
+  | "swarm"
+  | "hunter";
 
 /** Pushes units toward damage, eliminations and scenario targets. */
 export const aggressiveBotDoctrine: BotDoctrine = {
@@ -77,3 +84,62 @@ export const defensiveBotDoctrine: BotDoctrine = {
   overwatchScore: 500,
   finishAdvanceScore: 50,
 };
+
+/** Sacrifices incidental damage in order to complete the current mission goal. */
+export const objectiveBotDoctrine: BotDoctrine = {
+  ...aggressiveBotDoctrine,
+  id: "objective",
+  name: "Priorytet misji",
+  objectiveAttackBonus: 180_000,
+  movementBaseScore: 45_000,
+  movementProgressWeight: 2_500,
+  remainingDistancePenaltyWeight: 50,
+  deploymentBaseScore: 55_000,
+  deploymentDistancePenaltyWeight: 75,
+  lethalBonus: 4_000,
+  targetValueWeight: 0,
+};
+
+/** Gets reserves onto the board quickly and keeps a broad advance moving. */
+export const swarmBotDoctrine: BotDoctrine = {
+  ...aggressiveBotDoctrine,
+  id: "swarm",
+  name: "Natarcie rojem",
+  attackBaseScore: 32_000,
+  abilityBaseScore: 34_000,
+  movementBaseScore: 30_000,
+  movementProgressWeight: 1_400,
+  advanceActionBonus: 1_500,
+  deploymentBaseScore: 70_000,
+  deploymentDistancePenaltyWeight: 10,
+  targetValueWeight: 0,
+  terrainDefenseWeight: 0,
+  overwatchScore: 25,
+};
+
+/** Pursues valuable and vulnerable enemy units instead of static objectives. */
+export const hunterBotDoctrine: BotDoctrine = {
+  ...aggressiveBotDoctrine,
+  id: "hunter",
+  name: "Łowca celów",
+  objectiveAttackBonus: 5_000,
+  attackBaseScore: 55_000,
+  damagePotentialWeight: 80,
+  lethalBonus: 18_000,
+  targetValueWeight: 750,
+  remainingHpPenaltyWeight: 8,
+  abilityBaseScore: 60_000,
+  abilityEffectWeight: 650,
+};
+
+export const botDoctrines: Readonly<Record<BotProfileId, BotDoctrine>> = {
+  aggressive: aggressiveBotDoctrine,
+  defensive: defensiveBotDoctrine,
+  objective: objectiveBotDoctrine,
+  swarm: swarmBotDoctrine,
+  hunter: hunterBotDoctrine,
+};
+
+export function getBotDoctrine(profile: BotProfileId): BotDoctrine {
+  return botDoctrines[profile];
+}

@@ -3,6 +3,7 @@ import { createBattlefieldObject } from "../core/battlefield-objects";
 import { starterArmies } from "../data";
 import {
   alignDeploymentZones,
+  applyScenarioMapPreset,
   createInitialBattleSnapshot,
   createScenarioDraft,
   generateScenarioDraftMap,
@@ -17,7 +18,10 @@ import {
   startBattleFromDraft,
   toggleDeploymentZoneCell,
 } from "./scenario-draft";
-import { defendPointScenario } from "../core/scenario/scenarios";
+import {
+  christophsisLastLandingScenario,
+  defendPointScenario,
+} from "../core/scenario/scenarios";
 
 describe("scenario draft flow", () => {
   it("keeps stable generator settings in a new draft", () => {
@@ -66,6 +70,64 @@ describe("scenario draft flow", () => {
 
     expect(second.mapGeneration?.seed).toBe(nextMapSeed(1138));
     expect(second.board).not.toEqual(first.board);
+  });
+
+  it("materializes a locked mission preset identically for two to four armies", () => {
+    const twoArmyDraft = createScenarioDraft(christophsisLastLandingScenario.id, {
+      armies: starterArmies,
+      defenderArmyId: starterArmies[0].id,
+    });
+    const extraArmies = structuredClone(starterArmies);
+    extraArmies.push({
+      ...structuredClone(starterArmies[0]),
+      id: "republic-allies",
+      playerName: "Allies",
+      units: [],
+    });
+    const threeArmyDraft = createScenarioDraft(christophsisLastLandingScenario.id, {
+      armies: extraArmies,
+      defenderArmyId: extraArmies[0].id,
+    });
+
+    const twoArmyMap = applyScenarioMapPreset(
+      twoArmyDraft,
+      christophsisLastLandingScenario,
+    );
+    const threeArmyMap = applyScenarioMapPreset(
+      threeArmyDraft,
+      christophsisLastLandingScenario,
+    );
+
+    expect(twoArmyMap.board).toEqual(threeArmyMap.board);
+    expect(twoArmyMap.deploymentZones).toHaveLength(2);
+    expect(threeArmyMap.deploymentZones).toHaveLength(3);
+    expect(twoArmyMap.mapGeneration).toMatchObject({
+      themeId: "christophsis-crystal-city",
+      seed: 3277,
+    });
+  });
+
+  it("shows an authored mission board before armies are configured", () => {
+    const draft = applyScenarioMapPreset(
+      createScenarioDraft(christophsisLastLandingScenario.id),
+      christophsisLastLandingScenario,
+    );
+
+    expect(draft.board.tiles.length).toBeGreaterThan(0);
+    expect(draft.deploymentZones).toEqual(
+      christophsisLastLandingScenario.deploymentZones,
+    );
+  });
+
+  it("rejects regeneration of an authored mission map", () => {
+    const draft = createScenarioDraft(christophsisLastLandingScenario.id, {
+      armies: starterArmies,
+    });
+
+    expect(() => generateScenarioDraftMap(
+      draft,
+      christophsisLastLandingScenario,
+    )).toThrow("Predefined mission maps cannot be regenerated.");
   });
 
   it("starts a battle from a full independent copy of the draft", () => {

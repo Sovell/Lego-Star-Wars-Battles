@@ -21,6 +21,7 @@ export function getMapScenarioRequirements(
   };
   switch (scenario.victoryCondition.type) {
     case "SurviveRounds":
+    case "Scripted":
       return { ...common, requiredObjects: [] };
     case "ProtectObject":
       return {

@@ -4,6 +4,7 @@ import {
   type MapGenerationRecipe,
   type MapThemeId,
 } from "../core/map-generation";
+import { generateDeploymentZones } from "../core/map-generation/deployment-zone-generator";
 import { getTemplate, templateById } from "../core/rules/state";
 import type {
   DeploymentZone,
@@ -95,6 +96,9 @@ export function generateScenarioDraftMap(
   scenario: ScenarioDefinition,
   useNextSeed = false,
 ): ScenarioDraft {
+  if (scenario.mapPreset) {
+    throw new Error("Predefined mission maps cannot be regenerated.");
+  }
   if (draft.armies.length < 2 || draft.armies.length > 4) {
     throw new Error("Map generation requires two to four configured armies.");
   }
@@ -120,6 +124,62 @@ export function generateScenarioDraftMap(
     mapGeneration: {
       themeId: settings.themeId,
       seed,
+      lastRecipe: generated.recipe,
+    },
+  };
+}
+
+export function applyScenarioMapPreset(
+  draft: ScenarioDraft,
+  scenario: ScenarioDefinition,
+): ScenarioDraft {
+  const preset = scenario.mapPreset;
+  if (!preset) {
+    throw new Error("Scenario does not define a map preset.");
+  }
+  if (draft.armies.length === 1 || draft.armies.length > 4) {
+    throw new Error("Mission map presets require no armies or two to four configured armies.");
+  }
+
+  // Generate the board against a canonical four-army layout. This reserves both
+  // complete board edges and keeps terrain and objects identical regardless of
+  // whether the player brings two, three, or four armies.
+  const canonicalArmies = [
+    { id: "preset-team-1-a", teamId: 1 as const },
+    { id: "preset-team-2-a", teamId: 2 as const },
+    { id: "preset-team-1-b", teamId: 1 as const },
+    { id: "preset-team-2-b", teamId: 2 as const },
+  ];
+  const generated = generateMap({
+    width: preset.width,
+    height: preset.height,
+    seed: preset.seed,
+    themeId: preset.themeId,
+    terrainDensity: preset.terrainDensity,
+    scenario,
+    armies: canonicalArmies,
+    defenderArmySlot: scenario.defaultDefenderArmySlot ?? 0,
+  });
+  const deploymentZones = draft.armies.length === 0
+    ? structuredClone(scenario.deploymentZones)
+    : generateDeploymentZones({
+        width: preset.width,
+        height: preset.height,
+        armies: draft.armies,
+        defenderArmySlot: Math.max(
+          0,
+          draft.armies.findIndex((army) => army.id === draft.defenderArmyId),
+        ),
+        depth: generated.recipe.deploymentDepth,
+      });
+
+  return {
+    ...draft,
+    board: generated.board,
+    deploymentZones,
+    mapGeneration: {
+      themeId: preset.themeId,
+      seed: preset.seed,
       lastRecipe: generated.recipe,
     },
   };
@@ -262,25 +322,72 @@ export function remapScheduledEventsByArmy(
   nextArmies: Array<Pick<Army, "id" | "faction">>,
 ): ScenarioScheduledEvent[] {
   return events.flatMap((event) => {
-    const previousSlot = previousArmies.findIndex(
-      (army) => army.id === event.effect.armyId,
+    const cloned = structuredClone(event);
+    if ("armyId" in cloned.trigger && cloned.trigger.armyId) {
+      const nextTriggerArmy = findRemappedArmy(
+        cloned.trigger.armyId,
+        previousArmies,
+        nextArmies,
+        inferFactionFromArmyId(cloned.trigger.armyId),
+      );
+      if (!nextTriggerArmy && cloned.trigger.type === "ArmyStrengthBelow") return [];
+      cloned.trigger = {
+        ...cloned.trigger,
+        armyId: nextTriggerArmy?.id,
+      } as typeof cloned.trigger;
+    }
+    const effect = cloned.effect;
+    if (
+      effect.type !== "DeployReinforcements" &&
+      effect.type !== "SpawnUnits" &&
+      effect.type !== "ChangeAIProfile"
+    ) {
+      return [cloned];
+    }
+    const effectFaction = effect.type === "ChangeAIProfile"
+      ? inferFactionFromArmyId(effect.armyId)
+      : templateById.get(effect.units[0]?.templateId)?.faction;
+    const nextArmy = findRemappedArmy(
+      effect.armyId,
+      previousArmies,
+      nextArmies,
+      effectFaction,
     );
-    const nextArmy = nextArmies.find((army) => army.id === event.effect.armyId)
-      ?? nextArmies[previousSlot]
-      ?? nextArmies[0];
     if (!nextArmy) return [];
-
+    if (effect.type === "ChangeAIProfile") {
+      return [{ ...cloned, effect: { ...effect, armyId: nextArmy.id } }];
+    }
     return [{
-      ...structuredClone(event),
+      ...cloned,
       effect: {
-        ...structuredClone(event.effect),
+        ...effect,
         armyId: nextArmy.id,
-        units: event.effect.units.filter((unit) =>
+        units: effect.units.filter((unit) =>
           templateById.get(unit.templateId)?.faction === nextArmy.faction
         ),
       },
     }];
   });
+}
+
+function findRemappedArmy(
+  armyId: string,
+  previousArmies: Array<Pick<Army, "id">>,
+  nextArmies: Array<Pick<Army, "id" | "faction">>,
+  intendedFaction?: Army["faction"],
+) {
+  const previousSlot = previousArmies.findIndex((army) => army.id === armyId);
+  return nextArmies.find((army) => army.id === armyId)
+    ?? nextArmies.find((army) => army.faction === intendedFaction)
+    ?? nextArmies[previousSlot]
+    ?? nextArmies[0];
+}
+
+function inferFactionFromArmyId(armyId: string): Army["faction"] | undefined {
+  const normalized = armyId.toLowerCase();
+  if (normalized.includes("republic")) return "Republic";
+  if (normalized.includes("separatist")) return "Separatists";
+  return undefined;
 }
 
 function resetArmies(armies: Army[]): Army[] {

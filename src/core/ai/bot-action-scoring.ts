@@ -1,8 +1,9 @@
 import type { Battle, UnitInstance, WeaponProfile } from "../../types";
 import type { BattleAction } from "../battle-actions";
 import type { LegalUnitAction } from "../legal-actions";
-import { distance, type GridPosition } from "../rules/geometry";
+import type { GridPosition } from "../rules/geometry";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
+import { getPathCost } from "../rules/pathfinding";
 import { findUnit, getTemplate } from "../rules/state";
 import { getDefenseBonus, getHazardSuppression } from "../rules/terrain";
 import type { BotStrategyContext } from "./bot-strategy-context";
@@ -152,8 +153,28 @@ function scoreMovement(
 ): number {
   const unit = findUnit(battle, action.unitId);
   if (!unit?.position || !movementTarget) return Number.NEGATIVE_INFINITY;
-  const currentDistance = distance(unit.position, movementTarget);
-  const targetDistance = distance(action.targetPosition, movementTarget);
+  const movementBudget = getTemplate(unit).movement +
+    (unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0);
+  const pathOptions = {
+    unitId: unit.id,
+    movementBudget,
+    allowOccupiedTarget: true,
+  };
+  const currentDistance = getPathCost(
+    battle,
+    unit.position,
+    movementTarget,
+    pathOptions,
+  );
+  const targetDistance = getPathCost(
+    battle,
+    action.targetPosition,
+    movementTarget,
+    pathOptions,
+  );
+  if (currentDistance === undefined || targetDistance === undefined) {
+    return Number.NEGATIVE_INFINITY;
+  }
   const progress = currentDistance - targetDistance;
   if (progress <= 0) return Number.NEGATIVE_INFINITY;
 
@@ -176,9 +197,22 @@ function scoreDeployment(
     x: Math.floor((battle.board.width - 1) / 2),
     y: Math.floor((battle.board.height - 1) / 2),
   };
+  const unit = findUnit(battle, action.unitId);
+  const movementBudget = unit ? getTemplate(unit).movement : 1;
+  const pathDistance = getPathCost(
+    battle,
+    action.targetPosition,
+    destination,
+    {
+      unitId: action.unitId,
+      movementBudget,
+      allowOccupiedTarget: true,
+    },
+  );
+  if (pathDistance === undefined) return Number.NEGATIVE_INFINITY;
   return (
     doctrine.deploymentBaseScore -
-    distance(action.targetPosition, destination) * doctrine.deploymentDistancePenaltyWeight +
+    pathDistance * doctrine.deploymentDistancePenaltyWeight +
     getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight +
     getTileAttackBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight -
     getTileHazardPenalty(battle, action.targetPosition) * doctrine.suppressionWeight

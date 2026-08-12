@@ -1,8 +1,9 @@
 import type { Battle, OrderType } from "../../types";
 import type { BattleAction } from "../battle-actions";
-import { deployUnit } from "../rules/deployment";
-import { advanceUnit, moveUnit } from "../rules/movement";
-import { findUnit } from "../rules/state";
+import { validateUnitActivation } from "../rules/activation";
+import { getLegalReserveEntryCells } from "../rules/deployment";
+import { getReachableCells } from "../rules/pathfinding";
+import { findUnit, getTemplate } from "../rules/state";
 import type { ScenarioDefinition } from "../scenario/scenario-types";
 
 export type PositionOrder = Extract<OrderType, "Move" | "Advance">;
@@ -24,36 +25,24 @@ export function getLegalPositionActions(
   order: PositionOrder,
 ): LegalPositionAction[] {
   const unit = findUnit(battle, unitId);
-  if (!unit) return [];
+  if (!unit || validateUnitActivation(battle, unitId)) return [];
 
-  return boardPositions(battle).flatMap<LegalPositionAction>((targetPosition) => {
-    if (!unit.position) {
-      const action: LegalPositionAction = {
+  if (!unit.position) {
+    return getLegalReserveEntryCells(battle, scenario, unitId).map(
+      (targetPosition): LegalPositionAction => ({
         type: "DeployUnit",
         unitId,
         targetPosition,
-      };
-      return deployUnit(battle, scenario, unitId, targetPosition).battle === battle
-        ? []
-        : [action];
-    }
+      }),
+    );
+  }
+  if (unit.movedThisTurn) return [];
 
-    const action: LegalPositionAction = order === "Advance"
+  const movementBonus = unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0;
+  const movementBudget = getTemplate(unit).movement + movementBonus;
+  return getReachableCells(battle, unit.position, movementBudget, { unitId }).map(
+    ({ position: targetPosition }): LegalPositionAction => order === "Advance"
       ? { type: "AdvanceUnit", unitId, targetPosition }
-      : { type: "MoveUnit", unitId, targetPosition };
-    const result = order === "Advance"
-      ? advanceUnit(battle, unitId, targetPosition)
-      : moveUnit(battle, unitId, targetPosition);
-    return result.battle === battle ? [] : [action];
-  });
-}
-
-function boardPositions(battle: Battle): Array<{ x: number; y: number }> {
-  return Array.from(
-    { length: battle.board.width * battle.board.height },
-    (_, index) => ({
-      x: index % battle.board.width,
-      y: Math.floor(index / battle.board.width),
-    }),
+      : { type: "MoveUnit", unitId, targetPosition },
   );
 }

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Battle, UnitInstance } from "../../types";
 import { createBattlefieldObject } from "../battlefield-objects";
 import { createBattle } from "../battle-state";
-import { controlTerritoryScenario } from "../scenario/scenarios";
+import { controlTerritoryScenario, survivalTestScenario } from "../scenario/scenarios";
+import { createTerrainTile } from "../terrain-definitions";
 import { aggressiveBotDoctrine } from "./bot-doctrine";
 import { createBotStrategyContext } from "./bot-strategy-context";
 
@@ -52,6 +53,51 @@ describe("bot strategy context", () => {
 
     expect(context?.movementTarget).toEqual({ x: 5, y: 3 });
     expect(context?.objectiveName).toBe("terytorium");
+  });
+
+  it("targets an enemy reachable by a real route instead of one behind a wall", () => {
+    let battle = createBattle();
+    battle = {
+      ...battle,
+      board: {
+        width: 5,
+        height: 5,
+        objects: [],
+        tiles: Array.from(
+          { length: 5 },
+          (_, y) => createTerrainTile("Impassable", 2, y),
+        ),
+      },
+      activeActivation: {
+        id: "bot-token",
+        armyId: "army_separatists",
+        faction: "Separatists",
+        used: true,
+      },
+      armies: battle.armies.map((army) => ({
+        ...army,
+        units: army.units.map((unit) => ({
+          ...unit,
+          position: null,
+          status: "Activated" as const,
+        })),
+      })),
+    };
+    battle = patchUnit(battle, "sep_unit_1", {
+      position: { x: 0, y: 2 },
+      status: "Ready",
+    });
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 4, y: 2 } });
+    battle = patchUnit(battle, "rep_unit_2", { position: { x: 1, y: 4 } });
+
+    const context = createBotStrategyContext(
+      battle,
+      survivalTestScenario,
+      "army_separatists",
+      aggressiveBotDoctrine,
+    );
+
+    expect(context?.movementTarget).toEqual({ x: 1, y: 4 });
   });
 });
 

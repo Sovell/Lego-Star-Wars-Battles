@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { starterArmies } from "../../data";
 import { createBattle } from "../battle-state";
+import { createTerrainTile } from "../terrain-definitions";
 import { survivalTestScenario } from "../scenario/scenarios";
 import { getLegalPositionActions } from "./get-legal-position-actions";
 
@@ -66,5 +67,29 @@ describe("getLegalPositionActions", () => {
       unit.id,
       "Advance",
     )).toEqual([]);
+  });
+
+  it("uses the shared pathfinder for highlighted legal cells", () => {
+    const battle = createReadyBattle();
+    const unit = battle.armies[0].units[0];
+    battle.armies.forEach((army) => army.units.forEach((candidate) => {
+      if (candidate.id !== unit.id) candidate.position = null;
+    }));
+    unit.position = { x: 0, y: 0 };
+    battle.board.tiles = [
+      createTerrainTile("Impassable", 1, 0),
+      createTerrainTile("Impassable", 0, 1),
+    ];
+
+    const actions = getLegalPositionActions(
+      battle,
+      survivalTestScenario,
+      unit.id,
+      "Move",
+    );
+
+    expect(actions).not.toContainEqual(expect.objectContaining({
+      targetPosition: { x: 1, y: 1 },
+    }));
   });
 });

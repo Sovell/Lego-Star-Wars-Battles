@@ -14,8 +14,10 @@ import {
   localizeFaction,
   localizeScenarioDescription,
   localizeScenarioName,
+  localizeThemeName,
   useI18n,
 } from "../../i18n";
+import { getMapTheme } from "../../core/map-generation/map-themes";
 import "./MissionPanel.css";
 
 export function MissionPanel({
@@ -91,12 +93,18 @@ export function MissionPanel({
       : text("porażka", "defeat");
   const scenarioName = localizeScenarioName(language, scenario.id, scenario.name);
   const scenarioDescription = localizeScenarioDescription(language, scenario.id, scenario.description);
+  const activeObjectiveName = mission.activeObjectiveName ?? scenarioName;
+  const activeObjectiveDescription = mission.activeObjectiveDescription ?? scenarioDescription;
+  const narrativeMission = scenario.experience === "NarrativeMission";
+  const visibleScenarioOptions = scenarios.filter((option) =>
+    (option.experience === "NarrativeMission") === narrativeMission
+  );
 
   if (gamePhase === "Playing") {
     return (
       <section className={`missionPanel missionInPlay ${mission.status.toLowerCase()}`}>
-        <PanelTitle title={scenarioName} detail={statusLabel} />
-        <p>{scenarioDescription}</p>
+        <PanelTitle title={activeObjectiveName} detail={statusLabel} />
+        <p>{activeObjectiveDescription}</p>
         <div className="missionProgressHeader">
           <span>{text("Rundy", "Rounds")}</span>
           <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
@@ -130,6 +138,7 @@ export function MissionPanel({
           editable={false}
           events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
           resolvedEventIds={mission.resolvedEventIds}
+          zones={scenario.zones}
         />
         <div className="missionCombatants">
           <span>{text("Obrońca", "Defender")}: <strong>{defender ? localizeFaction(language, defender.faction) : text("Brak", "None")}</strong></span>
@@ -154,32 +163,76 @@ export function MissionPanel({
   return (
     <section className={`missionPanel ${mission.status.toLowerCase()}`}>
       <PanelTitle title={text("Misja", "Mission")} detail={statusLabel} />
+      <div className="scenarioExperiencePicker" role="group" aria-label={text("Tryb przygotowania", "Setup mode")}>
+        <button
+          className={narrativeMission ? "active" : ""}
+          type="button"
+          onClick={() => {
+            const firstMission = scenarios.find((option) => option.experience === "NarrativeMission");
+            if (firstMission && !narrativeMission) onScenarioChange(firstMission.id);
+          }}
+        >
+          <strong>{text("Rozegraj misję", "Play a mission")}</strong>
+          <span>{text("Gotowa mapa i wydarzenia", "Authored map and events")}</span>
+        </button>
+        <button
+          className={!narrativeMission ? "active" : ""}
+          type="button"
+          onClick={() => {
+            const firstTemplate = scenarios.find((option) => option.experience !== "NarrativeMission");
+            if (firstTemplate && narrativeMission) onScenarioChange(firstTemplate.id);
+          }}
+        >
+          <strong>{text("Stwórz scenariusz", "Create a scenario")}</strong>
+          <span>{text("Generator i edycja mapy", "Map generator and editing")}</span>
+        </button>
+      </div>
       <label className="missionSelector">
-        {text("Tryb scenariusza", "Scenario type")}
+        {narrativeMission ? text("Gotowa misja", "Authored mission") : text("Szablon zasad", "Rules template")}
         <select
           disabled={gamePhase !== "Preparation"}
           value={scenario.id}
           onChange={(event) => onScenarioChange(event.target.value)}
         >
-          {scenarios.map((option) => (
+          {visibleScenarioOptions.map((option) => (
             <option key={option.id} value={option.id}>{localizeScenarioName(language, option.id, option.name)}</option>
           ))}
         </select>
       </label>
-      <MapGeneratorPanel
-        boardHeight={mapBoardHeight}
-        boardWidth={mapBoardWidth}
-        canGenerate={armies.length >= 2 && armies.length <= 4}
-        hasManualMap={mapHasManualChanges}
-        settings={mapGeneration}
-        onGenerate={onGenerateMap}
-        onSettingsChange={onMapGenerationSettingsChange}
-      />
+      {narrativeMission && scenario.mapPreset ? (
+        <section className="missionMapPreset">
+          <div>
+            <span>{text("Mapa misji", "Mission map")}</span>
+            <strong>{localizeThemeName(
+              language,
+              scenario.mapPreset.themeId,
+              getMapTheme(scenario.mapPreset.themeId).name,
+            )}</strong>
+          </div>
+          <span className="missionMapLock">{text("Zablokowana", "Locked")}</span>
+          <small>
+            {scenario.mapPreset.width}×{scenario.mapPreset.height} · seed {scenario.mapPreset.seed}. {text(
+              "Mapa, obiekty i strefy są częścią misji i nie mogą być generowane ani edytowane.",
+              "The map, objects, and zones are part of the mission and cannot be generated or edited.",
+            )}
+          </small>
+        </section>
+      ) : (
+        <MapGeneratorPanel
+          boardHeight={mapBoardHeight}
+          boardWidth={mapBoardWidth}
+          canGenerate={armies.length >= 2 && armies.length <= 4}
+          hasManualMap={mapHasManualChanges}
+          settings={mapGeneration}
+          onGenerate={onGenerateMap}
+          onSettingsChange={onMapGenerationSettingsChange}
+        />
+      )}
       <div className="missionRoles">
         <label className="missionSelector">
           {text("Frakcja broniąca", "Defending faction")}
           <select
-            disabled={gamePhase !== "Preparation"}
+            disabled={gamePhase !== "Preparation" || narrativeMission}
             value={defender?.id ?? ""}
             onChange={(event) => onDefenderArmyChange(event.target.value)}
           >
@@ -200,14 +253,15 @@ export function MissionPanel({
         defenderArmyId={mission.defenderArmyId}
         deploymentZones={scenario.deploymentZones}
         controlEditingDisabled={false}
-        teamEditingDisabled={false}
+        teamEditingDisabled={narrativeMission}
         onArmyConfigChange={onArmyConfigChange}
       />
       <ScenarioEventsPanel
         armies={armies}
         currentRound={currentRound}
-        editable
+        editable={!narrativeMission}
         events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
+        zones={scenario.zones}
         onChange={onScheduledEventsChange}
       />
       <h3>{scenarioName}</h3>
@@ -217,7 +271,7 @@ export function MissionPanel({
         <input
           type="number"
           min="1"
-          disabled={gamePhase !== "Preparation"}
+          disabled={gamePhase !== "Preparation" || narrativeMission}
           value={requiredRounds}
           onChange={(event) => onRoundTargetChange(Number(event.target.value))}
         />
@@ -237,7 +291,7 @@ export function MissionPanel({
                 <label key={stage}>
                   {text("Sektor", "Sector")} {stage + 1}
                   <input
-                    disabled={gamePhase !== "Preparation"}
+                    disabled={gamePhase !== "Preparation" || narrativeMission}
                     min={1}
                     type="number"
                     value={values[stage] ?? requiredRounds}
@@ -284,7 +338,7 @@ export function MissionPanel({
             disabled={!canStart}
             onClick={onStart}
           >
-            {text("Rozegraj scenariusz", "Play scenario")}
+            {narrativeMission ? text("Rozegraj misję", "Play mission") : text("Rozegraj scenariusz", "Play scenario")}
           </button>
           {!canStart ? (
             <small className="missionStartHint">
