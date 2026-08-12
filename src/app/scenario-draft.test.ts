@@ -21,6 +21,7 @@ import {
 import {
   christophsisLastLandingScenario,
   defendPointScenario,
+  protectGeneratorScenario,
 } from "../core/scenario/scenarios";
 
 describe("scenario draft flow", () => {
@@ -158,7 +159,7 @@ describe("scenario draft flow", () => {
 
     expect(battle.board.tiles[0].terrainType).toBe("LightCover");
     expect(battle.board.objects![0]).toMatchObject({
-      currentHp: 8,
+      currentHp: 9,
       status: "Active",
     });
     expect(battle.armies[0].units[0]).toMatchObject({
@@ -201,7 +202,7 @@ describe("scenario draft flow", () => {
       status: "Ready",
     });
     expect(restarted.board.objects![0]).toMatchObject({
-      currentHp: 8,
+      currentHp: 9,
       status: "Active",
       position: { x: 5, y: 2 },
     });
@@ -269,6 +270,21 @@ describe("scenario draft flow", () => {
       { id: "army-slot-0-entry", armySlot: 0, cells: [{ x: 0, y: 0 }] },
       { id: "army-slot-1-entry", armySlot: 1, cells: [{ x: 2, y: 2 }] },
     ]);
+  });
+
+  it("applies scenario-specific durability without changing the base object preset", () => {
+    const generator = createBattlefieldObject("Generator", { x: 2, y: 2 });
+    const battle = startBattleFromDraft(createScenarioDraft("protect-generator", {
+      armies: starterArmies,
+      board: { width: 8, height: 8, tiles: [], objects: [generator] },
+    }), protectGeneratorScenario);
+
+    expect(generator).toMatchObject({ maxHp: 9, currentHp: 9, armorSave: 5 });
+    expect(battle.board.objects?.[0]).toMatchObject({
+      maxHp: 10,
+      currentHp: 10,
+      armorSave: 4,
+    });
   });
 
   it("preserves custom progressive stage limits when rebuilding a draft", () => {

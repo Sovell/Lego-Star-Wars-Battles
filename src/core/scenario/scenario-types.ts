@@ -34,6 +34,7 @@ export type ScenarioVictoryCondition =
   | {
       type: "DefendPoint";
       rounds: number;
+      roundLimit: number;
       defenderArmySlot: number;
       objectiveType: "DefensePoint";
     };
@@ -132,12 +133,49 @@ export type ScenarioMapPreset = {
   terrainDensity?: number;
 };
 
+export type MissionDirectorPhase = "Opening" | "Escalation" | "Crisis" | "Finale";
+
+export type MissionDirectorDefinition = {
+  playerArmySlot: number;
+  enemyArmySlot: number;
+  phaseProfiles?: Partial<Record<MissionDirectorPhase, BotProfileId>>;
+  escalation?: {
+    firstRound: number;
+    interval: number;
+    maxWaves: number;
+    /** A wave may arrive while enemy power is at or below this multiple of player power. */
+    powerRatioThreshold: number;
+    waves: ScenarioReinforcementUnit[][];
+  };
+  emergencySupport?: {
+    firstRound: number;
+    strengthBelowPercentage: number;
+    maxUses: number;
+    cooldownRounds: number;
+    waves: ScenarioReinforcementUnit[][];
+  };
+};
+
+export type MissionDirectorState = {
+  phase?: MissionDirectorPhase;
+  lastEvaluatedRound?: number;
+  lastWaveRound?: number;
+  wavesDeployed: number;
+  lastSupportRound?: number;
+  supportUses: number;
+};
+
 export type ScenarioDefinition = {
   id: string;
   name: string;
   description: string;
   experience?: ScenarioExperience;
   mapPreset?: ScenarioMapPreset;
+  missionDirector?: MissionDirectorDefinition;
+  objectDurability?: Partial<Record<
+    BattlefieldObjectType,
+    { maxHp: number; armorSave?: number }
+  >>;
   planet?: string;
   recommendedMapThemeId?: MapThemeId;
   recommendedPoints?: number;
@@ -172,6 +210,7 @@ export type MissionState = {
   activeObjectiveId?: string;
   activeObjectiveName?: string;
   activeObjectiveDescription?: string;
+  directorState?: MissionDirectorState;
 };
 
 export type MissionEvent =
@@ -184,5 +223,10 @@ export type MissionEvent =
   | {
       type: "ScheduledEventResolved";
       eventId: string;
+      message: string;
+    }
+  | {
+      type: "MissionDirectorIntervention";
+      intervention: "PhaseChanged" | "EnemyWave" | "EmergencySupport";
       message: string;
     };

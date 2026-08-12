@@ -2,6 +2,7 @@ import type { BattleEvent } from "../battle-actions";
 import type { Army, Battle } from "../../types";
 import { areArmiesAllied, areArmiesEnemies, getArmyTeamId } from "../army-relations";
 import type { MissionEvent, MissionState, ScenarioDefinition } from "./scenario-types";
+import { orderScenarioObjectivesFromDeployment } from "./scenario-objective-resolver";
 
 export type ScenarioEngineResult = {
   mission: MissionState;
@@ -36,6 +37,9 @@ export function createMissionState(
       : {}),
     ...(scenario.scheduledEvents?.length
       ? { scheduledEvents: structuredClone(scenario.scheduledEvents), resolvedEventIds: [] }
+      : {}),
+    ...(scenario.missionDirector
+      ? { directorState: { wavesDeployed: 0, supportUses: 0 } }
       : {}),
     ...(defenderArmyId ? { defenderArmyId } : {}),
     ...(attackerArmyId ? { attackerArmyId } : {}),
@@ -216,12 +220,17 @@ export function applyScenarioEvents(
 
   if (scenario.victoryCondition.type === "DefendPoint") {
     const condition = scenario.victoryCondition;
+    const elapsedRounds = Math.max(0, (battle?.turn ?? 1) - 1);
+    const roundLimit = Math.max(condition.roundLimit, requiredRounds);
     const defensePoint = battle?.board.objects?.find(
       (object) =>
         object.type === condition.objectiveType && object.status === "Active",
     );
 
     if (!defensePoint) {
+      if (elapsedRounds >= roundLimit) {
+        return defendPointTimeout(mission, roundLimit);
+      }
       return {
         mission,
         events: [{
@@ -246,6 +255,9 @@ export function applyScenarioEvents(
     );
 
     if (!defenderPresent || enemyPresent) {
+      if (elapsedRounds >= roundLimit) {
+        return defendPointTimeout(mission, roundLimit);
+      }
       return {
         mission: { ...mission, roundsCompleted: 0 },
         events: [{
@@ -256,6 +268,12 @@ export function applyScenarioEvents(
     }
 
     roundsCompleted = mission.roundsCompleted + completedRounds;
+    if (roundsCompleted < requiredRounds && elapsedRounds >= roundLimit) {
+      return defendPointTimeout(
+        { ...mission, roundsCompleted },
+        roundLimit,
+      );
+    }
   }
 
   if (roundsCompleted < requiredRounds) {
@@ -344,6 +362,20 @@ function applyDestroyObjectsProgress(
   };
 }
 
+function defendPointTimeout(
+  mission: MissionState,
+  roundLimit: number,
+): ScenarioEngineResult {
+  return {
+    mission: { ...mission, status: "Defeat" },
+    events: [{
+      type: "MissionCompleted",
+      status: "Defeat",
+      message: `Misja zakończona porażką: punkt nie został utrzymany przed końcem ${roundLimit}. rundy.`,
+    }],
+  };
+}
+
 function applyProgressiveControlRound(
   mission: MissionState,
   condition: Extract<ScenarioDefinition["victoryCondition"], { type: "ProgressiveControl" }>,
@@ -352,7 +384,7 @@ function applyProgressiveControlRound(
   completedRounds: number,
 ): ScenarioEngineResult {
   const attacker = battle?.armies[condition.attackerArmySlot];
-  const objectives = orderObjectivesFromDeployment(
+  const objectives = orderScenarioObjectivesFromDeployment(
     (battle?.board.objects ?? []).filter((object) =>
       object.type === condition.objectiveType && object.status === "Active"
     ),
@@ -492,28 +524,6 @@ function teamControlsPosition(
   );
   return occupants.some((unit) => areArmiesAllied(battle, unit.armyId, armyId)) &&
     !occupants.some((unit) => areArmiesEnemies(battle, unit.armyId, armyId));
-}
-
-function orderObjectivesFromDeployment<T extends { position: { x: number; y: number } }>(
-  objectives: T[],
-  deploymentCells: { x: number; y: number }[],
-): T[] {
-  const origin = deploymentCells.length > 0
-    ? {
-        x: deploymentCells.reduce((sum, cell) => sum + cell.x, 0) / deploymentCells.length,
-        y: deploymentCells.reduce((sum, cell) => sum + cell.y, 0) / deploymentCells.length,
-      }
-    : { x: 0, y: 0 };
-  return [...objectives].sort((left, right) =>
-    manhattanDistance(left.position, origin) - manhattanDistance(right.position, origin)
-  );
-}
-
-function manhattanDistance(
-  first: { x: number; y: number },
-  second: { x: number; y: number },
-): number {
-  return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
 }
 
 function applyTerritoryRound(

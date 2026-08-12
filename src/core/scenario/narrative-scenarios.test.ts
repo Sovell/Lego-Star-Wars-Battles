@@ -4,6 +4,7 @@ import { createScenarioDraft, applyScenarioMapPreset, remapScheduledEventsByArmy
 import { validateMapConnectivity } from "../map-generation/map-connectivity";
 import { validateScheduledScenarioEvents } from "./scheduled-events";
 import { applyScenarioEvents, createMissionState } from "./scenario-engine";
+import { validateMissionDirector } from "./mission-director";
 import {
   customScenarioTemplates,
   mandaloreHuntInSundariScenario,
@@ -36,6 +37,7 @@ describe("narrative mission catalog", () => {
       expect(first.board).toEqual(second.board);
       expect(first.mapGeneration?.themeId).toBe(scenario.mapPreset?.themeId);
       expect(validateMapConnectivity(first.board).valid).toBe(true);
+      expect(validateMissionDirector(scenario.missionDirector, starterArmies)).toBe(true);
     },
   );
 
@@ -59,15 +61,15 @@ describe("narrative mission catalog", () => {
   it("fails a scripted hunt when its authored round limit expires", () => {
     const mission = {
       ...createMissionState(mandaloreHuntInSundariScenario, starterArmies),
-      roundsCompleted: 7,
+      roundsCompleted: 11,
     };
     const result = applyScenarioEvents(
       mission,
       mandaloreHuntInSundariScenario,
-      [{ type: "TurnEnded", turn: 8 }],
+      [{ type: "TurnEnded", turn: 12 }],
     );
 
     expect(result.mission.status).toBe("Defeat");
-    expect(result.mission.roundsCompleted).toBe(8);
+    expect(result.mission.roundsCompleted).toBe(12);
   });
 });

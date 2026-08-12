@@ -4,6 +4,7 @@ import { createBattlefieldObject } from "../battlefield-objects";
 import { createBattle } from "../battle-state";
 import {
   defendPointScenario,
+  geonosisDroidFoundryScenario,
   protectGeneratorScenario,
   survivalTestScenario,
 } from "../scenario/scenarios";
@@ -105,6 +106,39 @@ describe("attacker bot", () => {
       battle,
       protectGeneratorScenario,
       attackerArmyId,
+    );
+
+    expect(decision?.action).toMatchObject({
+      type: "AttackObject",
+      objectId: battle.board.objects?.[0].id,
+    });
+  });
+
+  it("attacks a DestroyObjects generator resolved as the current mission target", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", { status: "Activated" });
+    battle = patchUnit(battle, "rep_unit_1", {
+      position: { x: 2, y: 2 },
+      status: "Ready",
+    });
+    battle = {
+      ...battle,
+      activeActivation: {
+        id: "republic-token",
+        armyId: "army_republic",
+        faction: "Republic",
+        used: true,
+      },
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      geonosisDroidFoundryScenario,
+      "army_republic",
     );
 
     expect(decision?.action).toMatchObject({

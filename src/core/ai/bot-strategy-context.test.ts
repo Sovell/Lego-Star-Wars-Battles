@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Battle, UnitInstance } from "../../types";
 import { createBattlefieldObject } from "../battlefield-objects";
 import { createBattle } from "../battle-state";
-import { controlTerritoryScenario, survivalTestScenario } from "../scenario/scenarios";
+import {
+  christophsisBreakLineScenario,
+  controlTerritoryScenario,
+  feluciaAmbushScenario,
+  survivalTestScenario,
+} from "../scenario/scenarios";
 import { createTerrainTile } from "../terrain-definitions";
-import { aggressiveBotDoctrine } from "./bot-doctrine";
+import { aggressiveBotDoctrine, defensiveBotDoctrine } from "./bot-doctrine";
 import { createBotStrategyContext } from "./bot-strategy-context";
 
 describe("bot strategy context", () => {
@@ -99,7 +104,73 @@ describe("bot strategy context", () => {
 
     expect(context?.movementTarget).toEqual({ x: 1, y: 4 });
   });
+
+  it("targets the current progressive-control stage", () => {
+    let battle = readyRepublicContextBattle();
+    const objectives = [2, 4, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 3 })
+    );
+    battle = {
+      ...battle,
+      board: { ...battle.board, objects: objectives },
+    };
+
+    const context = createBotStrategyContext(
+      battle,
+      christophsisBreakLineScenario,
+      "army_republic",
+      aggressiveBotDoctrine,
+      {
+        scenarioId: christophsisBreakLineScenario.id,
+        status: "Active",
+        roundsCompleted: 0,
+        objectiveStage: 1,
+      },
+    );
+
+    expect(context?.movementTarget).toEqual({ x: 4, y: 3 });
+    expect(context?.objectiveName).toBe(objectives[1].name);
+  });
+
+  it("targets the extraction zone for the extracting team", () => {
+    const battle = readyRepublicContextBattle();
+
+    const context = createBotStrategyContext(
+      battle,
+      feluciaAmbushScenario,
+      "army_republic",
+      defensiveBotDoctrine,
+      {
+        scenarioId: feluciaAmbushScenario.id,
+        status: "Active",
+        roundsCompleted: 3,
+      },
+    );
+
+    expect(context?.movementTarget?.x).toBe(7);
+    expect(context?.objectiveName).toBe("strefa ewakuacji");
+  });
 });
+
+function readyRepublicContextBattle(): Battle {
+  const battle = createBattle();
+  return {
+    ...battle,
+    activeActivation: {
+      id: "republic-token",
+      armyId: "army_republic",
+      faction: "Republic",
+      used: true,
+    },
+    armies: battle.armies.map((army) => ({
+      ...army,
+      units: army.units.map((unit) => ({
+        ...unit,
+        status: unit.id === "rep_unit_1" ? "Ready" as const : "Activated" as const,
+      })),
+    })),
+  };
+}
 
 function patchUnit(
   battle: Battle,

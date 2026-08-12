@@ -40,6 +40,7 @@ import {
 } from "../../core/rules/activation";
 import { isPositionFree } from "../../core/rules/occupancy";
 import { createMissionState } from "../../core/scenario/scenario-engine";
+import { validateMissionDirector } from "../../core/scenario/mission-director";
 import { applyMissionAction } from "../../core/scenario/mission-session";
 import { validateScheduledScenarioEvents } from "../../core/scenario/scheduled-events";
 import type { MissionState, ScenarioDefinition } from "../../core/scenario/scenario-types";
@@ -322,7 +323,7 @@ export function BattleScreen({
     validateScheduledScenarioEvents(
       scenario.scheduledEvents ?? [],
       battle.armies,
-    );
+    ) && validateMissionDirector(scenario.missionDirector, battle.armies);
 
   useEffect(() => {
     if (!battle.armies.some((army) => army.id === selectedDeploymentArmyId)) {

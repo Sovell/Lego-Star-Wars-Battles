@@ -9,6 +9,8 @@ export type BotDoctrine = {
   coverPenaltyWeight: number;
   remainingHpPenaltyWeight: number;
   objectiveAttackBonus: number;
+  objectiveDefenseThreatWeight: number;
+  objectiveImmediateThreatBonus: number;
   abilityBaseScore: number;
   abilityEffectWeight: number;
   movementBaseScore: number;
@@ -43,6 +45,8 @@ export const aggressiveBotDoctrine: BotDoctrine = {
   coverPenaltyWeight: 25,
   remainingHpPenaltyWeight: 1,
   objectiveAttackBonus: 100_000,
+  objectiveDefenseThreatWeight: 0,
+  objectiveImmediateThreatBonus: 0,
   abilityBaseScore: 50_000,
   abilityEffectWeight: 500,
   movementBaseScore: 20_000,
@@ -70,6 +74,8 @@ export const defensiveBotDoctrine: BotDoctrine = {
   coverPenaltyWeight: 0,
   remainingHpPenaltyWeight: 1,
   objectiveAttackBonus: 0,
+  objectiveDefenseThreatWeight: 3_000,
+  objectiveImmediateThreatBonus: 30_000,
   abilityBaseScore: 45_000,
   abilityEffectWeight: 300,
   movementBaseScore: 20_000,

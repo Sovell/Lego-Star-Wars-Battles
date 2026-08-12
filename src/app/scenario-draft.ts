@@ -215,13 +215,16 @@ export function createPreparationBattle(draft: ScenarioDraft): Battle {
   };
 }
 
-export function startBattleFromDraft(draft: ScenarioDraft): Battle {
+export function startBattleFromDraft(
+  draft: ScenarioDraft,
+  scenario?: ScenarioDefinition,
+): Battle {
   const armies = resetArmies(draft.armies);
   const battle = createBattle(armies);
 
   return {
     ...battle,
-    board: resetBoard(draft.board),
+    board: resetBoard(draft.board, scenario),
   };
 }
 
@@ -410,15 +413,21 @@ function resetUnit(unit: UnitInstance, armyId: string): UnitInstance {
   };
 }
 
-function resetBoard(board: Board): Board {
+function resetBoard(board: Board, scenario?: ScenarioDefinition): Board {
   const nextBoard = structuredClone(board);
 
   return {
     ...nextBoard,
-    objects: (nextBoard.objects ?? []).map((object) => ({
-      ...object,
-      currentHp: object.maxHp,
-      status: "Active",
-    })),
+    objects: (nextBoard.objects ?? []).map((object) => {
+      const durability = scenario?.objectDurability?.[object.type];
+      const maxHp = durability?.maxHp ?? object.maxHp;
+      return {
+        ...object,
+        ...durability,
+        maxHp,
+        currentHp: maxHp,
+        status: "Active" as const,
+      };
+    }),
   };
 }

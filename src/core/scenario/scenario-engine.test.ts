@@ -41,7 +41,7 @@ describe("scenario engine", () => {
   it("completes the survival scenario after the required number of rounds", () => {
     const mission = {
       ...createMissionState(survivalTestScenario),
-      roundsCompleted: 2,
+      roundsCompleted: 7,
     };
     const result = applyScenarioEvents(mission, survivalTestScenario, [
       { type: "TurnEnded", turn: 4 },
@@ -50,7 +50,7 @@ describe("scenario engine", () => {
     expect(result.mission).toEqual({
       scenarioId: survivalTestScenario.id,
       status: "Victory",
-      roundsCompleted: 3,
+      roundsCompleted: 8,
     });
     expect(result.events).toEqual([
       expect.objectContaining({ type: "MissionCompleted", status: "Victory" }),
@@ -173,6 +173,26 @@ describe("scenario engine", () => {
 
     expect(result.mission.roundsCompleted).toBe(0);
     expect(result.events).toEqual([expect.objectContaining({ type: "MissionProgress" })]);
+  });
+
+  it("ends point defense in defeat when the overall battle limit expires", () => {
+    const battle = createBattle();
+    battle.turn = defendPointScenario.victoryCondition.type === "DefendPoint"
+      ? defendPointScenario.victoryCondition.roundLimit + 1
+      : 11;
+    battle.board.objects = [createBattlefieldObject("DefensePoint", { x: 4, y: 4 })];
+
+    const result = applyScenarioEvents(
+      { ...createMissionState(defendPointScenario), roundsCompleted: 2 },
+      defendPointScenario,
+      [{ type: "TurnEnded", turn: battle.turn }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Defeat");
+    expect(result.events).toEqual([
+      expect.objectContaining({ type: "MissionCompleted", status: "Defeat" }),
+    ]);
   });
 
   it("counts point defense for the army selected as defender", () => {
@@ -328,12 +348,12 @@ describe("scenario engine", () => {
   it("loses the foundry assault when its round limit expires", () => {
     const mission = {
       ...createMissionState(geonosisDroidFoundryScenario),
-      roundsCompleted: 5,
+      roundsCompleted: 9,
     };
     const result = applyScenarioEvents(
       mission,
       geonosisDroidFoundryScenario,
-      [{ type: "TurnEnded", turn: 7 }],
+      [{ type: "TurnEnded", turn: 11 }],
     );
 
     expect(result.mission.status).toBe("Defeat");
@@ -431,12 +451,12 @@ describe("scenario engine", () => {
     battle.armies[0].units[0].position = { x: 7, y: 4 };
     const mission = {
       ...createMissionState(feluciaAmbushScenario, battle.armies),
-      roundsCompleted: 1,
+      roundsCompleted: 5,
     };
     const result = applyScenarioEvents(
       mission,
       feluciaAmbushScenario,
-      [{ type: "TurnEnded", turn: 3 }],
+      [{ type: "TurnEnded", turn: 4 }],
       battle,
     );
 

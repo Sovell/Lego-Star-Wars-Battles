@@ -6,6 +6,7 @@ import { chooseBestBotAction } from "./bot-action-scoring";
 import {
   botDoctrines,
   getBotDoctrine,
+  defensiveBotDoctrine,
   hunterBotDoctrine,
   objectiveBotDoctrine,
   swarmBotDoctrine,
@@ -64,6 +65,26 @@ describe("bot doctrine profiles", () => {
       battle,
       doctrine: hunterBotDoctrine,
     })?.action).toMatchObject({ defenderId: "sep_unit_2" });
+  });
+
+  it("lets the defensive profile focus an enemy threatening a protected objective", () => {
+    let battle = createBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 3, y: 3 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 1, y: 0 } });
+    battle = patchUnit(battle, "sep_unit_2", { position: { x: 6, y: 6 } });
+    const attacker = battle.armies.flatMap((army) => army.units)
+      .find((unit) => unit.id === "rep_unit_1")!;
+    const weaponId = getTemplate(attacker).weapons[0].id;
+    const actions = [
+      { type: "Attack" as const, attackerId: attacker.id, defenderId: "sep_unit_1", weaponId },
+      { type: "Attack" as const, attackerId: attacker.id, defenderId: "sep_unit_2", weaponId },
+    ];
+
+    expect(chooseBestBotAction(actions, {
+      battle,
+      doctrine: defensiveBotDoctrine,
+      protectedObjectivePosition: { x: 0, y: 0 },
+    })?.action).toMatchObject({ defenderId: "sep_unit_1" });
   });
 });
 

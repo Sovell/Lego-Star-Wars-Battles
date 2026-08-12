@@ -110,6 +110,13 @@ export function MissionPanel({
           <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
         </div>
         <progress max={requiredRounds} value={mission.roundsCompleted} />
+        {scenario.victoryCondition.type === "DefendPoint" ? (
+          <div className="missionProgressHeader">
+            <span>{text("Limit bitwy", "Battle limit")}</span>
+            <strong>{Math.min(currentRound, scenario.victoryCondition.roundLimit)}/{scenario.victoryCondition.roundLimit}</strong>
+          </div>
+        ) : null}
+        <MissionDirectorStatus mission={mission} scenario={scenario} />
         {scenario.victoryCondition.type === "DestroyObjects" ? (
           <div className="missionProgressHeader">
             <span>{text("Zniszczone cele", "Destroyed targets")}</span>
@@ -266,6 +273,7 @@ export function MissionPanel({
       />
       <h3>{scenarioName}</h3>
       <p>{scenarioDescription}</p>
+      <MissionDirectorStatus mission={mission} scenario={scenario} />
       <label className="missionSelector">
         {text("Wymagane rundy", "Required rounds")}
         <input
@@ -351,6 +359,46 @@ export function MissionPanel({
           {text("Zakończ i przygotuj nową rozgrywkę", "End and prepare a new game")}
         </button>
       )}
+    </section>
+  );
+}
+
+function MissionDirectorStatus({
+  mission,
+  scenario,
+}: {
+  mission: MissionState;
+  scenario: ScenarioDefinition;
+}) {
+  const { text } = useI18n();
+  const definition = scenario.missionDirector;
+  if (!definition) return null;
+  const state = mission.directorState;
+  const phase = state?.phase === "Opening"
+    ? text("Otwarcie", "Opening")
+    : state?.phase === "Escalation"
+      ? text("Eskalacja", "Escalation")
+      : state?.phase === "Crisis"
+        ? text("Kryzys", "Crisis")
+        : state?.phase === "Finale"
+          ? text("Finał", "Finale")
+          : text("Oczekiwanie", "Standby");
+
+  return (
+    <section className="missionDirectorStatus">
+      <div>
+        <span>Mission Director</span>
+        <strong>{phase}</strong>
+      </div>
+      <small>
+        {text("Fale adaptacyjne", "Adaptive waves")}: {state?.wavesDeployed ?? 0}/{definition.escalation?.maxWaves ?? 0}
+        {" · "}
+        {text("Wsparcie", "Support")}: {state?.supportUses ?? 0}/{definition.emergencySupport?.maxUses ?? 0}
+      </small>
+      <small>{text(
+        "Tempo i posiłki reagują na siłę obu drużyn.",
+        "Pacing and reinforcements react to both teams' strength.",
+      )}</small>
     </section>
   );
 }

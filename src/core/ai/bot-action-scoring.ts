@@ -1,7 +1,7 @@
 import type { Battle, UnitInstance, WeaponProfile } from "../../types";
 import type { BattleAction } from "../battle-actions";
 import type { LegalUnitAction } from "../legal-actions";
-import type { GridPosition } from "../rules/geometry";
+import { distance, lineOfSight, type GridPosition } from "../rules/geometry";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
 import { getPathCost } from "../rules/pathfinding";
 import { findUnit, getTemplate } from "../rules/state";
@@ -10,7 +10,8 @@ import type { BotStrategyContext } from "./bot-strategy-context";
 
 export type BotActionScoringContext = Pick<
   BotStrategyContext,
-  "battle" | "doctrine" | "movementTarget" | "objectiveObjectId"
+  "battle" | "doctrine" | "movementTarget" | "objectiveObjectId" |
+  "protectedObjectivePosition"
 > & { decisionSeed?: string };
 
 export type ScoredBotAction<TAction extends LegalUnitAction = LegalUnitAction> = {
@@ -78,8 +79,9 @@ export function estimateMaximumDamage(weapon: WeaponProfile): number {
 
 function scoreUnitAttack(
   action: Extract<BattleAction, { type: "Attack" }>,
-  { battle, doctrine }: BotActionScoringContext,
+  context: BotActionScoringContext,
 ): number {
+  const { battle, doctrine } = context;
   const attacker = findUnit(battle, action.attackerId);
   const defender = findUnit(battle, action.defenderId);
   const weapon = getWeapon(attacker, action.weaponId);
@@ -92,7 +94,8 @@ function scoreUnitAttack(
     (damagePotential >= defender.currentHp ? doctrine.lethalBonus : 0) +
     getTemplate(defender).cost * doctrine.targetValueWeight -
     getDefenseBonus(battle, defender) * doctrine.coverPenaltyWeight -
-    defender.currentHp * doctrine.remainingHpPenaltyWeight
+    defender.currentHp * doctrine.remainingHpPenaltyWeight +
+    getObjectiveThreatScore(defender, context)
   );
 }
 
@@ -125,8 +128,9 @@ function scoreObjectAttack(
 
 function scoreAbility(
   action: Extract<BattleAction, { type: "UseAbility" }>,
-  { battle, doctrine }: BotActionScoringContext,
+  context: BotActionScoringContext,
 ): number {
+  const { battle, doctrine } = context;
   const unit = findUnit(battle, action.unitId);
   const ability = unit
     ? getUnitActiveAbilities(battle, unit).find((candidate) => candidate.id === action.abilityId)
@@ -143,7 +147,8 @@ function scoreAbility(
     doctrine.abilityBaseScore +
     effectValue * doctrine.abilityEffectWeight +
     (effectValue >= target.currentHp ? doctrine.lethalBonus : 0) -
-    target.currentHp * doctrine.remainingHpPenaltyWeight
+    target.currentHp * doctrine.remainingHpPenaltyWeight +
+    getObjectiveThreatScore(target, context)
   );
 }
 
@@ -242,6 +247,24 @@ function getWeapon(unit: UnitInstance | undefined, weaponId: string): WeaponProf
 function getTileDefenseBonus(battle: Battle, position: GridPosition): number {
   return battle.board.tiles.find((tile) => tile.x === position.x && tile.y === position.y)
     ?.defenseBonus ?? 0;
+}
+
+function getObjectiveThreatScore(
+  unit: UnitInstance,
+  { battle, doctrine, protectedObjectivePosition }: BotActionScoringContext,
+): number {
+  if (!unit.position || !protectedObjectivePosition) return 0;
+  const objectiveDistance = distance(unit.position, protectedObjectivePosition);
+  const proximity = Math.max(
+    0,
+    Math.max(battle.board.width, battle.board.height) - objectiveDistance,
+  );
+  const canAttackObjective = getTemplate(unit).weapons.some((weapon) =>
+    weapon.range >= objectiveDistance &&
+    lineOfSight(battle, unit.position!, protectedObjectivePosition)
+  );
+  return proximity * doctrine.objectiveDefenseThreatWeight +
+    (canAttackObjective ? doctrine.objectiveImmediateThreatBonus : 0);
 }
 
 function getTileAttackBonus(battle: Battle, position: GridPosition): number {

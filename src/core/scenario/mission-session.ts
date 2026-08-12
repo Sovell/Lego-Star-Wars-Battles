@@ -6,6 +6,7 @@ import {
   type BattleActionResult,
 } from "../battle-actions";
 import { applyScenarioEvents } from "./scenario-engine";
+import { applyMissionDirectorRound } from "./mission-director";
 import {
   applyScenarioTriggerEffects,
   deriveScenarioTriggerSignals,
@@ -80,17 +81,33 @@ export function applyMissionAction(
     scenario,
     triggerSignals,
   );
-  const battle = triggeredResult.mission.status === "Active"
-    ? triggeredResult.battle
+  const directorResult = completedTurn
+    ? applyMissionDirectorRound(
+        triggeredResult.battle,
+        triggeredResult.mission,
+        scenario,
+        completedTurn.turn,
+      )
     : {
-        ...triggeredResult.battle,
+        battle: triggeredResult.battle,
+        mission: triggeredResult.mission,
+        events: [],
+      };
+  const battle = directorResult.mission.status === "Active"
+    ? directorResult.battle
+    : {
+        ...directorResult.battle,
         activeActivation: undefined,
       };
 
   return {
     ...battleResult,
     battle,
-    mission: triggeredResult.mission,
-    missionEvents: [...scenarioResult.events, ...triggeredResult.events],
+    mission: directorResult.mission,
+    missionEvents: [
+      ...scenarioResult.events,
+      ...triggeredResult.events,
+      ...directorResult.events,
+    ],
   };
 }

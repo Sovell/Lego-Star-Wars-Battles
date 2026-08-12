@@ -35,6 +35,7 @@ import {
 } from "./core/battle-state";
 import { createBattlefieldObject } from "./core/battlefield-objects";
 import { createMissionState } from "./core/scenario/scenario-engine";
+import { applyMissionDirectorRound } from "./core/scenario/mission-director";
 import {
   applyScheduledScenarioEvents,
   validateScheduledScenarioEvents,
@@ -480,7 +481,7 @@ export function App() {
     scenarioStartInProgress.current = true;
 
     try {
-      const preparedBattle = startBattleFromDraft(scenarioDraft);
+      const preparedBattle = startBattleFromDraft(scenarioDraft, activeScenario);
       const initialBattle = structuredClone(preparedBattle);
       const preparedMission = {
         ...createMissionState(
@@ -500,12 +501,19 @@ export function App() {
         activeScenario,
         [{ type: "RoundStarted", round: 1 }],
       );
-      const nextBattle = startEvents.battle;
-      const nextMission = startEvents.mission;
+      const directorStart = applyMissionDirectorRound(
+        startEvents.battle,
+        startEvents.mission,
+        activeScenario,
+        1,
+      );
+      const nextBattle = directorStart.battle;
+      const nextMission = directorStart.mission;
       const localizedScenarioName = localizeScenarioName(language, activeScenario.id, activeScenario.name);
       const startLog = createLog(1, `${text("Rozpoczęto scenariusz", "Scenario started")}: ${localizedScenarioName}.`);
       const saveLog = createLog(1, text("Utworzono automatyczny zapis początkowy.", "An automatic initial save was created."));
       let nextLogs = [
+        ...directorStart.events.map((event) => createLog(1, event.message)),
         ...startEvents.events.map((event) => createLog(1, event.message)),
         saveLog,
         startLog,
@@ -523,6 +531,7 @@ export function App() {
       } catch (error) {
         const detail = error instanceof Error ? ` ${error.message}` : "";
         nextLogs = [
+          ...directorStart.events.map((event) => createLog(1, event.message)),
           ...startEvents.events.map((event) => createLog(1, event.message)),
           createLog(1, `${text("Nie udało się utworzyć zapisu początkowego.", "Could not create the initial save.")}${detail}`),
           startLog,

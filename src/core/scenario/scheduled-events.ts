@@ -84,7 +84,7 @@ export function applyScenarioTriggerEffects(
   const missionEvents: MissionEvent[] = [];
   for (const event of dueEvents) {
     if (nextMission.status !== "Active") break;
-    const result = applyEffect(nextBattle, nextMission, scenario, event);
+    const result = applyScenarioEventEffect(nextBattle, nextMission, scenario, event);
     nextBattle = result.battle;
     nextMission = result.mission;
     resolvedIds.add(event.id);
@@ -269,7 +269,7 @@ function triggerMatches(
   }
 }
 
-function applyEffect(
+export function applyScenarioEventEffect(
   battle: Battle,
   mission: MissionState,
   scenario: ScenarioDefinition,

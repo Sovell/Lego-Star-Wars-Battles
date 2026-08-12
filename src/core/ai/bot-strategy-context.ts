@@ -4,6 +4,7 @@ import { isPositionFree } from "../rules/occupancy";
 import type { GridPosition } from "../rules/geometry";
 import { getPathCost } from "../rules/pathfinding";
 import { getTemplate } from "../rules/state";
+import { resolveScenarioObjective } from "../scenario/scenario-objective-resolver";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
 import type { BotDoctrine } from "./bot-doctrine";
 import type { BotDecisionContext } from "./bot-controller";
@@ -19,6 +20,7 @@ export type BotStrategyContext = {
   objectiveName?: string;
   movementTarget?: GridPosition;
   objectiveObjectId?: string;
+  protectedObjectivePosition?: GridPosition;
   decisionSeed: string;
 };
 
@@ -41,14 +43,21 @@ export function createBotStrategyContext(
   const units = pendingAdvanceUnit ? [pendingAdvanceUnit] : availableUnits;
   if (units.length === 0) return undefined;
 
-  const objective = getScenarioObjective(battle, scenario);
+  const scenarioObjective = resolveScenarioObjective({
+    battle,
+    scenario,
+    mission,
+    armyId,
+    units,
+  });
+  const objective = scenarioObjective?.object;
   const territoryTarget = scenario.victoryCondition.type === "ControlTerritory"
     ? findTerritoryTarget(battle, mission, units, armyId, doctrine.objectivePolicy)
     : undefined;
   const enemyTarget = doctrine.objectivePolicy === "Assault"
     ? findNearestEnemyPosition(battle, units, armyId)
     : undefined;
-  const movementTarget = objective?.position ?? territoryTarget ?? enemyTarget;
+  const movementTarget = scenarioObjective?.position ?? territoryTarget ?? enemyTarget;
 
   return {
     battle,
@@ -58,32 +67,22 @@ export function createBotStrategyContext(
     doctrine,
     units,
     objective,
-    objectiveName: objective?.name ??
+    objectiveName: scenarioObjective?.name ??
       (scenario.victoryCondition.type === "ControlTerritory" ? "terytorium" : undefined),
     movementTarget,
     objectiveObjectId:
-      doctrine.objectivePolicy === "Assault" && objective?.destructible
+      doctrine.objectivePolicy === "Assault" &&
+        scenarioObjective?.canAttackObject && objective?.destructible
         ? objective.id
+        : undefined,
+    protectedObjectivePosition:
+      doctrine.objectivePolicy === "Hold" &&
+        scenarioObjective && !scenarioObjective.canAttackObject
+        ? scenarioObjective.position
         : undefined,
     decisionSeed: decisionContext?.seed ??
       `${battle.id}:${battle.turn}:${battle.activeActivation.id}:${armyId}`,
   };
-}
-
-function getScenarioObjective(
-  battle: Battle,
-  scenario: ScenarioDefinition,
-): BattlefieldObject | undefined {
-  const objectiveType = scenario.victoryCondition.type === "ProtectObject"
-    ? scenario.victoryCondition.objectType
-    : scenario.victoryCondition.type === "DefendPoint"
-      ? scenario.victoryCondition.objectiveType
-      : undefined;
-  return objectiveType
-    ? battle.board.objects?.find(
-        (object) => object.type === objectiveType && object.status === "Active"
-      )
-    : undefined;
 }
 
 function findTerritoryTarget(

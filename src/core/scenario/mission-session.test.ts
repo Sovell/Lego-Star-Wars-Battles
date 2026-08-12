@@ -4,14 +4,17 @@ import { createBattle } from "../battle-state";
 import { createSequenceDiceRoller } from "../random";
 import { createMissionState } from "./scenario-engine";
 import { applyMissionAction } from "./mission-session";
-import { survivalTestScenario } from "./scenarios";
+import {
+  christophsisLastLandingScenario,
+  survivalTestScenario,
+} from "./scenarios";
 
 describe("mission session", () => {
   it("does not count an incomplete activation pool as a completed round", () => {
     const battle = createBattle();
     const mission = {
       ...createMissionState(survivalTestScenario),
-      roundsCompleted: 2,
+      roundsCompleted: 7,
     };
 
     const result = applyMissionAction(
@@ -31,7 +34,7 @@ describe("mission session", () => {
     const battle = activateAllLivingUnits(createBattle());
     const mission = {
       ...createMissionState(survivalTestScenario),
-      roundsCompleted: 2,
+      roundsCompleted: 7,
     };
 
     const result = applyMissionAction(
@@ -44,6 +47,30 @@ describe("mission session", () => {
     expect(result.battle.phase).toBe("Activation");
     expect(result.battle.activeActivation).toBeUndefined();
     expect(result.missionEvents.map((event) => event.type)).toEqual(["MissionCompleted"]);
+  });
+
+  it("runs the Mission Director after a completed round", () => {
+    const battle = activateAllLivingUnits(createBattle());
+    const mission = createMissionState(
+      christophsisLastLandingScenario,
+      battle.armies,
+    );
+
+    const result = applyMissionAction(
+      { battle, mission },
+      christophsisLastLandingScenario,
+      { type: "EndTurn" },
+    );
+
+    expect(result.mission.directorState).toMatchObject({
+      phase: "Opening",
+      lastEvaluatedRound: 2,
+    });
+    expect(result.mission.botProfiles?.army_separatists).toBe("aggressive");
+    expect(result.missionEvents).toContainEqual(expect.objectContaining({
+      type: "MissionDirectorIntervention",
+      intervention: "PhaseChanged",
+    }));
   });
 
   it("does not finish a mission when the last enemy unit is destroyed", () => {

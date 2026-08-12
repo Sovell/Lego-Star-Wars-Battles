@@ -96,8 +96,8 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
   "christophsis-last-landing": {
     name: { pl: "Christophsis: Ostatnie lądowisko", en: "Christophsis: Last Landing Zone" },
     description: {
-      pl: "Utrzymaj lądowisko do czasu przybycia kanonierki LAAT i odeprzyj kolejne fale droidów.",
-      en: "Hold the landing zone until the LAAT gunship arrives and repel successive droid waves.",
+      pl: "Utrzymaj lądowisko przez osiem rund, do czasu przybycia kanonierki LAAT, i odeprzyj kolejne fale droidów.",
+      en: "Hold the landing zone for eight rounds until the LAAT gunship arrives and repel successive droid waves.",
     },
   },
   "geonosis-heart-of-factory": {
@@ -110,8 +110,8 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
   "felucia-surrounded": {
     name: { pl: "Felucia: Okrążeni!", en: "Felucia: Surrounded!" },
     description: {
-      pl: "Przetrwaj sześć rund w grzybowych ostępach, odpierając coraz cięższe fale droidów.",
-      en: "Survive six rounds in the fungal wilds against increasingly heavy droid waves.",
+      pl: "Przetrwaj dziesięć rund w grzybowych ostępach, odpierając coraz cięższe fale droidów.",
+      en: "Survive ten rounds in the fungal wilds against increasingly heavy droid waves.",
     },
   },
   "mandalore-hunt-in-sundari": {
@@ -138,15 +138,15 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
   "defend-point": {
     name: { pl: "Broń punktu", en: "Defend the Point" },
     description: {
-      pl: "Wyznacz punkt na mapie i utrzymaj go przez trzy kolejne pełne rundy.",
-      en: "Designate a point on the map and hold it for three consecutive full rounds.",
+      pl: "Wyznacz punkt na mapie i utrzymaj go przez pięć kolejnych pełnych rund.",
+      en: "Designate a point on the map and hold it for five consecutive full rounds.",
     },
   },
   "protect-generator": {
     name: { pl: "Chroń generator", en: "Protect the Generator" },
     description: {
-      pl: "Postaw generator i utrzymaj go przy życiu przez trzy pełne rundy.",
-      en: "Place a generator and keep it operational for three full rounds.",
+      pl: "Postaw generator i utrzymaj go przy życiu przez pięć pełnych rund.",
+      en: "Place a generator and keep it operational for five full rounds.",
     },
   },
   "control-territory": {
@@ -159,8 +159,8 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
   "geonosis-droid-foundry": {
     name: { pl: "Geonosis: Fabryka droidów", en: "Geonosis: Droid Foundry" },
     description: {
-      pl: "Przebij się przez skalne gardła i zniszcz dwa generatory fabryki przed upływem szóstej rundy.",
-      en: "Break through the rocky choke points and destroy two foundry generators before the end of round six.",
+      pl: "Przebij się przez skalne gardła i zniszcz dwa generatory fabryki przed upływem dziesiątej rundy.",
+      en: "Break through the rocky choke points and destroy two foundry generators before the end of round ten.",
     },
   },
   "christophsis-break-line": {

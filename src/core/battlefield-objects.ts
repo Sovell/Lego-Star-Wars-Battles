@@ -26,7 +26,7 @@ export const battlefieldObjectPresets: BattlefieldObjectPreset[] = [
   {
     type: "Generator",
     name: "Generator",
-    maxHp: 8,
+    maxHp: 9,
     armorSave: 5,
     defenseBonus: 0,
     destructible: true,

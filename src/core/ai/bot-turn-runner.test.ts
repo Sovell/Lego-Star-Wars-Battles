@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { Battle } from "../../types";
 import { createBattle } from "../battle-state";
 import { createMissionState } from "../scenario/scenario-engine";
-import { survivalTestScenario } from "../scenario/scenarios";
+import {
+  christophsisBreakLineScenario,
+  controlTerritoryScenario,
+  feluciaAmbushScenario,
+  geonosisDroidFoundryScenario,
+  survivalTestScenario,
+} from "../scenario/scenarios";
 import { resolveDefaultBotProfile, runBotTurn } from "./bot-turn-runner";
 
 describe("bot turn runner", () => {
@@ -14,10 +20,31 @@ describe("bot turn runner", () => {
       "army_republic",
     );
 
-    expect(resolveDefaultBotProfile(battle, mission, "army_republic"))
+    expect(resolveDefaultBotProfile(battle, mission, survivalTestScenario, "army_republic"))
       .toBe("defensive");
-    expect(resolveDefaultBotProfile(battle, mission, "army_separatists"))
+    expect(resolveDefaultBotProfile(battle, mission, survivalTestScenario, "army_separatists"))
       .toBe("aggressive");
+  });
+
+  it("selects objective-aware profiles from scenario roles", () => {
+    const battle = createBattle();
+    const cases = [
+      [geonosisDroidFoundryScenario, "army_republic", "objective"],
+      [christophsisBreakLineScenario, "army_republic", "objective"],
+      [feluciaAmbushScenario, "army_republic", "objective"],
+      [feluciaAmbushScenario, "army_separatists", "hunter"],
+      [controlTerritoryScenario, "army_republic", "objective"],
+      [controlTerritoryScenario, "army_separatists", "objective"],
+    ] as const;
+
+    for (const [scenario, armyId, expected] of cases) {
+      const mission = createMissionState(
+        scenario,
+        battle.armies,
+        battle.armies[scenario.defaultDefenderArmySlot ?? 0].id,
+      );
+      expect(resolveDefaultBotProfile(battle, mission, scenario, armyId)).toBe(expected);
+    }
   });
 
   it("accepts an explicit profile override without UI strategy wiring", () => {
