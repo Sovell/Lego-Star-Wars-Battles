@@ -52,6 +52,42 @@ describe("scheduled scenario events", () => {
     ]);
   });
 
+  it("does not create a second copy of a hero from reinforcements", () => {
+    const heroWave: ScenarioScheduledEvent = {
+      id: "duplicate-hero-wave",
+      name: "Powrót Rexa",
+      trigger: { type: "RoundStarted", round: 1 },
+      effect: {
+        type: "DeployReinforcements",
+        armyId: "army_republic",
+        units: [{ templateId: "captain_rex", count: 2 }],
+      },
+      visibility: "Announced",
+    };
+    const scenario = withEvents([heroWave]);
+    const battle = createBattle();
+    battle.armies[0].units.push({
+      id: "existing-rex",
+      templateId: "captain_rex",
+      armyId: "army_republic",
+      currentHp: 17,
+      suppression: 0,
+      position: null,
+      status: "Ready",
+      hidden: false,
+    });
+
+    const result = applyScheduledScenarioEvents(
+      battle,
+      createMissionState(scenario, battle.armies),
+      scenario,
+      [{ type: "RoundStarted", round: 1 }],
+    );
+
+    expect(result.battle.armies.flatMap((army) => army.units)
+      .filter((unit) => unit.templateId === "captain_rex")).toHaveLength(1);
+  });
+
   it("never resolves the same event twice", () => {
     const scenario = withEvents([roundOneReinforcements]);
     const battle = createBattle();

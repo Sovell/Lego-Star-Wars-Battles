@@ -1200,6 +1200,16 @@ select {
   padding: 16px;
 }
 
+.composerValidationError {
+  background: rgba(151, 48, 48, 0.18);
+  border: 1px solid rgba(224, 89, 89, 0.42);
+  border-radius: 7px;
+  color: #ffb0b0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  padding: 9px;
+}
+
 .composerJson {
   min-height: 240px;
 }

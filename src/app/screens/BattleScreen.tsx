@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { abilities } from "../../data";
+import { abilities, unitTemplates } from "../../data";
 import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
 import { PanelTitle } from "../components/PanelTitle";
@@ -22,6 +22,7 @@ import {
 } from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
 import { runBotTurn } from "../../core/ai/bot-turn-runner";
+import { getDuplicateHeroTemplateIds } from "../../core/army-roster";
 import { getArmyControl } from "../../core/army-relations";
 import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
 import type { BattleAction } from "../../core/battle-actions";
@@ -124,6 +125,7 @@ export function BattleScreen({
   onGamePhaseChange,
   onImportError,
   onLoadArmies,
+  onLoadRecommendedArmies,
   onLogsChange,
   onGenerateMap,
   onMapGenerationSettingsChange,
@@ -170,6 +172,7 @@ export function BattleScreen({
   onGamePhaseChange: (phase: GamePhase) => void;
   onImportError: (error: string) => void;
   onLoadArmies: (armies: Army[], logMessage: string) => void;
+  onLoadRecommendedArmies: () => void;
   onLogsChange: (logs: CombatLogEntry[]) => void;
   onGenerateMap: (useNextSeed: boolean) => void;
   onMapGenerationSettingsChange: (
@@ -311,6 +314,19 @@ export function BattleScreen({
   const selectedDeploymentZone = scenario.deploymentZones.find(
     (zone) => zone.armySlot === selectedDeploymentArmySlot,
   );
+  const duplicateHeroIds = getDuplicateHeroTemplateIds(battle.armies);
+  const rosterStartError = duplicateHeroIds.length > 0
+    ? text(
+        `Ten sam bohater nie może wystąpić więcej niż raz: ${duplicateHeroIds.map((templateId) => {
+          const template = unitTemplates.find((candidate) => candidate.id === templateId);
+          return template ? localizeUnitName(language, template.id, template.name) : templateId;
+        }).join(", ")}.`,
+        `The same hero cannot appear more than once: ${duplicateHeroIds.map((templateId) => {
+          const template = unitTemplates.find((candidate) => candidate.id === templateId);
+          return template ? localizeUnitName(language, template.id, template.name) : templateId;
+        }).join(", ")}.`,
+      )
+    : undefined;
   const canStartScenario =
     battle.armies.length >= 2 &&
     battle.armies.length <= 4 &&
@@ -320,6 +336,7 @@ export function BattleScreen({
       ))
     ) &&
     battle.armies.every((army) => army.units.length > 0) &&
+    duplicateHeroIds.length === 0 &&
     validateScheduledScenarioEvents(
       scenario.scheduledEvents ?? [],
       battle.armies,
@@ -875,6 +892,7 @@ export function BattleScreen({
             activationCounts={preparationActive ? undefined : activationCounts}
             armies={battle.armies}
             canStart={canStartScenario}
+            startError={rosterStartError}
             currentRound={battle.turn}
             gamePhase={gamePhase}
             mapBoardHeight={battle.board.height}
@@ -888,6 +906,7 @@ export function BattleScreen({
             onGenerateMap={onGenerateMap}
             onMapGenerationSettingsChange={onMapGenerationSettingsChange}
             onArmyConfigChange={onArmyConfigChange}
+            onLoadRecommendedArmies={onLoadRecommendedArmies}
             onDefenderArmyChange={onDefenderArmyChange}
             onRoundTargetChange={(rounds) =>
               onMissionChange({

@@ -34,6 +34,7 @@ import {
   getTemplate,
 } from "./core/battle-state";
 import { createBattlefieldObject } from "./core/battlefield-objects";
+import { getDuplicateHeroTemplateIds, hasUniqueHeroes } from "./core/army-roster";
 import { createMissionState } from "./core/scenario/scenario-engine";
 import { applyMissionDirectorRound } from "./core/scenario/mission-director";
 import {
@@ -41,6 +42,10 @@ import {
   validateScheduledScenarioEvents,
 } from "./core/scenario/scheduled-events";
 import { scenarios, survivalTestScenario } from "./core/scenario/scenarios";
+import {
+  buildScenarioPresetArmies,
+  getScenarioArmyPreset,
+} from "./core/scenario/scenario-army-presets";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import { createPersistenceAdapter } from "./core/persistence/create-persistence-adapter";
 import type { SavedBattle } from "./core/persistence/save-types";
@@ -219,6 +224,11 @@ export function App() {
     scenario: ScenarioDefinition = activeScenario,
     defenderArmyId?: string,
   ) {
+    const duplicateHeroIds = getDuplicateHeroTemplateIds(armies);
+    if (duplicateHeroIds.length > 0) {
+      throw new Error(formatDuplicateHeroError(duplicateHeroIds, language));
+    }
+
     const nextArmies = withDefaultArmyConfiguration(
       structuredClone(armies),
       defenderArmyId,
@@ -323,6 +333,28 @@ export function App() {
       scenarioDraft.armies[nextScenario.defaultDefenderArmySlot ?? 0]?.id
         ?? mission.defenderArmyId,
     );
+  }
+
+  function handleLoadRecommendedArmies() {
+    const preset = getScenarioArmyPreset(activeScenario.id);
+    if (!preset) return;
+
+    try {
+      const armies = buildScenarioPresetArmies(preset, language);
+      loadArmies(
+        armies,
+        text(
+          `Wczytano rekomendowany skład „${preset.name.pl}”. Nadal możesz go edytować w kreatorze armii.`,
+          `Loaded the recommended “${preset.name.en}” roster. You can still edit it in Army Composer.`,
+        ),
+        activeScenario,
+        armies[activeScenario.defaultDefenderArmySlot ?? 0]?.id,
+      );
+    } catch (error) {
+      setImportError(error instanceof Error
+        ? error.message
+        : text("Nie udało się wczytać rekomendowanego składu.", "Could not load the recommended roster."));
+    }
   }
 
   function handleDefenderArmyChange(defenderArmyId: string) {
@@ -469,6 +501,7 @@ export function App() {
         scenarioDraft.armies.length,
       ).some((zone) => zone.cells.length === 0) ||
       scenarioDraft.armies.some((army) => army.units.length === 0) ||
+      !hasUniqueHeroes(scenarioDraft.armies) ||
       !validateScheduledScenarioEvents(
         scenarioDraft.scheduledEvents,
         scenarioDraft.armies,
@@ -810,6 +843,7 @@ export function App() {
           onGamePhaseChange={setGamePhase}
           onImportError={setImportError}
           onLoadArmies={loadArmies}
+          onLoadRecommendedArmies={handleLoadRecommendedArmies}
           onLogsChange={setLogs}
           onGenerateMap={handleGenerateMap}
           onMapGenerationSettingsChange={handleMapGenerationSettingsChange}
@@ -871,6 +905,7 @@ function ArmyComposerView({
     [drafts],
   );
   const generatedJson = JSON.stringify(armies, null, 2);
+  const duplicateHeroIds = getDuplicateHeroTemplateIds(armies);
 
   function patchDraft(index: number, patch: Partial<ComposerArmyDraft>) {
     setDrafts((current) => current.map((draft, draftIndex) =>
@@ -934,6 +969,11 @@ function ArmyComposerView({
           detail={`${armies.length} ${text("armie", "armies")} · ${armies.reduce((total, army) => total + getArmyCost(army), 0)} ${text("pkt", "pts")}`}
         />
         <ArmyPreview armies={armies} />
+        {duplicateHeroIds.length > 0 ? (
+          <p className="composerValidationError" role="alert">
+            {formatDuplicateHeroError(duplicateHeroIds, language)}
+          </p>
+        ) : null}
         <details className="jsonDetails">
           <summary>{text("Eksport JSON", "JSON export")}</summary>
           <textarea
@@ -944,7 +984,11 @@ function ArmyComposerView({
             wrap="off"
           />
         </details>
-        <button className="primaryButton" onClick={() => onLoadArmies(armies)}>
+        <button
+          className="primaryButton"
+          disabled={duplicateHeroIds.length > 0}
+          onClick={() => onLoadArmies(armies)}
+        >
           {text("Użyj armii w scenariuszu", "Use armies in scenario")}
         </button>
       </aside>
@@ -1249,4 +1293,20 @@ function createUnitInstance(
     status: "Ready",
     hidden: false,
   };
+}
+
+function formatDuplicateHeroError(
+  templateIds: readonly string[],
+  language: Language,
+): string {
+  const names = templateIds.map((templateId) => {
+    const template = unitTemplates.find((candidate) => candidate.id === templateId);
+    return template
+      ? localizeUnitName(language, template.id, template.name)
+      : templateId;
+  }).join(", ");
+
+  return language === "pl"
+    ? `Nie można powielać bohaterów w jednej bitwie. Usuń dodatkowe kopie: ${names}.`
+    : `Heroes cannot be duplicated in one battle. Remove extra copies of: ${names}.`;
 }

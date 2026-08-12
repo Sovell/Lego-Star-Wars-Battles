@@ -5,6 +5,7 @@ import type {
   UnitInstance,
 } from "../../types";
 import type { BattleEvent } from "../battle-actions";
+import { filterDuplicateHeroReinforcements } from "../army-roster";
 import { buildActivationBag } from "../rules/activation";
 import { templateById } from "../rules/state";
 import type {
@@ -385,12 +386,15 @@ function addUnits(
     };
   }
 
-  const requestedTemplates = units.flatMap(({ templateId, count }) => {
-    const template = templateById.get(templateId);
-    const normalizedCount = Math.max(0, Math.floor(count));
-    if (!template || template.faction !== army.faction || normalizedCount === 0) return [];
-    return Array.from({ length: normalizedCount }, () => template);
-  });
+  const requestedTemplates = filterDuplicateHeroReinforcements(
+    battle.armies,
+    units.flatMap(({ templateId, count }) => {
+      const template = templateById.get(templateId);
+      const normalizedCount = Math.max(0, Math.floor(count));
+      if (!template || template.faction !== army.faction || normalizedCount === 0) return [];
+      return Array.from({ length: normalizedCount }, () => template);
+    }),
+  );
   if (requestedTemplates.length === 0) {
     return {
       battle,

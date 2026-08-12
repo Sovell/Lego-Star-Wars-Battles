@@ -18,12 +18,14 @@ import {
   useI18n,
 } from "../../i18n";
 import { getMapTheme } from "../../core/map-generation/map-themes";
+import { getScenarioArmyPreset } from "../../core/scenario/scenario-army-presets";
 import "./MissionPanel.css";
 
 export function MissionPanel({
   activationCounts,
   armies,
   canStart,
+  startError,
   gamePhase,
   currentRound,
   mission,
@@ -37,6 +39,7 @@ export function MissionPanel({
   onMapGenerationSettingsChange,
   onScenarioChange,
   onArmyConfigChange,
+  onLoadRecommendedArmies,
   onDefenderArmyChange,
   onRoundTargetChange,
   onStageRoundTargetsChange,
@@ -47,6 +50,7 @@ export function MissionPanel({
   activationCounts?: Record<string, { remaining: number; total: number }>;
   armies: Army[];
   canStart: boolean;
+  startError?: string;
   gamePhase: "Preparation" | "Playing";
   currentRound: number;
   mission: MissionState;
@@ -65,6 +69,7 @@ export function MissionPanel({
     armyId: string,
     patch: Partial<Pick<Army, "teamId" | "control">>,
   ) => void;
+  onLoadRecommendedArmies: () => void;
   onDefenderArmyChange: (armyId: string) => void;
   onRoundTargetChange: (rounds: number) => void;
   onStageRoundTargetsChange: (rounds: number[]) => void;
@@ -96,6 +101,7 @@ export function MissionPanel({
   const activeObjectiveName = mission.activeObjectiveName ?? scenarioName;
   const activeObjectiveDescription = mission.activeObjectiveDescription ?? scenarioDescription;
   const narrativeMission = scenario.experience === "NarrativeMission";
+  const armyPreset = getScenarioArmyPreset(scenario.id);
   const visibleScenarioOptions = scenarios.filter((option) =>
     (option.experience === "NarrativeMission") === narrativeMission
   );
@@ -235,6 +241,38 @@ export function MissionPanel({
           onSettingsChange={onMapGenerationSettingsChange}
         />
       )}
+      {armyPreset ? (
+        <section className="missionArmySetup">
+          <div className="missionArmySetupHeader">
+            <div>
+              <span>{text("Skład armii", "Army composition")}</span>
+              <strong>{armyPreset.name[language]}</strong>
+            </div>
+            <span className="missionArmyCurrent">{text("Obecne aktywne", "Current active")}</span>
+          </div>
+          <p>{armyPreset.description[language]}</p>
+          <div className="missionArmyOptions">
+            <div className="missionArmyOption active">
+              <strong>{text("Użyj wczytanych armii", "Use loaded armies")}</strong>
+              <small>{text(
+                "Zachowuje Twój własny skład i poziom trudności.",
+                "Keeps your custom roster and difficulty.",
+              )}</small>
+            </div>
+            <button className="missionArmyOption" type="button" onClick={onLoadRecommendedArmies}>
+              <strong>{text("Wczytaj rekomendowane", "Load recommended")}</strong>
+              <small>{text(
+                "Zastępuje wszystkie armie gotowym składem misji.",
+                "Replaces all armies with the mission roster.",
+              )}</small>
+            </button>
+          </div>
+          <small className="missionArmyRule">{text(
+            "Bohater może wystąpić tylko raz w całej bitwie, także w armii sojusznika.",
+            "A hero may appear only once in the entire battle, including allied armies.",
+          )}</small>
+        </section>
+      ) : null}
       <div className="missionRoles">
         <label className="missionSelector">
           {text("Frakcja broniąca", "Defending faction")}
@@ -349,8 +387,8 @@ export function MissionPanel({
             {narrativeMission ? text("Rozegraj misję", "Play mission") : text("Rozegraj scenariusz", "Play scenario")}
           </button>
           {!canStart ? (
-            <small className="missionStartHint">
-              {text("Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.", "Prepare 2–4 armies, deployment zones, and complete mission events.")}
+            <small className={`missionStartHint ${startError ? "error" : ""}`}>
+              {startError ?? text("Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.", "Prepare 2–4 armies, deployment zones, and complete mission events.")}
             </small>
           ) : null}
         </>
