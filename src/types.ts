@@ -119,6 +119,7 @@ export type BattlefieldObject = {
   destructible: boolean;
   blocksLineOfSight: boolean;
   status: "Active" | "Destroyed";
+  visualId?: string;
 };
 
 export type Board = {

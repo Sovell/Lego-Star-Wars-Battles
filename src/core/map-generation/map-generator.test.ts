@@ -25,7 +25,7 @@ describe("map generator foundation", () => {
     ]);
   });
 
-  it("registers eight planetary themes with complete visual palettes", () => {
+  it("registers planetary and starship themes with complete visual palettes", () => {
     expect(mapThemes.map(({ id }) => id)).toEqual([
       "desert-outpost",
       "forest-moon",
@@ -35,8 +35,10 @@ describe("map generator foundation", () => {
       "felucia-wilds",
       "christophsis-crystal-city",
       "mandalore-city",
+      "separatist-warship",
+      "republic-warship",
     ]);
-    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(8);
+    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(9);
     expect(new Set(mapThemes.map(({ generation }) => generation.motif)).size).toBe(7);
     expect(mapThemes.every(({ presentation }) =>
       Object.values(presentation.palette.terrain).every((color) => /^#[0-9a-f]{6}$/i.test(color))
@@ -45,7 +47,7 @@ describe("map generator foundation", () => {
       .toBe(getMapTheme("ice-front").presentation.palette.terrain.difficultTerrain);
   });
 
-  it("generates every planetary theme deterministically", () => {
+  it("generates every map theme deterministically", () => {
     const generatedBoards = mapThemes.map(({ id }) => {
       const config = { width: 8, height: 8, seed: 1138, themeId: id };
       const first = generateMap(config);

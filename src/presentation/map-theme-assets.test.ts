@@ -29,6 +29,13 @@ describe("map theme assets", () => {
       .toEqual(["LEGO Star Wars Battles — Mandalore vector pack"]);
   });
 
+  it("registers both starship vector bundles", () => {
+    expect(getMapAssetSet("separatist-warship")?.sources[0]?.url)
+      .toBe("/map-assets/separatist-ship/README.md");
+    expect(getMapAssetSet("republic-warship")?.sources[0]?.url)
+      .toBe("/map-assets/republic-ship/README.md");
+  });
+
   it("selects terrain decoration variants deterministically", () => {
     const first = getMapTerrainDecorationUrl("desert-outpost", "LightCover", 2, 3);
     const replay = getMapTerrainDecorationUrl("desert-outpost", "LightCover", 2, 3);
@@ -48,6 +55,8 @@ describe("map theme assets", () => {
     ["felucia-wilds", "/map-assets/felucia/"],
     ["christophsis-crystal-city", "/map-assets/christophsis/"],
     ["mandalore-city", "/map-assets/mandalore/"],
+    ["separatist-warship", "/map-assets/separatist-ship/"],
+    ["republic-warship", "/map-assets/republic-ship/"],
   ] as const)("maps %s terrain to its own asset directory", (themeId, directory) => {
     expect(getMapTerrainDecorationUrl(themeId, "LightCover", 2, 3)?.startsWith(directory))
       .toBe(true);
@@ -86,6 +95,8 @@ describe("map theme assets", () => {
     ["felucia-wilds", "/map-assets/felucia/"],
     ["christophsis-crystal-city", "/map-assets/christophsis/"],
     ["mandalore-city", "/map-assets/mandalore/"],
+    ["separatist-warship", "/map-assets/separatist-ship/"],
+    ["republic-warship", "/map-assets/republic-ship/"],
   ] as const)("maps every battlefield object for %s", (themeId, directory) => {
     for (const objectType of [
       "DefensePoint",
@@ -96,5 +107,12 @@ describe("map theme assets", () => {
     ] as const) {
       expect(getMapObjectAssetUrl(themeId, objectType)?.startsWith(directory)).toBe(true);
     }
+  });
+
+  it("uses dedicated rescue objective artwork on starship maps", () => {
+    expect(getMapObjectAssetUrl("separatist-warship", "StrategicPoint", "r2-d2"))
+      .toBe("/map-assets/separatist-ship/r2-d2.svg");
+    expect(getMapObjectAssetUrl("republic-warship", "StrategicPoint", "extraction"))
+      .toBe("/map-assets/republic-ship/extraction-airlock.svg");
   });
 });

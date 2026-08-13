@@ -438,6 +438,120 @@ export const christophsisCrystalDataScenario: ScenarioDefinition = {
   defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
 };
 
+export const rescueR2D2Scenario: ScenarioDefinition = {
+  id: "separatist-warship-rescue-r2d2",
+  name: "Okręt Separatystów: Uratuj R2-D2",
+  description: "Przebij się przez pokład więzienny, uwolnij R2-D2 i doprowadź go do śluzy ewakuacyjnej.",
+  experience: "NarrativeMission",
+  planet: "Separatist Warship",
+  recommendedMapThemeId: "separatist-warship",
+  mapPreset: {
+    themeId: "separatist-warship",
+    seed: 22022,
+    width: 8,
+    height: 8,
+    terrainDensity: 0.43,
+  },
+  defaultDefenderArmySlot: 1,
+  missionDirector: {
+    playerArmySlot: 0,
+    enemyArmySlot: 1,
+    phaseProfiles: {
+      Opening: "defensive",
+      Escalation: "objective",
+      Crisis: "hunter",
+      Finale: "aggressive",
+    },
+    escalation: {
+      firstRound: 5,
+      interval: 3,
+      maxWaves: 2,
+      powerRatioThreshold: 1.1,
+      waves: [
+        [{ templateId: "b1_droid_regiment", count: 1 }],
+        [{ templateId: "bx_commando_droid", count: 1 }],
+      ],
+    },
+    emergencySupport: {
+      firstRound: 7,
+      strengthBelowPercentage: 30,
+      maxUses: 1,
+      cooldownRounds: 3,
+      waves: [[{ templateId: "clone_command_squad", count: 1 }]],
+    },
+  },
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "rescue-r2-d2",
+    name: "Uratuj R2-D2",
+    description: "Przejmij cel z R2-D2, a następnie zajmij śluzę ewakuacyjną.",
+    victoryPoints: 1,
+  }],
+  objectivePresentation: [
+    { name: "Uwięziony R2-D2", visualId: "r2-d2" },
+    { name: "Śluza ewakuacyjna", visualId: "extraction" },
+  ],
+  scheduledEvents: [{
+    id: "r2-d2-guard-reserve",
+    name: "Alarm na pokładzie więziennym",
+    trigger: { type: "RoundStarted", round: 4 },
+    effect: {
+      type: "DeployReinforcements",
+      armyId: "army_separatists",
+      units: [{ templateId: "b1_droid_regiment", count: 1 }],
+    },
+    visibility: "Announced",
+  }, {
+    id: "r2-d2-lockdown",
+    name: "Blokada dróg ewakuacji",
+    trigger: { type: "RoundStarted", round: 7 },
+    effect: {
+      type: "ChangeAIProfile",
+      armyId: "army_separatists",
+      profile: "hunter",
+    },
+    visibility: "Announced",
+  }],
+  victoryCondition: {
+    type: "RescueAndExtract",
+    objectiveType: "StrategicPoint",
+    hostageCount: 1,
+    rescuerArmySlot: 0,
+    roundLimit: 14,
+    stageRoundLimits: [7, 7],
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const rescueHostagesScenario: ScenarioDefinition = {
+  id: "rescue-hostages",
+  name: "Uratuj zakładników",
+  description: "Uwolnij kolejno dwóch zakładników i zabezpiecz dla nich punkt ewakuacji.",
+  recommendedMapThemeId: "separatist-warship",
+  defaultDefenderArmySlot: 1,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "rescue-hostages",
+    name: "Uratuj zakładników",
+    description: "Przejmij oba cele z zakładnikami, a następnie punkt ewakuacji.",
+    victoryPoints: 1,
+  }],
+  objectivePresentation: [
+    { name: "Zakładnik I", visualId: "hostage" },
+    { name: "Zakładnik II", visualId: "hostage" },
+    { name: "Punkt ewakuacji", visualId: "extraction" },
+  ],
+  victoryCondition: {
+    type: "RescueAndExtract",
+    objectiveType: "StrategicPoint",
+    hostageCount: 2,
+    rescuerArmySlot: 0,
+    roundLimit: 16,
+    stageRoundLimits: [5, 5, 6],
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
 export const survivalTestScenario: ScenarioDefinition = {
   id: "survival-test",
   name: "Ostatni bastion",
@@ -637,6 +751,7 @@ export const narrativeMissions: ScenarioDefinition[] = [
   feluciaSurroundedScenario,
   mandaloreHuntInSundariScenario,
   christophsisCrystalDataScenario,
+  rescueR2D2Scenario,
 ];
 
 export const customScenarioTemplates: ScenarioDefinition[] = [
@@ -648,6 +763,7 @@ export const customScenarioTemplates: ScenarioDefinition[] = [
   christophsisBreakLineScenario,
   feluciaAmbushScenario,
   mandaloreBattleForSectorsScenario,
+  rescueHostagesScenario,
 ];
 
 export const scenarios: ScenarioDefinition[] = [

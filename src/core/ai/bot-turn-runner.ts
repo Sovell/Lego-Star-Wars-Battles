@@ -50,8 +50,11 @@ export function resolveDefaultBotProfile(
   const condition = scenario.victoryCondition;
   if (condition.type === "ControlTerritory") return "objective";
 
-  if (condition.type === "ProgressiveControl") {
-    const attackerArmyId = battle.armies[condition.attackerArmySlot]?.id;
+  if (condition.type === "ProgressiveControl" || condition.type === "RescueAndExtract") {
+    const armySlot = condition.type === "ProgressiveControl"
+      ? condition.attackerArmySlot
+      : condition.rescuerArmySlot;
+    const attackerArmyId = battle.armies[armySlot]?.id;
     if (attackerArmyId && areArmiesAllied(battle, armyId, attackerArmyId)) {
       return "objective";
     }

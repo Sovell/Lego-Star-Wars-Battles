@@ -19,6 +19,7 @@ import {
   createInitialBattleSnapshot,
   toggleDeploymentZoneCell,
   type ScenarioMapGenerationState,
+  type ScenarioMapScale,
 } from "../scenario-draft";
 import type { GamePhase } from "../types/game-phase";
 import { runBotTurn } from "../../core/ai/bot-turn-runner";
@@ -129,6 +130,7 @@ export function BattleScreen({
   onLogsChange,
   onGenerateMap,
   onMapGenerationSettingsChange,
+  onMapSizeChange,
   onBattlefieldObjectPlace,
   onDeploymentZonesChange,
   onDefenderArmyChange,
@@ -178,6 +180,7 @@ export function BattleScreen({
   onMapGenerationSettingsChange: (
     patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
   ) => void;
+  onMapSizeChange: (scale: ScenarioMapScale) => void;
   onBattlefieldObjectPlace: (
     type: BattlefieldObjectType | undefined,
     position: { x: number; y: number },
@@ -905,6 +908,7 @@ export function BattleScreen({
             onScenarioChange={onScenarioChange}
             onGenerateMap={onGenerateMap}
             onMapGenerationSettingsChange={onMapGenerationSettingsChange}
+            onMapSizeChange={onMapSizeChange}
             onArmyConfigChange={onArmyConfigChange}
             onLoadRecommendedArmies={onLoadRecommendedArmies}
             onDefenderArmyChange={onDefenderArmyChange}
@@ -1381,6 +1385,9 @@ function UnitDetails({
   }
 
   const template = getTemplate(selectedUnit);
+  const passiveAbilities = abilities.filter((ability) =>
+    template.abilities.includes(ability.id) && ability.type !== "active"
+  );
   const presentation = getUnitPresentationProfile(template.id, template.faction);
   const themeStyle = {
     "--unit-accent": presentation.theme.accent,
@@ -1442,6 +1449,32 @@ function UnitDetails({
           </span>
         ))}
       </div>
+      {passiveAbilities.length > 0 ? (
+        <section className="unitPassiveAbilities">
+          <strong>{text("Efekty pasywne", "Passive effects")}</strong>
+          <div>
+            {passiveAbilities.map((ability) => {
+              const abilityName = localizeAbilityName(language, ability);
+              const abilityDescription = localizeAbilityDescription(language, ability);
+              return (
+                <span
+                  aria-label={`${abilityName}. ${abilityDescription}`}
+                  key={ability.id}
+                  tabIndex={0}
+                  title={abilityDescription}
+                >
+                  {abilityName}
+                  {ability.type === "aura" ? <small>{text("Aura", "Aura")}</small> : null}
+                </span>
+              );
+            })}
+          </div>
+          <small>{text(
+            "Najedź na nazwę, aby zobaczyć opis.",
+            "Hover over a name to see its description.",
+          )}</small>
+        </section>
+      ) : null}
       {debugMode ? (
         <>
           <button

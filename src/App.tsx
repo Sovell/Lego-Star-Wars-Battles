@@ -15,9 +15,11 @@ import {
   remapDeploymentZonesByArmy,
   remapScheduledEventsByArmy,
   restartDraftFromBattle,
+  resizeScenarioDraftMap,
   startBattleFromDraft,
   updateScenarioMapGenerationState,
   type ScenarioMapGenerationState,
+  type ScenarioMapScale,
 } from "./app/scenario-draft";
 import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
@@ -696,6 +698,26 @@ export function App() {
     ].slice(0, 12));
   }
 
+  function handleMapSizeChange(scale: ScenarioMapScale) {
+    if (baseScenario.mapPreset) return;
+    const nextDraft = resizeScenarioDraftMap(scenarioDraft, baseScenario, scale);
+    setScenarioDraft(nextDraft);
+    setMission((current) => ({
+      ...current,
+      deploymentZones: structuredClone(nextDraft.deploymentZones),
+    }));
+    setLogs((current) => [
+      createLog(
+        1,
+        text(
+          `Zmieniono rozmiar mapy na ${nextDraft.board.width} × ${nextDraft.board.height} pól.`,
+          `Map size changed to ${nextDraft.board.width} × ${nextDraft.board.height} tiles.`,
+        ),
+      ),
+      ...current,
+    ].slice(0, 12));
+  }
+
   function handleMissionRestart() {
     const initialBattle = battleStartSnapshot ?? createInitialBattleSnapshot(battle);
     const nextDraft = restartDraftFromBattle(
@@ -847,6 +869,7 @@ export function App() {
           onLogsChange={setLogs}
           onGenerateMap={handleGenerateMap}
           onMapGenerationSettingsChange={handleMapGenerationSettingsChange}
+          onMapSizeChange={handleMapSizeChange}
           onMissionChange={handleMissionChange}
           onBattlefieldObjectPlace={handleBattlefieldObjectPlace}
           onDeploymentZonesChange={handleDeploymentZonesChange}

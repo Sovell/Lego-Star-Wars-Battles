@@ -19,7 +19,7 @@ export type MapAssetSet = {
     licenseUrl: string;
   }[];
   terrain: Partial<Record<DecoratedTerrainType, readonly string[]>>;
-  objects: Partial<Record<BattlefieldObjectType, string>>;
+  objects: Partial<Record<string, string>>;
 };
 
 const sciFiRtsSource = {
@@ -39,6 +39,20 @@ const foliagePackSource = {
 const mandaloreVectorSource = {
   name: "LEGO Star Wars Battles — Mandalore vector pack",
   url: "/map-assets/mandalore/README.md",
+  license: "CC0 1.0",
+  licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+} as const;
+
+const separatistWarshipVectorSource = {
+  name: "LEGO Star Wars Battles — Separatist warship vector pack",
+  url: "/map-assets/separatist-ship/README.md",
+  license: "CC0 1.0",
+  licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+} as const;
+
+const republicWarshipVectorSource = {
+  name: "LEGO Star Wars Battles — Republic warship vector pack",
+  url: "/map-assets/republic-ship/README.md",
   license: "CC0 1.0",
   licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
 } as const;
@@ -288,6 +302,50 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
     LightFortification: "/map-assets/mandalore/light-barricade.svg",
     HeavyFortification: "/map-assets/mandalore/heavy-bunker.svg",
   },
+}, {
+  id: "separatist-warship",
+  sources: [separatistWarshipVectorSource],
+  terrain: {
+    Impassable: ["/map-assets/separatist-ship/bulkhead.svg"],
+    Hazardous: ["/map-assets/separatist-ship/hazard.svg"],
+    HighGround: ["/map-assets/separatist-ship/catwalk.svg"],
+    LightCover: ["/map-assets/separatist-ship/light-cover.svg"],
+    HeavyCover: ["/map-assets/separatist-ship/heavy-cover.svg"],
+    DifficultTerrain: ["/map-assets/separatist-ship/debris.svg"],
+    Building: ["/map-assets/separatist-ship/bulkhead.svg"],
+  },
+  objects: {
+    DefensePoint: "/map-assets/separatist-ship/defense-turret.svg",
+    StrategicPoint: "/map-assets/separatist-ship/strategic-console.svg",
+    Generator: "/map-assets/separatist-ship/generator.svg",
+    LightFortification: "/map-assets/separatist-ship/light-cover.svg",
+    HeavyFortification: "/map-assets/separatist-ship/heavy-cover.svg",
+    hostage: "/map-assets/separatist-ship/hostage.svg",
+    "r2-d2": "/map-assets/separatist-ship/r2-d2.svg",
+    extraction: "/map-assets/separatist-ship/extraction-airlock.svg",
+  },
+}, {
+  id: "republic-warship",
+  sources: [republicWarshipVectorSource],
+  terrain: {
+    Impassable: ["/map-assets/republic-ship/bulkhead.svg"],
+    Hazardous: ["/map-assets/republic-ship/hazard.svg"],
+    HighGround: ["/map-assets/republic-ship/catwalk.svg"],
+    LightCover: ["/map-assets/republic-ship/light-cover.svg"],
+    HeavyCover: ["/map-assets/republic-ship/heavy-cover.svg"],
+    DifficultTerrain: ["/map-assets/republic-ship/debris.svg"],
+    Building: ["/map-assets/republic-ship/bulkhead.svg"],
+  },
+  objects: {
+    DefensePoint: "/map-assets/republic-ship/defense-turret.svg",
+    StrategicPoint: "/map-assets/republic-ship/strategic-console.svg",
+    Generator: "/map-assets/republic-ship/generator.svg",
+    LightFortification: "/map-assets/republic-ship/light-cover.svg",
+    HeavyFortification: "/map-assets/republic-ship/heavy-cover.svg",
+    hostage: "/map-assets/republic-ship/hostage.svg",
+    "r2-d2": "/map-assets/republic-ship/r2-d2.svg",
+    extraction: "/map-assets/republic-ship/extraction-airlock.svg",
+  },
 }];
 
 export function getMapAssetSet(themeId: MapThemeId): MapAssetSet | undefined {
@@ -309,8 +367,10 @@ export function getMapTerrainDecorationUrl(
 export function getMapObjectAssetUrl(
   themeId: MapThemeId,
   objectType: BattlefieldObjectType,
+  visualId?: string,
 ): string | undefined {
-  return getMapAssetSet(themeId)?.objects[objectType];
+  const objects = getMapAssetSet(themeId)?.objects;
+  return (visualId ? objects?.[visualId] : undefined) ?? objects?.[objectType];
 }
 
 function asDecoratedTerrainType(terrainType: TerrainType): DecoratedTerrainType {

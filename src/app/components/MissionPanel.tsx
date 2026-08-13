@@ -5,7 +5,7 @@ import type {
 } from "../../core/scenario/scenario-types";
 import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
 import type { Army, ArmyControl, TeamId } from "../../types";
-import type { ScenarioMapGenerationState } from "../scenario-draft";
+import type { ScenarioMapGenerationState, ScenarioMapScale } from "../scenario-draft";
 import { MapGeneratorPanel } from "./MapGeneratorPanel";
 import { PanelTitle } from "./PanelTitle";
 import { ScenarioEventsPanel } from "./ScenarioEventsPanel";
@@ -37,6 +37,7 @@ export function MissionPanel({
   mapHasManualChanges,
   onGenerateMap,
   onMapGenerationSettingsChange,
+  onMapSizeChange,
   onScenarioChange,
   onArmyConfigChange,
   onLoadRecommendedArmies,
@@ -64,6 +65,7 @@ export function MissionPanel({
   onMapGenerationSettingsChange: (
     patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
   ) => void;
+  onMapSizeChange: (scale: ScenarioMapScale) => void;
   onScenarioChange: (scenarioId: string) => void;
   onArmyConfigChange: (
     armyId: string,
@@ -83,9 +85,15 @@ export function MissionPanel({
       ? scenario.victoryCondition.rounds
       : scenario.victoryCondition.roundLimit
   );
-  const progressiveCondition = scenario.victoryCondition.type === "ProgressiveControl"
+  const progressiveCondition = scenario.victoryCondition.type === "ProgressiveControl" ||
+    scenario.victoryCondition.type === "RescueAndExtract"
     ? scenario.victoryCondition
     : undefined;
+  const progressiveStageCount = progressiveCondition
+    ? progressiveCondition.type === "ProgressiveControl"
+      ? progressiveCondition.count
+      : progressiveCondition.hostageCount + 1
+    : 0;
   const defender = armies.find((army) => army.id === mission.defenderArmyId) ?? armies[0];
   const attacker = armies.find((army) => army.id === mission.attackerArmyId)
     ?? armies.find((army) =>
@@ -129,10 +137,15 @@ export function MissionPanel({
             <strong>{mission.destroyedObjectiveIds?.length ?? 0}/{scenario.victoryCondition.count}</strong>
           </div>
         ) : null}
-        {scenario.victoryCondition.type === "ProgressiveControl" ? (
+        {scenario.victoryCondition.type === "ProgressiveControl" ||
+        scenario.victoryCondition.type === "RescueAndExtract" ? (
           <div className="missionProgressHeader">
-            <span>{text("Przełamane sektory", "Captured sectors")}</span>
-            <strong>{mission.objectiveStage ?? 0}/{scenario.victoryCondition.count}</strong>
+            <span>{scenario.victoryCondition.type === "RescueAndExtract"
+              ? text("Etapy ratunku", "Rescue stages")
+              : text("Przełamane sektory", "Captured sectors")}</span>
+            <strong>{mission.objectiveStage ?? 0}/{scenario.victoryCondition.type === "RescueAndExtract"
+              ? scenario.victoryCondition.hostageCount + 1
+              : scenario.victoryCondition.count}</strong>
           </div>
         ) : null}
         {scenario.victoryCondition.type === "ControlTerritory" ? (
@@ -239,6 +252,7 @@ export function MissionPanel({
           settings={mapGeneration}
           onGenerate={onGenerateMap}
           onSettingsChange={onMapGenerationSettingsChange}
+          onSizeChange={onMapSizeChange}
         />
       )}
       {armyPreset ? (
@@ -330,7 +344,7 @@ export function MissionPanel({
             <small>{text("Ile pełnych rund można poświęcić na każdy kolejny sektor.", "How many full rounds may be spent on each consecutive sector.")}</small>
           </div>
           <div className="stageRoundGrid">
-            {Array.from({ length: progressiveCondition.count }, (_, stage) => {
+            {Array.from({ length: progressiveStageCount }, (_, stage) => {
               const defaults = progressiveCondition.stageRoundLimits ?? [];
               const values = mission.stageRoundTargets ?? defaults;
               return (
@@ -343,7 +357,7 @@ export function MissionPanel({
                     value={values[stage] ?? requiredRounds}
                     onChange={(event) => {
                       const next = Array.from(
-                        { length: progressiveCondition.count },
+                        { length: progressiveStageCount },
                         (_, index) => values[index] ?? requiredRounds,
                       );
                       next[stage] = Math.max(1, Math.floor(Number(event.target.value) || 1));

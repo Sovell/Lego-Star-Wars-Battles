@@ -49,13 +49,18 @@ export function createMissionState(
     ...(scenario.victoryCondition.type === "DestroyObjects"
       ? { destroyedObjectiveIds: [] }
       : {}),
-    ...(scenario.victoryCondition.type === "ProgressiveControl"
+    ...(scenario.victoryCondition.type === "ProgressiveControl" ||
+      scenario.victoryCondition.type === "RescueAndExtract"
       ? {
           objectiveStage: 0,
           stageStartedRound: 0,
           stageRoundTargets: structuredClone(
             scenario.victoryCondition.stageRoundLimits ??
-              Array(scenario.victoryCondition.count).fill(scenario.victoryCondition.roundLimit),
+              Array(
+                scenario.victoryCondition.type === "ProgressiveControl"
+                  ? scenario.victoryCondition.count
+                  : scenario.victoryCondition.hostageCount + 1,
+              ).fill(scenario.victoryCondition.roundLimit),
           ),
         }
       : {}),
@@ -162,7 +167,8 @@ export function applyScenarioEvents(
     );
   }
 
-  if (scenario.victoryCondition.type === "ProgressiveControl") {
+  if (scenario.victoryCondition.type === "ProgressiveControl" ||
+    scenario.victoryCondition.type === "RescueAndExtract") {
     return applyProgressiveControlRound(
       mission,
       scenario.victoryCondition,
@@ -378,17 +384,27 @@ function defendPointTimeout(
 
 function applyProgressiveControlRound(
   mission: MissionState,
-  condition: Extract<ScenarioDefinition["victoryCondition"], { type: "ProgressiveControl" }>,
+  condition: Extract<
+    ScenarioDefinition["victoryCondition"],
+    { type: "ProgressiveControl" | "RescueAndExtract" }
+  >,
   deploymentZones: ScenarioDefinition["deploymentZones"],
   battle: Battle | undefined,
   completedRounds: number,
 ): ScenarioEngineResult {
-  const attacker = battle?.armies[condition.attackerArmySlot];
+  const armySlot = condition.type === "ProgressiveControl"
+    ? condition.attackerArmySlot
+    : condition.rescuerArmySlot;
+  const stageCount = condition.type === "ProgressiveControl"
+    ? condition.count
+    : condition.hostageCount + 1;
+  const rescueMission = condition.type === "RescueAndExtract";
+  const attacker = battle?.armies[armySlot];
   const objectives = orderScenarioObjectivesFromDeployment(
     (battle?.board.objects ?? []).filter((object) =>
       object.type === condition.objectiveType && object.status === "Active"
     ),
-    deploymentZones.find((zone) => zone.armySlot === condition.attackerArmySlot)?.cells ?? [],
+    deploymentZones.find((zone) => zone.armySlot === armySlot)?.cells ?? [],
   );
   let objectiveStage = mission.objectiveStage ?? 0;
   const currentStage = objectiveStage;
@@ -411,13 +427,15 @@ function applyProgressiveControlRound(
     stageStartedRound,
   };
 
-  if (objectiveStage >= condition.count) {
+  if (objectiveStage >= stageCount) {
     return {
       mission: { ...nextMission, status: "Victory" },
       events: [{
         type: "MissionCompleted",
         status: "Victory",
-        message: "Linia obrony została przełamana sektor po sektorze.",
+        message: rescueMission
+          ? "Zakładnicy zostali uwolnieni i bezpiecznie dotarli do punktu ewakuacji."
+          : "Linia obrony została przełamana sektor po sektorze.",
       }],
     };
   }
@@ -434,7 +452,9 @@ function applyProgressiveControlRound(
       events: [{
         type: "MissionCompleted",
         status: "Defeat",
-        message: `Nie przełamano sektora ${currentStage + 1} w wyznaczonym czasie.`,
+        message: rescueMission
+          ? `Nie ukończono etapu ratunku ${currentStage + 1} w wyznaczonym czasie.`
+          : `Nie przełamano sektora ${currentStage + 1} w wyznaczonym czasie.`,
       }],
     };
   }
@@ -444,7 +464,9 @@ function applyProgressiveControlRound(
       events: [{
         type: "MissionCompleted",
         status: "Defeat",
-        message: "Natarcie zatrzymało się przed ostatnim sektorem.",
+        message: rescueMission
+          ? "Nie udało się ewakuować zakładników przed upływem limitu czasu."
+          : "Natarcie zatrzymało się przed ostatnim sektorem.",
       }],
     };
   }
@@ -452,7 +474,11 @@ function applyProgressiveControlRound(
     mission: nextMission,
     events: [{
       type: "MissionProgress",
-      message: `Przełamane sektory: ${objectiveStage}/${condition.count}.`,
+      message: rescueMission
+        ? objectiveStage < condition.hostageCount
+          ? `Uratowani zakładnicy: ${objectiveStage}/${condition.hostageCount}.`
+          : "Zakładnicy uwolnieni. Doprowadź ich do punktu ewakuacji."
+        : `Przełamane sektory: ${objectiveStage}/${stageCount}.`,
     }],
   };
 }

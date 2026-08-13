@@ -71,6 +71,15 @@ export function getMapScenarioRequirements(
           placement: "distributed",
         }],
       };
+    case "RescueAndExtract":
+      return {
+        ...common,
+        requiredObjects: [{
+          objectType: scenario.victoryCondition.objectiveType,
+          count: scenario.victoryCondition.hostageCount + 1,
+          placement: "distributed",
+        }],
+      };
     case "SurviveAndExtract":
       return { ...common, requiredObjects: [] };
   }

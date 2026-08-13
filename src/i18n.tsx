@@ -128,6 +128,20 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
       en: "Secure the archive relay, then break through to the extraction transmitter.",
     },
   },
+  "separatist-warship-rescue-r2d2": {
+    name: { pl: "Okręt Separatystów: Uratuj R2-D2", en: "Separatist Warship: Rescue R2-D2" },
+    description: {
+      pl: "Przebij się przez pokład więzienny, uwolnij R2-D2 i doprowadź go do śluzy ewakuacyjnej.",
+      en: "Fight through the detention deck, free R2-D2, and escort him to the extraction airlock.",
+    },
+  },
+  "rescue-hostages": {
+    name: { pl: "Uratuj zakładników", en: "Rescue the Hostages" },
+    description: {
+      pl: "Uwolnij kolejno dwóch zakładników i zabezpiecz dla nich punkt ewakuacji.",
+      en: "Free two hostages in sequence, then secure their extraction point.",
+    },
+  },
   "survival-test": {
     name: { pl: "Ostatni bastion", en: "Last Stand" },
     description: {
@@ -226,6 +240,14 @@ const themeText: Record<string, { name: Localized; description: Localized }> = {
   "mandalore-city": {
     name: { pl: "Mandalore — Sektory Sundari", en: "Mandalore — Sundari Sectors" },
     description: { pl: "Kanciaste sektory miasta z durastalowymi placami, kopułami i wąskimi liniami natarcia.", en: "Angular city sectors with durasteel plazas, domes, and narrow attack lanes." },
+  },
+  "separatist-warship": {
+    name: { pl: "Statek Separatystów — pokład więzienny", en: "Separatist Warship — Detention Deck" },
+    description: { pl: "Ciemne korytarze okrętu, grodzie więzienne, przewody zasilania i chłodne centra dowodzenia.", en: "Dark corridors, detention bulkheads, power conduits, and cold command centers." },
+  },
+  "republic-warship": {
+    name: { pl: "Statek Republiki — pokłady Venatora", en: "Republic Warship — Venator Decks" },
+    description: { pl: "Jasne pokłady Venatora, czerwone oznaczenia sektorów, hangary i ufortyfikowane centra łączności.", en: "Bright Venator decks, red sector markings, hangars, and fortified communication centers." },
   },
 };
 

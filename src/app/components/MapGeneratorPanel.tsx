@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { mapThemes, type MapThemeId } from "../../core/map-generation";
-import type { ScenarioMapGenerationState } from "../scenario-draft";
+import {
+  getScenarioMapScale,
+  type ScenarioMapGenerationState,
+  type ScenarioMapScale,
+} from "../scenario-draft";
 import {
   localizeThemeDescription,
   localizeThemeName,
@@ -18,6 +22,7 @@ export function MapGeneratorPanel({
   settings,
   onGenerate,
   onSettingsChange,
+  onSizeChange,
 }: {
   boardHeight: number;
   boardWidth: number;
@@ -28,14 +33,18 @@ export function MapGeneratorPanel({
   onSettingsChange: (
     patch: Partial<Pick<ScenarioMapGenerationState, "themeId" | "seed">>,
   ) => void;
+  onSizeChange: (scale: ScenarioMapScale) => void;
 }) {
   const { language, text } = useI18n();
   const [pendingAction, setPendingAction] = useState<GenerationAction>();
+  const [pendingSize, setPendingSize] = useState<ScenarioMapScale>();
   const selectedTheme = mapThemes.find(({ id }) => id === settings.themeId) ?? mapThemes[0];
   const generated = settings.lastRecipe;
+  const mapScale = getScenarioMapScale({ width: boardWidth, height: boardHeight });
   const settingsChanged = Boolean(
     generated && (
-      generated.seed !== settings.seed || generated.themeId !== settings.themeId
+      generated.seed !== settings.seed || generated.themeId !== settings.themeId ||
+      generated.width !== boardWidth || generated.height !== boardHeight
     )
   );
 
@@ -51,6 +60,21 @@ export function MapGeneratorPanel({
     if (!pendingAction) return;
     onGenerate(pendingAction === "next-seed");
     setPendingAction(undefined);
+  }
+
+  function requestSizeChange(scale: ScenarioMapScale): void {
+    if (scale === mapScale) return;
+    if (hasManualMap || generated) {
+      setPendingSize(scale);
+      return;
+    }
+    onSizeChange(scale);
+  }
+
+  function confirmSizeChange(): void {
+    if (!pendingSize) return;
+    onSizeChange(pendingSize);
+    setPendingSize(undefined);
   }
 
   return (
@@ -76,6 +100,16 @@ export function MapGeneratorPanel({
       </div>
       <p>{text("Układ uwzględni scenariusz, drużyny, obrońcę i strefy wejścia.", "The layout will account for the scenario, teams, defender, and deployment zones.")}</p>
       <div className="mapGeneratorFields">
+        <label>
+          {text("Rozmiar", "Size")}
+          <select
+            value={mapScale}
+            onChange={(event) => requestSizeChange(Number(event.target.value) as ScenarioMapScale)}
+          >
+            <option value={1}>{text("Standardowa — 8 × 8", "Standard — 8 × 8")}</option>
+            <option value={2}>{text("Podwójna — 16 × 16", "Double — 16 × 16")}</option>
+          </select>
+        </label>
         <label>
           {text("Motyw", "Theme")}
           <select
@@ -147,6 +181,27 @@ export function MapGeneratorPanel({
               className="secondaryButton"
               type="button"
               onClick={() => setPendingAction(undefined)}
+            >
+              {text("Anuluj", "Cancel")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {pendingSize ? (
+        <div className="mapGeneratorWarning" role="alert">
+          <strong>{text("Zmienić rozmiar i zastąpić mapę?", "Resize and replace the map?")}</strong>
+          <span>{text(
+            `Powstanie nowa mapa ${8 * pendingSize} × ${8 * pendingSize}. Teren, obiekty i strefy rozmieszczenia zostaną wygenerowane ponownie.`,
+            `A new ${8 * pendingSize} × ${8 * pendingSize} map will be created. Terrain, objects, and deployment zones will be regenerated.`,
+          )}</span>
+          <div>
+            <button className="dangerButton" type="button" onClick={confirmSizeChange}>
+              {text("Zmień rozmiar", "Change size")}
+            </button>
+            <button
+              className="secondaryButton"
+              type="button"
+              onClick={() => setPendingSize(undefined)}
             >
               {text("Anuluj", "Cancel")}
             </button>

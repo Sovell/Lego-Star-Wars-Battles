@@ -64,13 +64,20 @@ export function resolveScenarioObjective({
     );
   }
 
-  if (condition.type === "ProgressiveControl") {
+  if (condition.type === "ProgressiveControl" || condition.type === "RescueAndExtract") {
+    const armySlot = condition.type === "ProgressiveControl"
+      ? condition.attackerArmySlot
+      : condition.rescuerArmySlot;
+    const objectiveArmy = battle.armies[armySlot];
+    if (!objectiveArmy || !areArmiesAllied(battle, armyId, objectiveArmy.id)) {
+      return undefined;
+    }
     const objectives = orderScenarioObjectivesFromDeployment(
       (battle.board.objects ?? []).filter((object) =>
         object.type === condition.objectiveType && object.status === "Active"
       ),
       scenario.deploymentZones.find(
-        (zone) => zone.armySlot === condition.attackerArmySlot,
+        (zone) => zone.armySlot === armySlot,
       )?.cells ?? [],
     );
     return toObjectTarget(objectives[mission?.objectiveStage ?? 0], false);

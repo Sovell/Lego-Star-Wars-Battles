@@ -6,6 +6,7 @@ import {
   christophsisBreakLineScenario,
   feluciaAmbushScenario,
   geonosisDroidFoundryScenario,
+  rescueR2D2Scenario,
 } from "./scenarios";
 import { resolveScenarioObjective } from "./scenario-objective-resolver";
 
@@ -83,6 +84,32 @@ describe("scenario objective resolver", () => {
       position: { x: 7 },
     });
     expect(enemyTarget).toBeUndefined();
+  });
+
+  it("guides the rescue team from R2-D2 to the extraction airlock in order", () => {
+    const objectives = [2, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 3 })
+    );
+    const battle = {
+      ...createBattle(),
+      board: { ...createBattle().board, objects: objectives },
+    };
+
+    const target = resolveScenarioObjective({
+      battle,
+      scenario: rescueR2D2Scenario,
+      mission: {
+        scenarioId: rescueR2D2Scenario.id,
+        status: "Active",
+        roundsCompleted: 1,
+        objectiveStage: 1,
+      },
+      armyId: "army_republic",
+      units: [findUnit(battle, "rep_unit_1")],
+    });
+
+    expect(target?.position).toEqual({ x: 6, y: 3 });
+    expect(target?.object?.id).toBe(objectives[1].id);
   });
 });
 

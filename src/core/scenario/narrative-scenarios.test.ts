@@ -9,12 +9,13 @@ import {
   customScenarioTemplates,
   mandaloreHuntInSundariScenario,
   narrativeMissions,
+  rescueR2D2Scenario,
   scenarios,
 } from "./scenarios";
 
 describe("narrative mission catalog", () => {
-  it("separates five authored missions from custom scenario templates", () => {
-    expect(narrativeMissions).toHaveLength(5);
+  it("separates six authored missions from custom scenario templates", () => {
+    expect(narrativeMissions).toHaveLength(6);
     expect(narrativeMissions.every((scenario) =>
       scenario.experience === "NarrativeMission" && Boolean(scenario.mapPreset)
     )).toBe(true);
@@ -56,6 +57,19 @@ describe("narrative mission catalog", () => {
     expect(validateScheduledScenarioEvents(events, armies)).toBe(true);
     expect(events.find(({ id }) => id === "sundari-maul-enters")?.effect)
       .toMatchObject({ armyId: "army_player_2" });
+  });
+
+  it("turns the R2-D2 mission objectives into distinct rescue markers", () => {
+    const draft = createScenarioDraft(rescueR2D2Scenario.id, {
+      armies: starterArmies,
+      defenderArmyId: starterArmies[1].id,
+    });
+    const prepared = applyScenarioMapPreset(draft, rescueR2D2Scenario);
+    const visualIds = prepared.board.objects
+      .filter(({ type }) => type === "StrategicPoint")
+      .map(({ visualId }) => visualId);
+
+    expect(visualIds).toEqual(expect.arrayContaining(["r2-d2", "extraction"]));
   });
 
   it("fails a scripted hunt when its authored round limit expires", () => {

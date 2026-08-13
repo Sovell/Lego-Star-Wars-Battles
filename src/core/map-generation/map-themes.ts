@@ -404,6 +404,106 @@ export const mandaloreCityTheme: MapTheme = {
   },
 };
 
+export const separatistWarshipTheme: MapTheme = {
+  id: "separatist-warship",
+  version: 1,
+  name: "Separatist Warship — Detention Deck",
+  description: "Ciemne korytarze okrętu, grodzie więzienne, przewody zasilania i chłodne centra dowodzenia.",
+  presentation: {
+    assetSetId: "separatist-warship",
+    groundTextureId: "separatist-deck",
+    motif: "starship",
+    palette: {
+      ground: "#343a42",
+      accent: "#d9894f",
+      shadow: "#0c1016",
+      terrain: {
+        open: "#353c45",
+        lightCover: "#4b5158",
+        heavyCover: "#2b3038",
+        building: "#252a31",
+        difficultTerrain: "#4a403b",
+        impassable: "#181d23",
+        hazardous: "#8e3f2d",
+        highGround: "#58616c",
+      },
+    },
+  },
+  generation: {
+    motif: "urban-grid",
+    defaultTerrainDensity: 0.43,
+    clusterSize: { minimum: 2, maximum: 5 },
+    terrainWeights: [
+      { terrainType: "Building", weight: 5 },
+      { terrainType: "Impassable", weight: 4 },
+      { terrainType: "HeavyCover", weight: 3 },
+      { terrainType: "LightCover", weight: 3 },
+      { terrainType: "DifficultTerrain", weight: 2 },
+      { terrainType: "Hazardous", weight: 2 },
+      { terrainType: "HighGround", weight: 2 },
+    ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 3 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
+export const republicWarshipTheme: MapTheme = {
+  id: "republic-warship",
+  version: 1,
+  name: "Republic Warship — Venator Decks",
+  description: "Jasne pokłady Venatora, czerwone oznaczenia sektorów, hangary i ufortyfikowane centra łączności.",
+  presentation: {
+    assetSetId: "republic-warship",
+    groundTextureId: "republic-deck",
+    motif: "starship",
+    palette: {
+      ground: "#78838d",
+      accent: "#b64039",
+      shadow: "#182027",
+      terrain: {
+        open: "#687681",
+        lightCover: "#7d878e",
+        heavyCover: "#515c65",
+        building: "#47525b",
+        difficultTerrain: "#706866",
+        impassable: "#303b44",
+        hazardous: "#a54a3d",
+        highGround: "#929da4",
+      },
+    },
+  },
+  generation: {
+    motif: "urban-grid",
+    defaultTerrainDensity: 0.39,
+    clusterSize: { minimum: 2, maximum: 5 },
+    terrainWeights: [
+      { terrainType: "Building", weight: 4 },
+      { terrainType: "Impassable", weight: 3 },
+      { terrainType: "HeavyCover", weight: 3 },
+      { terrainType: "LightCover", weight: 4 },
+      { terrainType: "DifficultTerrain", weight: 2 },
+      { terrainType: "Hazardous", weight: 1 },
+      { terrainType: "HighGround", weight: 3 },
+    ],
+    objectBudget: {
+      minimum: 3,
+      maximum: 5,
+      minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 4 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
 export const mapThemes: readonly MapTheme[] = [
   desertOutpostTheme,
   forestMoonTheme,
@@ -413,6 +513,8 @@ export const mapThemes: readonly MapTheme[] = [
   feluciaWildsTheme,
   christophsisCrystalCityTheme,
   mandaloreCityTheme,
+  separatistWarshipTheme,
+  republicWarshipTheme,
 ];
 
 export function getMapTheme(themeId: MapThemeId): MapTheme {

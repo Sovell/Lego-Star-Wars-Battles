@@ -12,7 +12,8 @@ export type MapThemeMotif =
   | "spires"
   | "fungal"
   | "crystal"
-  | "mandalore";
+  | "mandalore"
+  | "starship";
 
 export type MapGenerationMotif =
   | "open-outpost"

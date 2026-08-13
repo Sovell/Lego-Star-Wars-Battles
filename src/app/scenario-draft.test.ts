@@ -7,6 +7,7 @@ import {
   createInitialBattleSnapshot,
   createScenarioDraft,
   generateScenarioDraftMap,
+  getScenarioMapScale,
   getScenarioMapGenerationState,
   hasManualScenarioMap,
   markScenarioDraftMapEdited,
@@ -15,6 +16,7 @@ import {
   remapDeploymentZonesByArmy,
   remapScheduledEventsByArmy,
   restartDraftFromBattle,
+  resizeScenarioDraftMap,
   startBattleFromDraft,
   toggleDeploymentZoneCell,
 } from "./scenario-draft";
@@ -71,6 +73,44 @@ describe("scenario draft flow", () => {
 
     expect(second.mapGeneration?.seed).toBe(nextMapSeed(1138));
     expect(second.board).not.toEqual(first.board);
+  });
+
+  it("regenerates a custom scenario on a double-size 16 by 16 board", () => {
+    const draft = createScenarioDraft(defendPointScenario.id, {
+      armies: starterArmies,
+      defenderArmyId: starterArmies[0].id,
+    });
+
+    const enlarged = resizeScenarioDraftMap(draft, defendPointScenario, 2);
+
+    expect(enlarged.board).toMatchObject({ width: 16, height: 16 });
+    expect(enlarged.mapGeneration?.lastRecipe).toMatchObject({
+      width: 16,
+      height: 16,
+      seed: 1138,
+    });
+    expect(enlarged.deploymentZones).toHaveLength(2);
+    expect(enlarged.deploymentZones.flatMap(({ cells }) => cells).every(({ x, y }) =>
+      x >= 0 && x < 16 && y >= 0 && y < 16
+    )).toBe(true);
+    expect(getScenarioMapScale(enlarged.board)).toBe(2);
+  });
+
+  it("returns to the standard size and keeps authored mission maps locked", () => {
+    const enlarged = resizeScenarioDraftMap(
+      createScenarioDraft(defendPointScenario.id, { armies: starterArmies }),
+      defendPointScenario,
+      2,
+    );
+    const standard = resizeScenarioDraftMap(enlarged, defendPointScenario, 1);
+
+    expect(standard.board).toMatchObject({ width: 8, height: 8 });
+    expect(getScenarioMapScale(standard.board)).toBe(1);
+    expect(() => resizeScenarioDraftMap(
+      createScenarioDraft(christophsisLastLandingScenario.id),
+      christophsisLastLandingScenario,
+      2,
+    )).toThrow("Predefined mission maps cannot be resized.");
   });
 
   it("materializes a locked mission preset identically for two to four armies", () => {

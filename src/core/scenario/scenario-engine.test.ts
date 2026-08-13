@@ -10,6 +10,7 @@ import {
   feluciaAmbushScenario,
   geonosisDroidFoundryScenario,
   protectGeneratorScenario,
+  rescueR2D2Scenario,
   survivalTestScenario,
 } from "./scenarios";
 
@@ -461,5 +462,33 @@ describe("scenario engine", () => {
     );
 
     expect(result.mission.status).toBe("Victory");
+  });
+
+  it("requires rescuing R2-D2 before securing the extraction airlock", () => {
+    const battle = createBattle();
+    battle.board.objects = [2, 6].map((x) =>
+      createBattlefieldObject("StrategicPoint", { x, y: 3 })
+    );
+    battle.armies[1].units.forEach((unit) => { unit.position = null; });
+    const mission = createMissionState(rescueR2D2Scenario, battle.armies);
+
+    battle.armies[0].units[0].position = { x: 2, y: 3 };
+    const rescue = applyScenarioEvents(
+      mission,
+      rescueR2D2Scenario,
+      [{ type: "TurnEnded", turn: 2 }],
+      battle,
+    );
+    battle.armies[0].units[0].position = { x: 6, y: 3 };
+    const extraction = applyScenarioEvents(
+      rescue.mission,
+      rescueR2D2Scenario,
+      [{ type: "TurnEnded", turn: 3 }],
+      battle,
+    );
+
+    expect(rescue.mission.objectiveStage).toBe(1);
+    expect(rescue.mission.status).toBe("Active");
+    expect(extraction.mission.status).toBe("Victory");
   });
 });

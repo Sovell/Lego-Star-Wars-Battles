@@ -62,7 +62,7 @@ export function DomMapBoard({
           y,
         );
         const battlefieldObjectAssetUrl = battlefieldObject
-          ? getMapObjectAssetUrl(mapThemeId, battlefieldObject.type)
+          ? getMapObjectAssetUrl(mapThemeId, battlefieldObject.type, battlefieldObject.visualId)
           : undefined;
 
         return (

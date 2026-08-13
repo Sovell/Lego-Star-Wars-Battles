@@ -24,6 +24,14 @@ export type ScenarioVictoryCondition =
       stageRoundLimits?: number[];
     }
   | {
+      type: "RescueAndExtract";
+      objectiveType: "StrategicPoint";
+      hostageCount: number;
+      rescuerArmySlot: number;
+      roundLimit: number;
+      stageRoundLimits?: number[];
+    }
+  | {
       type: "SurviveAndExtract";
       armySlot: number;
       minimumRounds: number;
@@ -184,6 +192,10 @@ export type ScenarioDefinition = {
   deploymentZones: DeploymentZone[];
   zones?: ScenarioZone[];
   objectives?: ObjectiveDefinition[];
+  objectivePresentation?: Array<{
+    name: string;
+    visualId: string;
+  }>;
   scheduledEvents?: ScenarioScheduledEvent[];
   victoryCondition: ScenarioVictoryCondition;
   defeatCondition?: ScenarioDefeatCondition;

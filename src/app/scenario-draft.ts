@@ -12,6 +12,7 @@ import type {
   ScenarioScheduledEvent,
 } from "../core/scenario/scenario-types";
 import type { Army, Battle, Board, UnitInstance } from "../types";
+import { orderScenarioObjectivesFromDeployment } from "../core/scenario/scenario-objective-resolver";
 import { createEmptyBoard } from "./new-game-state";
 
 export type ScenarioDraft = {
@@ -31,6 +32,10 @@ export type ScenarioMapGenerationState = {
   seed: number;
   lastRecipe?: MapGenerationRecipe;
 };
+
+export type ScenarioMapScale = 1 | 2;
+
+export const standardScenarioMapSize = 8;
 
 export const defaultMapGenerationState: ScenarioMapGenerationState = {
   themeId: "desert-outpost",
@@ -119,7 +124,11 @@ export function generateScenarioDraftMap(
 
   return {
     ...draft,
-    board: generated.board,
+    board: applyScenarioObjectivePresentation(
+      generated.board,
+      generated.deploymentZones,
+      scenario,
+    ),
     deploymentZones: generated.deploymentZones,
     mapGeneration: {
       themeId: settings.themeId,
@@ -127,6 +136,40 @@ export function generateScenarioDraftMap(
       lastRecipe: generated.recipe,
     },
   };
+}
+
+export function getScenarioMapScale(
+  board: Pick<Board, "width" | "height">,
+): ScenarioMapScale {
+  return board.width > standardScenarioMapSize || board.height > standardScenarioMapSize
+    ? 2
+    : 1;
+}
+
+export function resizeScenarioDraftMap(
+  draft: ScenarioDraft,
+  scenario: ScenarioDefinition,
+  scale: ScenarioMapScale,
+): ScenarioDraft {
+  if (scenario.mapPreset) {
+    throw new Error("Predefined mission maps cannot be resized.");
+  }
+
+  const size = standardScenarioMapSize * scale;
+  const settings = getScenarioMapGenerationState(draft);
+  const resizedDraft: ScenarioDraft = {
+    ...draft,
+    board: createEmptyBoard(size, size),
+    deploymentZones: [],
+    mapGeneration: {
+      themeId: settings.themeId,
+      seed: settings.seed,
+    },
+  };
+
+  return draft.armies.length >= 2 && draft.armies.length <= 4
+    ? generateScenarioDraftMap(resizedDraft, scenario)
+    : resizedDraft;
 }
 
 export function applyScenarioMapPreset(
@@ -175,13 +218,53 @@ export function applyScenarioMapPreset(
 
   return {
     ...draft,
-    board: generated.board,
+    board: applyScenarioObjectivePresentation(generated.board, deploymentZones, scenario),
     deploymentZones,
     mapGeneration: {
       themeId: preset.themeId,
       seed: preset.seed,
       lastRecipe: generated.recipe,
     },
+  };
+}
+
+function applyScenarioObjectivePresentation(
+  board: Board,
+  deploymentZones: DeploymentZone[],
+  scenario: ScenarioDefinition,
+): Board {
+  const presentation = scenario.objectivePresentation;
+  const condition = scenario.victoryCondition;
+  if (
+    !presentation?.length ||
+    (condition.type !== "ProgressiveControl" && condition.type !== "RescueAndExtract")
+  ) {
+    return board;
+  }
+
+  const armySlot = condition.type === "ProgressiveControl"
+    ? condition.attackerArmySlot
+    : condition.rescuerArmySlot;
+  const ordered = orderScenarioObjectivesFromDeployment(
+    (board.objects ?? []).filter((object) => object.type === condition.objectiveType),
+    deploymentZones.find((zone) => zone.armySlot === armySlot)?.cells ?? [],
+  );
+  const presentationById = new Map(
+    ordered.map((object, index) => [object.id, presentation[index]]),
+  );
+
+  return {
+    ...board,
+    objects: (board.objects ?? []).map((object) => {
+      const objectivePresentation = presentationById.get(object.id);
+      return objectivePresentation
+        ? {
+            ...object,
+            name: objectivePresentation.name,
+            visualId: objectivePresentation.visualId,
+          }
+        : object;
+    }),
   };
 }
 

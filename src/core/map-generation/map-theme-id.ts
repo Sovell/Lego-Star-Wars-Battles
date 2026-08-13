@@ -6,4 +6,6 @@ export type MapThemeId =
   | "geonosis-foundry"
   | "felucia-wilds"
   | "christophsis-crystal-city"
-  | "mandalore-city";
+  | "mandalore-city"
+  | "separatist-warship"
+  | "republic-warship";

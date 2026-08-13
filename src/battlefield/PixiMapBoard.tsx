@@ -690,7 +690,11 @@ function BattlefieldObjectToken({
   x: number;
   y: number;
 }) {
-  const texture = usePixiTexture(getMapObjectAssetUrl(mapThemeId, object.type));
+  const texture = usePixiTexture(getMapObjectAssetUrl(
+    mapThemeId,
+    object.type,
+    object.visualId,
+  ));
   const destroyed = object.status === "Destroyed";
 
   return (

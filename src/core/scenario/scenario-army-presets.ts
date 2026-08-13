@@ -169,6 +169,30 @@ const presets: ScenarioArmyPreset[] = [
       ]),
     ],
   },
+  {
+    id: "separatist-warship-rescue-r2d2-roster",
+    name: { pl: "Oddział ratunkowy R2-D2", en: "R2-D2 Rescue Team" },
+    description: {
+      pl: "Mobilny oddział Obi-Wana przedziera się przez pokład więzienny okrętu Separatystów.",
+      en: "Obi-Wan's mobile force fights through a Separatist detention deck.",
+    },
+    armies: [
+      republic([
+        { templateId: "obi_wan_kenobi", count: 1 },
+        { templateId: "captain_rex", count: 1 },
+        { templateId: "clone_trooper_squad", count: 2 },
+        { templateId: "clone_command_squad", count: 1 },
+        { templateId: "clone_engineers_332nd", count: 1 },
+      ]),
+      separatists([
+        { templateId: "general_grievous", count: 1 },
+        { templateId: "magnaguard_squad", count: 1 },
+        { templateId: "bx_commando_droid", count: 2 },
+        { templateId: "b1_battle_droid_commander_squad", count: 1 },
+        { templateId: "b1_droid_regiment", count: 1 },
+      ]),
+    ],
+  },
 ];
 
 const presetByScenarioId = new Map([
@@ -177,6 +201,7 @@ const presetByScenarioId = new Map([
   ["felucia-surrounded", presets[2]],
   ["mandalore-hunt-in-sundari", presets[3]],
   ["christophsis-crystal-data", presets[4]],
+  ["separatist-warship-rescue-r2d2", presets[5]],
 ]);
 
 export function getScenarioArmyPreset(scenarioId: string): ScenarioArmyPreset | undefined {
