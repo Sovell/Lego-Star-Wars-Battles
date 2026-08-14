@@ -5,6 +5,7 @@ import { getUnitAtPosition } from "./occupancy";
 import { findPath } from "./pathfinding";
 import { findUnit, getTemplate, replaceUnit } from "./state";
 import { getHazardSuppression, getTerrainAtPosition } from "./terrain";
+import { unlinkUnitSupport } from "./unit-support";
 
 export function getMoveDistance(baseMovement: number, movementCost: number): number {
   return Math.max(1, Math.floor(baseMovement / Math.max(1, movementCost)));
@@ -78,9 +79,10 @@ function performMovement(
     status: pinnedByHazard ? "Pinned" : keepActivationForAttack ? unit.status : "Activated",
     suppression: nextSuppression,
     movedThisTurn: true,
-    activeEffects: canContinueActivation
-      ? [...(unit.activeEffects ?? []), "advance_pending"]
-      : unit.activeEffects,
+    activeEffects: [
+      ...(unit.activeEffects ?? []).filter((effect) => effect !== "entrenched"),
+      ...(canContinueActivation ? ["advance_pending"] : []),
+    ],
   };
   const hazardLog = hazardSuppression
     ? ` Teren niebezpieczny: suppression +${hazardSuppression}${pinnedByHazard ? ", jednostka zostaje przygwozdzona" : ""}.`
@@ -88,7 +90,7 @@ function performMovement(
 
   return {
     battle: {
-      ...replaceUnit(battle, updatedUnit),
+      ...replaceUnit(unlinkUnitSupport(battle, unit.id), updatedUnit),
       activeActivation: canContinueActivation ? battle.activeActivation : undefined,
     },
     log: (canContinueActivation

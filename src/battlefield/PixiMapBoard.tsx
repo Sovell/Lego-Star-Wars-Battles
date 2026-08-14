@@ -622,6 +622,46 @@ function TerrainMotif({
           .stroke({ color: accentColor, alpha: 0.16, width: 2 });
         return;
       }
+      if (motif === "ryloth") {
+        const shift = variant * cellSize * 0.008;
+        graphics.moveTo(cellSize * 0.08, cellSize * 0.7)
+          .bezierCurveTo(
+            cellSize * 0.24, cellSize * (0.42 + shift / cellSize),
+            cellSize * 0.42, cellSize * 0.5,
+            cellSize * 0.55, cellSize * 0.3,
+          )
+          .bezierCurveTo(
+            cellSize * 0.68, cellSize * 0.14,
+            cellSize * 0.8, cellSize * 0.48,
+            cellSize * 0.92, cellSize * 0.34,
+          )
+          .stroke({ color: accentColor, alpha: 0.24, width: 1.3 });
+        graphics.moveTo(cellSize * 0.12, cellSize * 0.79)
+          .bezierCurveTo(
+            cellSize * 0.32, cellSize * 0.58,
+            cellSize * 0.53, cellSize * 0.7,
+            cellSize * 0.86, cellSize * 0.5,
+          )
+          .stroke({ color: accentColor, alpha: 0.14, width: 1 });
+        return;
+      }
+      if (motif === "laboratory") {
+        const inset = cellSize * (0.2 + variant * 0.006);
+        graphics.roundRect(inset, inset, cellSize - inset * 2, cellSize - inset * 2, 4)
+          .stroke({ color: accentColor, alpha: 0.2, width: 1.1 });
+        graphics.circle(cellSize * 0.5, cellSize * 0.5, cellSize * 0.08)
+          .stroke({ color: accentColor, alpha: 0.3, width: 1.2 });
+        graphics.moveTo(inset, cellSize * 0.5)
+          .lineTo(cellSize * 0.42, cellSize * 0.5)
+          .moveTo(cellSize * 0.58, cellSize * 0.5)
+          .lineTo(cellSize - inset, cellSize * 0.5)
+          .moveTo(cellSize * 0.5, inset)
+          .lineTo(cellSize * 0.5, cellSize * 0.42)
+          .moveTo(cellSize * 0.5, cellSize * 0.58)
+          .lineTo(cellSize * 0.5, cellSize - inset)
+          .stroke({ color: accentColor, alpha: 0.18, width: 1 });
+        return;
+      }
       graphics.moveTo(3, cellSize * (0.24 + variant * 0.04))
         .lineTo(cellSize * 0.3, cellSize * 0.38)
         .lineTo(cellSize * 0.48, cellSize * 0.3)

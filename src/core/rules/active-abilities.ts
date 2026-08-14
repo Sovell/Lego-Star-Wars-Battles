@@ -1,4 +1,4 @@
-import { abilities, taskForces } from "../../data";
+import { abilities, taskForces, unitTemplates } from "../../data";
 import type { AbilityDefinition, Battle, UnitInstance } from "../../types";
 import { areArmiesAllied } from "../army-relations";
 import type { DiceRoller } from "../random";
@@ -11,6 +11,12 @@ import { validateUnitActivation } from "./activation";
 import { crossedCriticalHpThreshold, resolveMoraleRetreat } from "./morale";
 import { isTerrainEnterable } from "../terrain-definitions";
 import { getTerrainAtPosition } from "./terrain";
+import {
+  clearBrokenSupportLinks,
+  linkUnitSupport,
+  unlinkUnitSupport,
+  type SupportMode,
+} from "./unit-support";
 
 export type UseAbilityInput = {
   unitId: string;
@@ -77,6 +83,16 @@ export function useActiveAbility(
     };
   }
 
+  if (
+    ability.effect.type === "bonus_move_then_melee_attack" &&
+    source.activeEffects?.includes("advance_pending")
+  ) {
+    return {
+      battle,
+      log: `${ability.name} nie może zostać użyte po wykonaniu Advance.`,
+    };
+  }
+
   return applyAbilityEffect(battle, source, ability, input, rollD6);
 }
 
@@ -124,6 +140,39 @@ function applyAbilityEffect(
       );
     }
 
+    case "build_field_hospital": {
+      const targetPosition = input.targetPosition;
+      if (
+        !source.position ||
+        !targetPosition ||
+        !isOnBoard(battle, targetPosition) ||
+        !isTerrainEnterable(getTerrainAtPosition(battle, targetPosition)) ||
+        distance(source.position, targetPosition) > (ability.range ?? 1) ||
+        battle.board.objects?.some((object) =>
+          object.status === "Active" &&
+          object.position.x === targetPosition.x &&
+          object.position.y === targetPosition.y
+        )
+      ) {
+        return { battle, log: "Wybierz wolne sąsiednie pole pod szpital polowy." };
+      }
+      const hospital = {
+        ...createBattlefieldObject("LightFortification", targetPosition),
+        name: "Szpital polowy",
+        visualId: "field-hospital",
+        healingPerRound: ability.effect.value ?? 2,
+      };
+      return finishAbility(
+        {
+          ...battle,
+          board: { ...battle.board, objects: [...(battle.board.objects ?? []), hospital] },
+        },
+        source,
+        ability,
+        `${getTemplate(source).name} buduje szpital polowy na polu ${targetPosition.x}, ${targetPosition.y}.`,
+      );
+    }
+
     case "restore_hp": {
       const target = getValidTarget(battle, source, input.targetUnitId, ability, "friendly");
       if (!target || !getTemplate(target).keywords.includes("Vehicle")) {
@@ -140,6 +189,95 @@ function applyAbilityEffect(
         source,
         ability,
         `${getTemplate(source).name} naprawia ${template.name}: HP ${restoredHp}/${template.maxHp}.`,
+      );
+    }
+
+    case "restore_living_hp": {
+      const target = getValidTarget(battle, source, input.targetUnitId, ability, "friendly");
+      if (!target || getTemplate(target).keywords.includes("Vehicle")) {
+        return { battle, log: "Leczenie wymaga żywej sojuszniczej jednostki niebędącej pojazdem." };
+      }
+      const template = getTemplate(target);
+      if (target.currentHp >= template.maxHp) {
+        return { battle, log: `${template.name} nie wymaga leczenia.` };
+      }
+      const restoredHp = Math.min(template.maxHp, target.currentHp + (ability.effect.value ?? 0));
+      return finishAbility(
+        replaceUnit(battle, { ...target, currentHp: restoredHp }),
+        source,
+        ability,
+        `${getTemplate(source).name} leczy ${template.name}: HP ${restoredHp}/${template.maxHp}.`,
+      );
+    }
+
+    case "entrench":
+      return finishAbility(
+        replaceUnit(battle, {
+          ...source,
+          activeEffects: [...(source.activeEffects ?? []), "entrenched"],
+        }),
+        source,
+        ability,
+        `${getTemplate(source).name} okopuje się i otrzymuje lekką osłonę do czasu ruchu.`,
+      );
+
+    case "link_support": {
+      const target = input.targetUnitId;
+      const mode = ability.effect.target as SupportMode;
+      if (!target || (mode !== "attack" && mode !== "defense")) {
+        return { battle, log: "Wybierz rodzaj i cel wsparcia." };
+      }
+      const linked = linkUnitSupport(battle, source.id, target, mode);
+      if (linked.error) return { battle, log: linked.error };
+      const receiver = findUnit(linked.battle, target)!;
+      return finishAbility(
+        linked.battle,
+        source,
+        ability,
+        `${getTemplate(source).name} tworzy parę z ${getTemplate(receiver).name} i wspiera ${mode === "attack" ? "atak" : "obronę"}.`,
+      );
+    }
+
+    case "summon_unit": {
+      const targetPosition = input.targetPosition;
+      const templateId = ability.effect.target;
+      const template = templateId ? unitTemplatesById.get(templateId) : undefined;
+      if (
+        !template ||
+        !source.position ||
+        !targetPosition ||
+        !isOnBoard(battle, targetPosition) ||
+        distance(source.position, targetPosition) > (ability.range ?? 1) ||
+        !isTerrainEnterable(getTerrainAtPosition(battle, targetPosition)) ||
+        !isPositionFree(battle, targetPosition)
+      ) {
+        return { battle, log: "Wybierz wolne sąsiednie pole dla przywołanego wsparcia." };
+      }
+      const army = battle.armies.find((candidate) => candidate.id === source.armyId)!;
+      const summoned: UnitInstance = {
+        id: `${source.id}-${template.id}-${crypto.randomUUID()}`,
+        templateId: template.id,
+        armyId: source.armyId,
+        currentHp: template.maxHp,
+        suppression: 0,
+        abilityCooldowns: {},
+        position: targetPosition,
+        status: "Activated",
+        hidden: false,
+      };
+      const nextBattle = {
+        ...battle,
+        armies: battle.armies.map((candidate) =>
+          candidate.id === army.id
+            ? { ...candidate, units: [...candidate.units, summoned] }
+            : candidate
+        ),
+      };
+      return finishAbility(
+        nextBattle,
+        source,
+        ability,
+        `${getTemplate(source).name} przywołuje ${template.name}.`,
       );
     }
 
@@ -196,6 +334,7 @@ function applyAbilityEffect(
       if (moraleResult) {
         nextBattle = moraleResult.battle;
       }
+      nextBattle = clearBrokenSupportLinks(nextBattle);
 
       const finished = finishAbility(
         nextBattle,
@@ -236,7 +375,9 @@ function applyAbilityEffect(
         return { battle, log: "Wybierz wolne pole w zasięgu specjalnego ruchu." };
       }
       return finishAbility(
-        replaceUnit(battle, { ...source, position: targetPosition, movedThisTurn: true }),
+        replaceUnit(unlinkUnitSupport(battle, source.id), {
+          ...source, position: targetPosition, movedThisTurn: true,
+        }),
         source,
         ability,
         `${getTemplate(source).name} zmienia pozycję dzięki ${ability.name}.`,
@@ -265,7 +406,9 @@ function applyAbilityEffect(
         return { battle, log: "Jednostka nie posiada broni do zakończenia szarży." };
       }
       const prepared = putAbilityOnCooldown(
-        replaceUnit(battle, { ...source, position: destination, movedThisTurn: true }),
+        replaceUnit(unlinkUnitSupport(battle, source.id), {
+          ...source, position: destination, movedThisTurn: true,
+        }),
         source.id,
         ability,
       );
@@ -302,7 +445,9 @@ function applyAbilityEffect(
       const attack = resolveAttack(prepared, source.id, target.id, weapon.id, rollD6);
       const attackerAfterAttack = findUnit(attack.battle, source.id);
       const finalBattle = attackerAfterAttack
-        ? replaceUnit(attack.battle, { ...attackerAfterAttack, position: targetPosition })
+        ? replaceUnit(unlinkUnitSupport(attack.battle, source.id), {
+            ...attackerAfterAttack, position: targetPosition,
+          })
         : attack.battle;
       return {
         battle: finalBattle,
@@ -339,6 +484,8 @@ function applyAbilityEffect(
       return { battle, log: `${ability.name} nie ma jeszcze obsługiwanego efektu.` };
   }
 }
+
+const unitTemplatesById = new Map(unitTemplates.map((template) => [template.id, template]));
 
 function finishAbility(
   battle: Battle,

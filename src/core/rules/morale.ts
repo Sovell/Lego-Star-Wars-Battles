@@ -125,7 +125,7 @@ export function resetUnitForNextTurn(unit: UnitInstance, template: UnitTemplate)
     status: nextSuppression >= template.morale ? "Pinned" : "Ready",
     suppression: nextSuppression,
     abilityCooldowns: nextCooldowns,
-    activeEffects: [],
+    activeEffects: unit.activeEffects?.filter((effect) => effect === "entrenched") ?? [],
     movedThisTurn: false,
   };
 }

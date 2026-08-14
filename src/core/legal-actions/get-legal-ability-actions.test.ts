@@ -79,6 +79,19 @@ describe("getLegalAbilityActions", () => {
 
     expect(getLegalAbilityActions(battle, source.id, "build_cover")).toEqual([]);
   });
+
+  it("does not offer Claw Rush after Advance", () => {
+    let battle = withActiveUnit("general_grievous", 1);
+    const source = battle.armies[1].units[0];
+    const enemy = battle.armies[0].units[0];
+    battle = patchUnit(battle, source.id, {
+      movedThisTurn: true,
+      activeEffects: ["advance_pending"],
+    });
+    battle = patchUnit(battle, enemy.id, { position: { x: 2, y: 2 } });
+
+    expect(getLegalAbilityActions(battle, source.id, "claw_rush")).toEqual([]);
+  });
 });
 
 function patchUnit(

@@ -56,6 +56,12 @@ export type UnitInstance = {
   suppression: number;
   abilityCooldowns?: Record<string, number>;
   activeEffects?: string[];
+  /** Optional one-to-one battlefield support link. Units keep separate positions and HP pools. */
+  supportLink?: {
+    partnerUnitId: string;
+    role: "provider" | "receiver";
+    mode: "attack" | "defense";
+  };
   movedThisTurn?: boolean;
   position: {
     x: number;
@@ -120,6 +126,8 @@ export type BattlefieldObject = {
   blocksLineOfSight: boolean;
   status: "Active" | "Destroyed";
   visualId?: string;
+  /** Healing applied at the end of a round to a living unit occupying this object. */
+  healingPerRound?: number;
 };
 
 export type Board = {

@@ -20,6 +20,8 @@ export {
   getMapThemeTerrainColor,
   iceFrontTheme,
   mandaloreCityTheme,
+  republicResearchStationTheme,
+  rylothBadlandsTheme,
   mapThemes,
   volcanicFoundryTheme,
 } from "./map-themes";

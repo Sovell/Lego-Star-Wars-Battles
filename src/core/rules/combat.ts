@@ -11,6 +11,7 @@ import {
 import { getTemplate, findUnit, replaceUnit } from "./state";
 import { getAttackBonus, getDefenseBonus } from "./terrain";
 import { randomD6, type DiceRoller } from "../random";
+import { clearBrokenSupportLinks, getActiveSupportProvider } from "./unit-support";
 
 export function resolveAttack(
   battle: Battle,
@@ -70,14 +71,17 @@ export function resolveAttack(
     attackerTemplate.abilities.includes("clone_training") && attacker.suppression === 0
       ? getNumericAbilityEffect(attackerTemplate, "hit_bonus_without_suppression")
       : 0;
-  const coverPenalty = getDefenseBonus(battle, defender);
+  const supportDefenseBonus = getActiveSupportProvider(battle, defender, "defense") ? 1 : 0;
+  const entrenchmentBonus = defender.activeEffects?.includes("entrenched") ? 1 : 0;
+  const coverPenalty = getDefenseBonus(battle, defender) + supportDefenseBonus + entrenchmentBonus;
   const highGroundBonus = getAttackBonus(battle, attacker);
   const attackerSuppressionPenalty = Math.min(2, attacker.suppression);
   const hitTarget = Math.min(6, Math.max(
     2,
     4 + coverPenalty + attackerSuppressionPenalty - cloneBonus - highGroundBonus,
   ));
-  const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender);
+  const supportAttackBonus = getActiveSupportProvider(battle, attacker, "attack") ? 1 : 0;
+  const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender) + supportAttackBonus;
   const attackDice = Math.max(1, weapon.attacks + attackDiceBonus);
   const hitRolls = rollD6Pool(attackDice, rollD6);
   const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
@@ -116,10 +120,10 @@ export function resolveAttack(
     status: "Activated",
     activeEffects: attacker.activeEffects?.filter((effect) => effect !== "advance_pending"),
   };
-  let nextBattle: Battle = {
+  let nextBattle: Battle = clearBrokenSupportLinks({
     ...replaceUnit(replaceUnit(battle, nextDefender), nextAttacker),
     activeActivation: undefined,
-  };
+  });
   const moraleResult = crossedCriticalHpThreshold(
     defenderTemplate,
     defender.currentHp,
@@ -128,7 +132,7 @@ export function resolveAttack(
     ? resolveMoraleRetreat(nextBattle, defender.id, attacker.position, rollD6)
     : undefined;
   if (moraleResult) {
-    nextBattle = moraleResult.battle;
+    nextBattle = clearBrokenSupportLinks(moraleResult.battle);
   }
 
   return {

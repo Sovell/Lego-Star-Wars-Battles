@@ -57,7 +57,56 @@ const republicWarshipVectorSource = {
   licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
 } as const;
 
-export const mapAssetSets: readonly MapAssetSet[] = [{
+const rylothGeneratedSource = {
+  name: "LEGO Star Wars Battles — Ryloth generated art pack",
+  url: "/map-assets/ryloth/README.md",
+  license: "Project asset",
+  licenseUrl: "/map-assets/ryloth/README.md",
+} as const;
+
+const researchStationGeneratedSource = {
+  name: "LEGO Star Wars Battles — Republic research station generated art pack",
+  url: "/map-assets/republic-research-station/README.md",
+  license: "Project asset",
+  licenseUrl: "/map-assets/republic-research-station/README.md",
+} as const;
+
+const generatedMapAssetSource = {
+  name: "LEGO Star Wars Battles — generated map art pack",
+  url: "/map-assets/generated/README.md",
+  license: "Project asset",
+  licenseUrl: "/map-assets/generated/README.md",
+} as const;
+
+function generatedThemeAssets(
+  theme: string,
+  fallbackSources: MapAssetSet["sources"],
+  extraObjects: MapAssetSet["objects"] = {},
+): Pick<MapAssetSet, "sources" | "terrain" | "objects"> {
+  const root = `/map-assets/generated/${theme}`;
+  return {
+    sources: [generatedMapAssetSource, ...fallbackSources],
+    terrain: {
+      Impassable: [`${root}/building.png`],
+      Hazardous: [`${root}/rough-terrain.png`],
+      HighGround: [`${root}/high-ground.png`],
+      LightCover: [`${root}/light-cover.png`],
+      HeavyCover: [`${root}/heavy-cover.png`],
+      DifficultTerrain: [`${root}/rough-terrain.png`],
+      Building: [`${root}/building.png`],
+    },
+    objects: {
+      DefensePoint: `${root}/high-ground.png`,
+      StrategicPoint: `${root}/building.png`,
+      Generator: `${root}/heavy-cover.png`,
+      LightFortification: `${root}/light-cover.png`,
+      HeavyFortification: `${root}/heavy-cover.png`,
+      ...extraObjects,
+    },
+  };
+}
+
+const legacyMapAssetSets: readonly MapAssetSet[] = [{
   id: "tatooine-outpost",
   sources: [sciFiRtsSource],
   terrain: {
@@ -272,6 +321,44 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
     HeavyFortification: "/map-assets/christophsis/heavy-bunker.png",
   },
 }, {
+  id: "ryloth-badlands",
+  sources: [rylothGeneratedSource],
+  terrain: {
+    Impassable: ["/map-assets/ryloth/spires-heavy-a.png"],
+    Hazardous: ["/map-assets/ryloth/ruins-rough-a.png"],
+    HighGround: ["/map-assets/ryloth/high-mesa-a.png"],
+    LightCover: ["/map-assets/ryloth/rocks-light-a.png"],
+    HeavyCover: ["/map-assets/ryloth/spires-heavy-a.png"],
+    DifficultTerrain: ["/map-assets/ryloth/ruins-rough-a.png"],
+    Building: ["/map-assets/ryloth/habitat-building-a.png"],
+  },
+  objects: {
+    DefensePoint: "/map-assets/ryloth/high-mesa-a.png",
+    StrategicPoint: "/map-assets/ryloth/habitat-building-a.png",
+    Generator: "/map-assets/ryloth/habitat-building-a.png",
+    LightFortification: "/map-assets/ryloth/rocks-light-a.png",
+    HeavyFortification: "/map-assets/ryloth/spires-heavy-a.png",
+  },
+}, {
+  id: "republic-research-station",
+  sources: [researchStationGeneratedSource],
+  terrain: {
+    Impassable: ["/map-assets/republic-research-station/laboratory-building-a.png"],
+    Hazardous: ["/map-assets/republic-research-station/damaged-lab-rough-a.png"],
+    HighGround: ["/map-assets/republic-research-station/research-platform-a.png"],
+    LightCover: ["/map-assets/republic-research-station/cargo-light-a.png"],
+    HeavyCover: ["/map-assets/republic-research-station/machinery-heavy-a.png"],
+    DifficultTerrain: ["/map-assets/republic-research-station/damaged-lab-rough-a.png"],
+    Building: ["/map-assets/republic-research-station/laboratory-building-a.png"],
+  },
+  objects: {
+    DefensePoint: "/map-assets/republic-research-station/research-platform-a.png",
+    StrategicPoint: "/map-assets/republic-research-station/laboratory-building-a.png",
+    Generator: "/map-assets/republic-research-station/machinery-heavy-a.png",
+    LightFortification: "/map-assets/republic-research-station/cargo-light-a.png",
+    HeavyFortification: "/map-assets/republic-research-station/machinery-heavy-a.png",
+  },
+}, {
   id: "mandalore-city",
   sources: [mandaloreVectorSource],
   terrain: {
@@ -348,6 +435,35 @@ export const mapAssetSets: readonly MapAssetSet[] = [{
   },
 }];
 
+const generatedThemeByAssetSetId: Readonly<Record<string, string>> = {
+  "tatooine-outpost": "tatooine",
+  "endor-forest": "endor",
+  "hoth-ice": "hoth",
+  "mustafar-foundry": "mustafar",
+  "geonosis-foundry": "geonosis",
+  "felucia-fungal": "felucia",
+  "christophsis-crystal": "christophsis",
+  "mandalore-city": "mandalore",
+  "separatist-warship": "separatist-ship",
+  "republic-warship": "republic-ship",
+};
+
+export const mapAssetSets: readonly MapAssetSet[] = legacyMapAssetSets.map((assetSet) => {
+  const generatedTheme = generatedThemeByAssetSetId[assetSet.id];
+  if (!generatedTheme) return assetSet;
+
+  const rescueObjectives = assetSet.id.endsWith("warship") ? {
+    hostage: assetSet.objects.hostage,
+    "r2-d2": assetSet.objects["r2-d2"],
+    extraction: assetSet.objects.extraction,
+  } : {};
+
+  return {
+    id: assetSet.id,
+    ...generatedThemeAssets(generatedTheme, assetSet.sources, rescueObjectives),
+  };
+});
+
 export function getMapAssetSet(themeId: MapThemeId): MapAssetSet | undefined {
   const assetSetId = getMapTheme(themeId).presentation.assetSetId;
   return mapAssetSets.find(({ id }) => id === assetSetId);
@@ -369,6 +485,9 @@ export function getMapObjectAssetUrl(
   objectType: BattlefieldObjectType,
   visualId?: string,
 ): string | undefined {
+  if (visualId === "field-hospital") {
+    return "/map-assets/shared/field-hospital.png";
+  }
   const objects = getMapAssetSet(themeId)?.objects;
   return (visualId ? objects?.[visualId] : undefined) ?? objects?.[objectType];
 }

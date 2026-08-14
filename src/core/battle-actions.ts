@@ -292,7 +292,24 @@ export function applyBattleAction(
 
       const armies = battle.armies.map((army) => ({
         ...army,
-        units: army.units.map((unit) => resetUnitForNextTurn(unit, getTemplate(unit))),
+        units: army.units.map((unit) => {
+          const hospital = unit.position
+            ? battle.board.objects?.find((object) =>
+                object.status === "Active" &&
+                (object.healingPerRound ?? 0) > 0 &&
+                object.position.x === unit.position?.x &&
+                object.position.y === unit.position.y
+              )
+            : undefined;
+          const template = getTemplate(unit);
+          const healedUnit = hospital && unit.status !== "Destroyed"
+            ? {
+                ...unit,
+                currentHp: Math.min(template.maxHp, unit.currentHp + (hospital.healingPerRound ?? 0)),
+              }
+            : unit;
+          return resetUnitForNextTurn(healedUnit, template);
+        }),
       }));
       const advancedBattle: Battle = {
         ...battle,

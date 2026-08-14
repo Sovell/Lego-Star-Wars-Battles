@@ -504,6 +504,82 @@ export const republicWarshipTheme: MapTheme = {
   },
 };
 
+export const rylothBadlandsTheme: MapTheme = {
+  id: "ryloth-badlands",
+  version: 1,
+  name: "Ryloth — Badlands Front",
+  description: "Suche kaniony Ryloth, skalne półki i pozycje ukryte pośród pomarańczowych pustkowi.",
+  presentation: {
+    assetSetId: "ryloth-badlands",
+    groundTextureId: "ryloth-dust",
+    motif: "ryloth",
+    palette: {
+      ground: "#8b4e36", accent: "#e58b52", shadow: "#241719",
+      terrain: {
+        open: "#75412f", lightCover: "#86533d", heavyCover: "#5a3931",
+        building: "#574946", difficultTerrain: "#9b573a", impassable: "#3b2927",
+        hazardous: "#b44c32", highGround: "#a96948",
+      },
+    },
+  },
+  generation: {
+    motif: "canyons",
+    defaultTerrainDensity: 0.39,
+    clusterSize: { minimum: 2, maximum: 6 },
+    terrainWeights: [
+      { terrainType: "DifficultTerrain", weight: 4 }, { terrainType: "HighGround", weight: 4 },
+      { terrainType: "HeavyCover", weight: 3 }, { terrainType: "LightCover", weight: 2 },
+      { terrainType: "Building", weight: 1 }, { terrainType: "Impassable", weight: 3 },
+      { terrainType: "Hazardous", weight: 1 },
+    ],
+    objectBudget: {
+      minimum: 3, maximum: 5, minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 3 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
+export const republicResearchStationTheme: MapTheme = {
+  id: "republic-research-station",
+  version: 1,
+  name: "Republic Research Station",
+  description: "Sterylne laboratoria, zamknięte grodzie, reaktory badawcze i wąskie korytarze stacji Republiki.",
+  presentation: {
+    assetSetId: "republic-research-station",
+    groundTextureId: "republic-laboratory",
+    motif: "laboratory",
+    palette: {
+      ground: "#7d8b91", accent: "#78c8d8", shadow: "#18252b",
+      terrain: {
+        open: "#718087", lightCover: "#78939b", heavyCover: "#53686f",
+        building: "#465a62", difficultTerrain: "#6e7778", impassable: "#30434a",
+        hazardous: "#bc5b42", highGround: "#9aabb0",
+      },
+    },
+  },
+  generation: {
+    motif: "urban-grid",
+    defaultTerrainDensity: 0.43,
+    clusterSize: { minimum: 2, maximum: 5 },
+    terrainWeights: [
+      { terrainType: "Building", weight: 5 }, { terrainType: "Impassable", weight: 4 },
+      { terrainType: "HeavyCover", weight: 3 }, { terrainType: "LightCover", weight: 4 },
+      { terrainType: "DifficultTerrain", weight: 2 }, { terrainType: "Hazardous", weight: 2 },
+      { terrainType: "HighGround", weight: 1 },
+    ],
+    objectBudget: {
+      minimum: 3, maximum: 5, minimumSpacing: 2,
+      objectWeights: [
+        { objectType: "LightFortification", weight: 4 },
+        { objectType: "HeavyFortification", weight: 2 },
+      ],
+    },
+  },
+};
+
 export const mapThemes: readonly MapTheme[] = [
   desertOutpostTheme,
   forestMoonTheme,
@@ -513,6 +589,8 @@ export const mapThemes: readonly MapTheme[] = [
   feluciaWildsTheme,
   christophsisCrystalCityTheme,
   mandaloreCityTheme,
+  rylothBadlandsTheme,
+  republicResearchStationTheme,
   separatistWarshipTheme,
   republicWarshipTheme,
 ];

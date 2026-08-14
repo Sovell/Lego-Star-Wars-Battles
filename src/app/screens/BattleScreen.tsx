@@ -1442,6 +1442,15 @@ function UnitDetails({
           ? `${selectedUnit.position.x}, ${selectedUnit.position.y}`
           : text("poza mapą", "off map")}
       </span>
+      {selectedUnit.supportLink ? (
+        <span>
+          {text("Para wsparcia", "Support pair")}: {selectedUnit.supportLink.role === "provider"
+            ? text("udziela wsparcia", "providing support")
+            : text("otrzymuje wsparcie", "receiving support")} ({selectedUnit.supportLink.mode === "attack"
+              ? text("atak", "attack")
+              : text("obrona", "defense")})
+        </span>
+      ) : null}
       <div className="unitWeaponList">
         {template.weapons.map((weapon) => (
           <span key={weapon.id}>

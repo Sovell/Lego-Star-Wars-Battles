@@ -35,10 +35,12 @@ describe("map generator foundation", () => {
       "felucia-wilds",
       "christophsis-crystal-city",
       "mandalore-city",
+      "ryloth-badlands",
+      "republic-research-station",
       "separatist-warship",
       "republic-warship",
     ]);
-    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(9);
+    expect(new Set(mapThemes.map(({ presentation }) => presentation.motif)).size).toBe(11);
     expect(new Set(mapThemes.map(({ generation }) => generation.motif)).size).toBe(7);
     expect(mapThemes.every(({ presentation }) =>
       Object.values(presentation.palette.terrain).every((color) => /^#[0-9a-f]{6}$/i.test(color))

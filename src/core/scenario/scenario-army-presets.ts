@@ -193,6 +193,54 @@ const presets: ScenarioArmyPreset[] = [
       ]),
     ],
   },
+  {
+    id: "ryloth-liberation-roster",
+    name: { pl: "Brygada wyzwolenia Ryloth", en: "Ryloth Liberation Brigade" },
+    description: {
+      pl: "Komandosi i zwiad Republiki przeciw mobilnej blokadzie Separatystów.",
+      en: "Republic commandos and scouts against a mobile Separatist blockade.",
+    },
+    armies: [
+      republic([
+        { templateId: "commander_cody", count: 1 },
+        { templateId: "clone_commando_section", count: 1 },
+        { templateId: "clone_medic_squad", count: 1 },
+        { templateId: "clone_trooper_squad", count: 2 },
+        { templateId: "at_rt_scout_walker", count: 1 },
+      ]),
+      separatists([
+        { templateId: "b1_battle_droid_commander_squad", count: 1 },
+        { templateId: "b1_droid_regiment", count: 2 },
+        { templateId: "b1_recon_squad", count: 1 },
+        { templateId: "stap_patrol", count: 1 },
+        { templateId: "dwarf_spider_droid", count: 1 },
+      ]),
+    ],
+  },
+  {
+    id: "republic-research-station-lockdown-roster",
+    name: { pl: "Załoga stacji badawczej", en: "Research Station Garrison" },
+    description: {
+      pl: "Obrońcy i medycy Republiki odpierają abordaż ciężkich droidów.",
+      en: "Republic defenders and medics repel a heavy droid boarding force.",
+    },
+    armies: [
+      republic([
+        { templateId: "obi_wan_kenobi", count: 1 },
+        { templateId: "clone_command_squad", count: 1 },
+        { templateId: "clone_trooper_squad", count: 2 },
+        { templateId: "clone_medic_squad", count: 1 },
+        { templateId: "clone_engineers_332nd", count: 1 },
+      ]),
+      separatists([
+        { templateId: "general_grievous", count: 1 },
+        { templateId: "b1_battle_droid_commander_squad", count: 1 },
+        { templateId: "b1_droid_squad", count: 2 },
+        { templateId: "super_battle_droid_squad", count: 1 },
+        { templateId: "bx_commando_droid", count: 1 },
+      ]),
+    ],
+  },
 ];
 
 const presetByScenarioId = new Map([
@@ -202,6 +250,8 @@ const presetByScenarioId = new Map([
   ["mandalore-hunt-in-sundari", presets[3]],
   ["christophsis-crystal-data", presets[4]],
   ["separatist-warship-rescue-r2d2", presets[5]],
+  ["ryloth-liberation", presets[6]],
+  ["republic-research-station-lockdown", presets[7]],
 ]);
 
 export function getScenarioArmyPreset(scenarioId: string): ScenarioArmyPreset | undefined {

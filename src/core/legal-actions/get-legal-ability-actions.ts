@@ -76,11 +76,15 @@ function getAbilityTargetMode(effectType: string): AbilityTargetMode {
     case "incoming_damage_multiplier":
       return "none";
     case "create_light_cover":
+    case "build_field_hospital":
+    case "summon_unit":
     case "bonus_move_ignore_terrain":
       return "position";
     case "move_after_attack":
       return "unit-position";
     case "restore_hp":
+    case "restore_living_hp":
+    case "link_support":
     case "damage_and_push":
     case "direct_damage":
     case "bonus_move_then_melee_attack":
@@ -88,6 +92,8 @@ function getAbilityTargetMode(effectType: string): AbilityTargetMode {
     case "task_force_attack_bonus_against_damaged":
     case "task_force_attack_bonus_against_hero":
       return "unit";
+    case "entrench":
+      return "none";
     default:
       return "none";
   }

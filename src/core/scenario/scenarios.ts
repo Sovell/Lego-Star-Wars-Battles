@@ -745,6 +745,78 @@ export const mandaloreBattleForSectorsScenario: ScenarioDefinition = {
   victoryCondition: { type: "ControlTerritory", rounds: 10 },
 };
 
+export const rylothLiberationScenario: ScenarioDefinition = {
+  id: "ryloth-liberation",
+  name: "Ryloth: Przełamanie blokady",
+  description: "Zajmij dwa punkty łączności w kanionach, zanim droidy sprowadzą pełne posiłki.",
+  experience: "NarrativeMission",
+  planet: "Ryloth",
+  recommendedMapThemeId: "ryloth-badlands",
+  recommendedPoints: 90,
+  mapPreset: { themeId: "ryloth-badlands", seed: 21287, width: 8, height: 8, terrainDensity: 0.39 },
+  defaultDefenderArmySlot: 1,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "break-ryloth-blockade",
+    name: "Przełam blokadę",
+    description: "Przejmij kolejno oba przekaźniki w skalnych gardłach.",
+    victoryPoints: 1,
+  }],
+  scheduledEvents: [{
+    id: "ryloth-stap-counterattack",
+    name: "Patrol STAP nadlatuje z kanionu",
+    trigger: { type: "RoundStarted", round: 5 },
+    effect: { type: "DeployReinforcements", armyId: "army_separatists", units: [{ templateId: "stap_patrol", count: 1 }] },
+    visibility: "Announced",
+  }, {
+    id: "ryloth-recon-screen",
+    name: "Zwiadowcy B1 osłaniają drugi przekaźnik",
+    trigger: { type: "RoundStarted", round: 8 },
+    effect: { type: "DeployReinforcements", armyId: "army_separatists", units: [{ templateId: "b1_recon_squad", count: 1 }] },
+    visibility: "Announced",
+  }],
+  victoryCondition: {
+    type: "ProgressiveControl", objectiveType: "StrategicPoint", count: 2,
+    attackerArmySlot: 0, roundLimit: 12, stageRoundLimits: [6, 6],
+  },
+  defeatCondition: { type: "ArmyEliminated", armySlot: 0 },
+};
+
+export const republicResearchStationScenario: ScenarioDefinition = {
+  id: "republic-research-station-lockdown",
+  name: "Stacja badawcza Republiki: Kwarantanna",
+  description: "Utrzymaj reaktor badawczy podczas abordażu i doczekaj odblokowania systemów bezpieczeństwa.",
+  experience: "NarrativeMission",
+  planet: "Republic Research Station",
+  recommendedMapThemeId: "republic-research-station",
+  recommendedPoints: 85,
+  mapPreset: { themeId: "republic-research-station", seed: 50101, width: 8, height: 8, terrainDensity: 0.43 },
+  defaultDefenderArmySlot: 0,
+  deploymentZones: standardDeploymentZones,
+  objectives: [{
+    id: "protect-research-reactor",
+    name: "Chroń rdzeń badawczy",
+    description: "Nie dopuść do zniszczenia generatora przez sześć pełnych rund.",
+    victoryPoints: 1,
+  }],
+  objectDurability: { Generator: { maxHp: 12, armorSave: 4 } },
+  scheduledEvents: [{
+    id: "research-station-breach",
+    name: "Droidy przebijają grodzie techniczne",
+    trigger: { type: "RoundStarted", round: 4 },
+    effect: { type: "DeployReinforcements", armyId: "army_separatists", units: [{ templateId: "b1_droid_squad", count: 1 }] },
+    visibility: "Announced",
+  }, {
+    id: "research-station-medical-team",
+    name: "Zespół medyczny opuszcza schron",
+    trigger: { type: "RoundStarted", round: 5 },
+    effect: { type: "DeployReinforcements", armyId: "army_republic", units: [{ templateId: "clone_medic_squad", count: 1 }] },
+    visibility: "Announced",
+  }],
+  victoryCondition: { type: "ProtectObject", rounds: 6, objectType: "Generator" },
+  defeatCondition: { type: "BattlefieldObjectDestroyed", objectType: "Generator" },
+};
+
 export const narrativeMissions: ScenarioDefinition[] = [
   christophsisLastLandingScenario,
   geonosisHeartOfFactoryScenario,
@@ -752,6 +824,8 @@ export const narrativeMissions: ScenarioDefinition[] = [
   mandaloreHuntInSundariScenario,
   christophsisCrystalDataScenario,
   rescueR2D2Scenario,
+  rylothLiberationScenario,
+  republicResearchStationScenario,
 ];
 
 export const customScenarioTemplates: ScenarioDefinition[] = [

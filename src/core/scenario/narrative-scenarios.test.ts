@@ -14,8 +14,8 @@ import {
 } from "./scenarios";
 
 describe("narrative mission catalog", () => {
-  it("separates six authored missions from custom scenario templates", () => {
-    expect(narrativeMissions).toHaveLength(6);
+  it("separates eight authored missions from custom scenario templates", () => {
+    expect(narrativeMissions).toHaveLength(8);
     expect(narrativeMissions.every((scenario) =>
       scenario.experience === "NarrativeMission" && Boolean(scenario.mapPreset)
     )).toBe(true);
@@ -65,7 +65,7 @@ describe("narrative mission catalog", () => {
       defenderArmyId: starterArmies[1].id,
     });
     const prepared = applyScenarioMapPreset(draft, rescueR2D2Scenario);
-    const visualIds = prepared.board.objects
+    const visualIds = (prepared.board.objects ?? [])
       .filter(({ type }) => type === "StrategicPoint")
       .map(({ visualId }) => visualId);
 

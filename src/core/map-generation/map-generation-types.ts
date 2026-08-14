@@ -13,6 +13,8 @@ export type MapThemeMotif =
   | "fungal"
   | "crystal"
   | "mandalore"
+  | "ryloth"
+  | "laboratory"
   | "starship";
 
 export type MapGenerationMotif =

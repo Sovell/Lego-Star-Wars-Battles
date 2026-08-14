@@ -7,5 +7,7 @@ export type MapThemeId =
   | "felucia-wilds"
   | "christophsis-crystal-city"
   | "mandalore-city"
+  | "ryloth-badlands"
+  | "republic-research-station"
   | "separatist-warship"
   | "republic-warship";

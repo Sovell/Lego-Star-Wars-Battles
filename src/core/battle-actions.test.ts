@@ -286,6 +286,20 @@ describe("applyBattleAction", () => {
     expect(result.events).toEqual([{ type: "TurnEnded", turn: 2 }]);
   });
 
+  it("heals a unit occupying an active field hospital at the end of a turn", () => {
+    let battle = activateAllLivingUnits(createBattle());
+    battle = patchUnit(battle, "rep_unit_1", { currentHp: 1, position: { x: 1, y: 2 } });
+    battle.board.objects = [{
+      ...createBattlefieldObject("LightFortification", { x: 1, y: 2 }, "field-hospital"),
+      name: "Szpital polowy",
+      healingPerRound: 2,
+    }];
+
+    const result = applyBattleAction(battle, { type: "EndTurn" });
+
+    expect(findUnit(result.battle, "rep_unit_1")?.currentHp).toBe(3);
+  });
+
   it("rejects ending a turn while any living unit still awaits its order", () => {
     const battle = patchUnit(createBattle(), "rep_unit_1", { status: "Activated" });
 
