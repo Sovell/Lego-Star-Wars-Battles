@@ -1,6 +1,11 @@
 # Lego-Star-Wars-Battles
 Web app/game for digital and physical wargaming
 
+## Player guide
+
+- [Krótka instrukcja gracza (PL)](docs/INSTRUKCJA_GRACZA.md)
+- [Instrukcja gracza ze screenami (PDF, PL)](output/pdf/LEGO_Star_Wars_Battles_Instrukcja_Gracza_PL.pdf)
+
 ## Headless balance simulations
 
 Run every narrative mission with 25 deterministic bot-vs-bot seeds:

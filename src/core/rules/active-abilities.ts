@@ -1,6 +1,6 @@
 import { abilities, taskForces, unitTemplates } from "../../data";
 import type { AbilityDefinition, Battle, UnitInstance } from "../../types";
-import { areArmiesAllied } from "../army-relations";
+import { areArmiesAllied, areArmiesEnemies } from "../army-relations";
 import type { DiceRoller } from "../random";
 import { createBattlefieldObject } from "../battlefield-objects";
 import { distance, isOnBoard, type GridPosition } from "./geometry";
@@ -8,7 +8,7 @@ import { isPositionFree } from "./occupancy";
 import { resolveAttack } from "./combat";
 import { findUnit, getTemplate, replaceUnit } from "./state";
 import { validateUnitActivation } from "./activation";
-import { crossedCriticalHpThreshold, resolveMoraleRetreat } from "./morale";
+import { crossedCriticalHpThreshold, getStatusAfterDamage, resolveMoraleRetreat } from "./morale";
 import { isTerrainEnterable } from "../terrain-definitions";
 import { getTerrainAtPosition } from "./terrain";
 import {
@@ -29,6 +29,7 @@ export type AbilityUseResult = {
   battle: Battle;
   log: string;
   destroyedUnitId?: string;
+  destroyedUnitIds?: string[];
 };
 
 export function getUnitActiveAbilities(
@@ -73,6 +74,17 @@ export function useActiveAbility(
   );
   if (!ability) {
     return { battle, log: "Wybrana aktywna zdolność nie należy do tej jednostki." };
+  }
+
+  if (
+    ability.usesPerBattle !== undefined &&
+    (source.usedAbilities ?? []).filter((abilityId) => abilityId === ability.id).length >=
+      ability.usesPerBattle
+  ) {
+    return {
+      battle,
+      log: `${ability.name} zostało już wykorzystane w tej bitwie.`,
+    };
   }
 
   const remainingCooldown = source.abilityCooldowns?.[ability.id] ?? 0;
@@ -170,6 +182,296 @@ function applyAbilityEffect(
         source,
         ability,
         `${getTemplate(source).name} buduje szpital polowy na polu ${targetPosition.x}, ${targetPosition.y}.`,
+      );
+    }
+
+    case "build_droid_foundry": {
+      const targetPosition = input.targetPosition;
+      const enemyAdjacent = targetPosition
+        ? battle.armies.some((army) =>
+            areArmiesEnemies(battle, army.id, source.armyId) &&
+            army.units.some((unit) =>
+              unit.status !== "Destroyed" &&
+              unit.position &&
+              distance(unit.position, targetPosition) <= 1
+            )
+          )
+        : false;
+      if (
+        !source.position ||
+        !targetPosition ||
+        !isOnBoard(battle, targetPosition) ||
+        !isTerrainEnterable(getTerrainAtPosition(battle, targetPosition)) ||
+        distance(source.position, targetPosition) > (ability.range ?? 2) ||
+        !isPositionFree(battle, targetPosition) ||
+        enemyAdjacent ||
+        battle.board.objects?.some((object) =>
+          object.status === "Active" &&
+          object.position.x === targetPosition.x &&
+          object.position.y === targetPosition.y
+        )
+      ) {
+        return {
+          battle,
+          log: "Wybierz kontrolowane, wolne pole poza bezpośrednim sąsiedztwem przeciwnika.",
+        };
+      }
+
+      const foundry = {
+        ...createBattlefieldObject("HeavyFortification", targetPosition),
+        name: "Droid Foundry",
+        maxHp: 10,
+        currentHp: 10,
+        armorSave: 4,
+        defenseBonus: 0,
+        blocksLineOfSight: true,
+        visualId: "droid-foundry",
+        controllerArmyId: source.armyId,
+        production: {
+          templateId: ability.effect.target ?? "b1_droid_squad",
+          intervalRounds: 2,
+          nextProductionTurn: battle.turn + 2,
+          remainingSpawns: ability.effect.value ?? 3,
+        },
+      };
+      return finishAbility(
+        {
+          ...battle,
+          board: {
+            ...battle.board,
+            objects: [...(battle.board.objects ?? []), foundry],
+          },
+        },
+        source,
+        ability,
+        `${getTemplate(source).name} zakłada fabrykę droidów na polu ${targetPosition.x}, ${targetPosition.y}.`,
+      );
+    }
+
+    case "line_airstrike": {
+      const targetPosition = input.targetPosition;
+      if (
+        !source.position ||
+        !targetPosition ||
+        !isOnBoard(battle, targetPosition) ||
+        distance(source.position, targetPosition) < 2 ||
+        distance(source.position, targetPosition) > (ability.range ?? 4)
+      ) {
+        return { battle, log: "Wybierz koniec linii nalotu w zasięgu od 2 do 4 pól." };
+      }
+      const strikeCells = linePositions(source.position, targetPosition).slice(1);
+      const damage = ability.effect.value ?? 3;
+      let hitCount = 0;
+      const destroyedUnitIds: string[] = [];
+      let nextBattle = battle;
+      for (const target of battle.armies.flatMap((army) => army.units)) {
+        if (
+          !target.position ||
+          target.status === "Destroyed" ||
+          areArmiesAllied(battle, source.armyId, target.armyId) ||
+          !strikeCells.some((position) =>
+            position.x === target.position?.x && position.y === target.position.y
+          )
+        ) {
+          continue;
+        }
+        hitCount += 1;
+        const nextHp = Math.max(0, target.currentHp - damage);
+        const nextSuppression = target.suppression + 1;
+        if (nextHp === 0) destroyedUnitIds.push(target.id);
+        nextBattle = replaceUnit(nextBattle, {
+          ...target,
+          currentHp: nextHp,
+          suppression: nextSuppression,
+          position: nextHp === 0 ? null : target.position,
+          status: getStatusAfterDamage(
+            target,
+            getTemplate(target),
+            nextHp,
+            nextSuppression,
+          ),
+        });
+      }
+      const finished = finishAbility(
+        clearBrokenSupportLinks(nextBattle),
+        source,
+        ability,
+        `${getTemplate(source).name} wzywa nalot wzdłuż ${strikeCells.length} pól; trafione jednostki: ${hitCount}.`,
+      );
+      return { ...finished, destroyedUnitIds };
+    }
+
+    case "schedule_area_strike": {
+      const targetPosition = input.targetPosition;
+      if (
+        !source.position ||
+        !targetPosition ||
+        !isOnBoard(battle, targetPosition) ||
+        distance(source.position, targetPosition) > (ability.range ?? 4) ||
+        battle.board.objects?.some((object) =>
+          object.status === "Active" &&
+          object.delayedStrike &&
+          object.position.x === targetPosition.x &&
+          object.position.y === targetPosition.y
+        )
+      ) {
+        return { battle, log: "Wybierz nieoznaczone pole w zasięgu misji ogniowej." };
+      }
+      const marker = {
+        ...createBattlefieldObject("LightFortification", targetPosition),
+        name: "Cel misji ogniowej",
+        maxHp: 0,
+        currentHp: 0,
+        destructible: false,
+        defenseBonus: 0,
+        visualId: "fire-mission-target",
+        delayedStrike: {
+          controllerArmyId: source.armyId,
+          resolveTurn: battle.turn + 1,
+          radius: 1,
+          damage: ability.effect.value ?? 3,
+          suppression: 2,
+        },
+      };
+      return finishAbility(
+        {
+          ...battle,
+          board: {
+            ...battle.board,
+            objects: [...(battle.board.objects ?? []), marker],
+          },
+        },
+        source,
+        ability,
+        `${getTemplate(source).name} wyznacza pole ${targetPosition.x}, ${targetPosition.y} do ostrzału na początku następnej rundy.`,
+      );
+    }
+
+    case "refresh_nearby_allies": {
+      if (!source.position) return { battle, log: "Dowódca musi znajdować się na mapie." };
+      const limit = ability.effect.value ?? 2;
+      const targets = battle.armies
+        .flatMap((army) => army.units)
+        .filter((target) =>
+          target.id !== source.id &&
+          target.position &&
+          target.status !== "Destroyed" &&
+          areArmiesAllied(battle, source.armyId, target.armyId) &&
+          distance(source.position!, target.position) <= (ability.range ?? 2) &&
+          (target.status !== "Ready" || target.suppression > 0)
+        )
+        .sort((left, right) =>
+          Number(right.status === "Activated") - Number(left.status === "Activated") ||
+          right.suppression - left.suppression ||
+          left.id.localeCompare(right.id)
+        )
+        .slice(0, limit);
+      if (targets.length === 0) {
+        return { battle, log: "Brak pobliskich jednostek wymagających reorganizacji." };
+      }
+      let nextBattle = battle;
+      for (const target of targets) {
+        nextBattle = replaceUnit(nextBattle, {
+          ...target,
+          suppression: 0,
+          status: "Ready",
+          movedThisTurn: false,
+        });
+      }
+      nextBattle = addBonusActivationTokens(nextBattle, targets);
+      return finishAbility(
+        nextBattle,
+        source,
+        ability,
+        `${getTemplate(source).name} reorganizuje ${targets.length} pobliskie jednostki.`,
+      );
+    }
+
+    case "rally_and_reactivate": {
+      const target = getValidTarget(battle, source, input.targetUnitId, ability, "friendly");
+      if (
+        !target ||
+        target.id === source.id ||
+        !getTemplate(target).keywords.includes("Clone")
+      ) {
+        return { battle, log: "Wybierz inną sojuszniczą jednostkę klonów w zasięgu." };
+      }
+      const nextBattle = addBonusActivationTokens(
+        replaceUnit(battle, {
+          ...target,
+          suppression: 0,
+          status: "Ready",
+          movedThisTurn: false,
+        }),
+        [target],
+      );
+      return finishAbility(
+        nextBattle,
+        source,
+        ability,
+        `${getTemplate(source).name} mobilizuje ${getTemplate(target).name} do dodatkowej aktywacji.`,
+      );
+    }
+
+    case "mark_shatterpoint":
+    case "designate_target": {
+      const target = getValidTarget(battle, source, input.targetUnitId, ability, "enemy");
+      if (!target) return { battle, log: "Wybierz wrogą jednostkę w zasięgu." };
+      const effect = ability.effect.type === "mark_shatterpoint"
+        ? "shatterpoint"
+        : `designated_target:${source.armyId}`;
+      return finishAbility(
+        replaceUnit(battle, {
+          ...target,
+          activeEffects: [...(target.activeEffects ?? []).filter((item) => item !== effect), effect],
+        }),
+        source,
+        ability,
+        `${getTemplate(source).name} oznacza ${getTemplate(target).name} zdolnością ${ability.name}.`,
+      );
+    }
+
+    case "deny_activation": {
+      const target = getValidTarget(battle, source, input.targetUnitId, ability, "enemy");
+      if (!target || target.status === "Activated") {
+        return { battle, log: "Wybierz wrogą jednostkę, która nie została jeszcze aktywowana." };
+      }
+      let spentToken = false;
+      const nextBattle = replaceUnit({
+        ...battle,
+        activationBag: battle.activationBag.map((token) => {
+          if (!spentToken && token.armyId === target.armyId && !token.used) {
+            spentToken = true;
+            return { ...token, used: true };
+          }
+          return token;
+        }),
+      }, { ...target, status: "Activated" });
+      return finishAbility(
+        nextBattle,
+        source,
+        ability,
+        `${getTemplate(source).name} odbiera aktywację jednostce ${getTemplate(target).name}.`,
+      );
+    }
+
+    case "mark_hunted_hero": {
+      const target = getValidTarget(battle, source, input.targetUnitId, ability, "enemy");
+      if (!target || !getTemplate(target).keywords.includes("Hero")) {
+        return { battle, log: "Wybierz wrogiego bohatera w zasięgu polowania." };
+      }
+      const nextSource = {
+        ...source,
+        activeEffects: [
+          ...(source.activeEffects ?? []).filter((effect) => !effect.startsWith("relentless_hunt:")),
+          `relentless_hunt:${target.id}`,
+        ],
+      };
+      return finishAbility(
+        replaceUnit(battle, nextSource),
+        source,
+        ability,
+        `${getTemplate(source).name} rozpoczyna nieustępliwe polowanie na ${getTemplate(target).name}.`,
       );
     }
 
@@ -515,6 +817,9 @@ function putAbilityOnCooldown(
   if (!source) return battle;
   return replaceUnit(battle, {
     ...source,
+    usedAbilities: ability.usesPerBattle !== undefined
+      ? [...(source.usedAbilities ?? []), ability.id]
+      : source.usedAbilities,
     abilityCooldowns: {
       ...(source.abilityCooldowns ?? {}),
       [ability.id]: ability.cooldown ?? 1,
@@ -569,4 +874,29 @@ function adjacentFreePositions(
     }
   }
   return result;
+}
+
+function linePositions(from: GridPosition, to: GridPosition): GridPosition[] {
+  const steps = distance(from, to);
+  return Array.from({ length: steps + 1 }, (_, index) => ({
+    x: Math.round(from.x + ((to.x - from.x) * index) / steps),
+    y: Math.round(from.y + ((to.y - from.y) * index) / steps),
+  })).filter((position, index, positions) =>
+    index === 0 ||
+    position.x !== positions[index - 1].x ||
+    position.y !== positions[index - 1].y
+  );
+}
+
+function addBonusActivationTokens(battle: Battle, units: UnitInstance[]): Battle {
+  const tokens = units.flatMap((unit) => {
+    const army = battle.armies.find((candidate) => candidate.id === unit.armyId);
+    return army ? [{
+      id: `${army.id}_command_bonus_${unit.id}_${crypto.randomUUID()}`,
+      armyId: army.id,
+      faction: army.faction,
+      used: false,
+    }] : [];
+  });
+  return { ...battle, activationBag: [...battle.activationBag, ...tokens] };
 }

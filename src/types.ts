@@ -55,6 +55,8 @@ export type UnitInstance = {
   currentHp: number;
   suppression: number;
   abilityCooldowns?: Record<string, number>;
+  /** Active abilities already spent for the whole battle (for example command ultimates). */
+  usedAbilities?: string[];
   activeEffects?: string[];
   /** Optional one-to-one battlefield support link. Units keep separate positions and HP pools. */
   supportLink?: {
@@ -128,6 +130,23 @@ export type BattlefieldObject = {
   visualId?: string;
   /** Healing applied at the end of a round to a living unit occupying this object. */
   healingPerRound?: number;
+  /** Army that owns a dynamically created battlefield installation. */
+  controllerArmyId?: string;
+  /** Optional automatic unit production performed between battle rounds. */
+  production?: {
+    templateId: string;
+    intervalRounds: number;
+    nextProductionTurn: number;
+    remainingSpawns: number;
+  };
+  /** Telegraph for a command ability resolved when the indicated round begins. */
+  delayedStrike?: {
+    controllerArmyId: string;
+    resolveTurn: number;
+    radius: number;
+    damage: number;
+    suppression: number;
+  };
 };
 
 export type Board = {
@@ -148,6 +167,8 @@ export type AbilityTrigger = "Passive" | "OnActivation" | "OnAttack" | "OnDefens
 
 export type AbilityType = "passive" | "active" | "aura";
 
+export type AbilityDiscipline = "personal" | "command";
+
 export type AbilityEffect = {
   type: string;
   value?: number;
@@ -161,6 +182,8 @@ export type AbilityDefinition = {
   trigger: AbilityTrigger;
   range?: number;
   cooldown?: number;
+  discipline?: AbilityDiscipline;
+  usesPerBattle?: number;
   effect: AbilityEffect;
   description: string;
 };

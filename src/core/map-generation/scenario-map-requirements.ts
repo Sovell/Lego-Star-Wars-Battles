@@ -53,31 +53,44 @@ export function getMapScenarioRequirements(
         }],
       };
     case "DestroyObjects":
+      {
+        const resolvedDefenderArmySlot = defenderArmySlot ?? getDefaultDefenderArmySlot(scenario);
       return {
         ...common,
-        defenderArmySlot: defenderArmySlot ?? getDefaultDefenderArmySlot(scenario),
+        defenderArmySlot: resolvedDefenderArmySlot,
+        attackerArmySlot: scenario.missionDirector?.playerArmySlot
+          ?? getOpposingArmySlot(resolvedDefenderArmySlot),
         requiredObjects: [{
           objectType: scenario.victoryCondition.objectType,
           count: scenario.victoryCondition.count,
-          placement: "defender-side",
+          placement: "defender-depth",
         }],
       };
+      }
     case "ProgressiveControl":
       return {
         ...common,
+        attackerArmySlot: scenario.victoryCondition.attackerArmySlot,
+        defenderArmySlot: defenderArmySlot
+          ?? scenario.defaultDefenderArmySlot
+          ?? getOpposingArmySlot(scenario.victoryCondition.attackerArmySlot),
         requiredObjects: [{
           objectType: scenario.victoryCondition.objectiveType,
           count: scenario.victoryCondition.count,
-          placement: "distributed",
+          placement: "assault-route",
         }],
       };
     case "RescueAndExtract":
       return {
         ...common,
+        attackerArmySlot: scenario.victoryCondition.rescuerArmySlot,
+        defenderArmySlot: defenderArmySlot
+          ?? scenario.defaultDefenderArmySlot
+          ?? getOpposingArmySlot(scenario.victoryCondition.rescuerArmySlot),
         requiredObjects: [{
           objectType: scenario.victoryCondition.objectiveType,
           count: scenario.victoryCondition.hostageCount + 1,
-          placement: "distributed",
+          placement: "assault-route",
         }],
       };
     case "SurviveAndExtract":
@@ -89,4 +102,8 @@ function getDefaultDefenderArmySlot(scenario: ScenarioDefinition): number {
   return scenario.defaultDefenderArmySlot ?? (scenario.defeatCondition?.type === "ArmyEliminated"
     ? scenario.defeatCondition.armySlot
     : 0);
+}
+
+function getOpposingArmySlot(armySlot: number): number {
+  return armySlot === 0 ? 1 : 0;
 }

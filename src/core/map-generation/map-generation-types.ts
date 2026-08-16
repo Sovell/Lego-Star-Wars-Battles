@@ -50,7 +50,12 @@ export type MapObjectWeight = {
   weight: number;
 };
 
-export type MapObjectPlacement = "defender-side" | "center" | "distributed";
+export type MapObjectPlacement =
+  | "defender-side"
+  | "center"
+  | "distributed"
+  | "defender-depth"
+  | "assault-route";
 
 export type MapScenarioObjectRequirement = {
   objectType: BattlefieldObjectType;
@@ -61,6 +66,7 @@ export type MapScenarioObjectRequirement = {
 export type MapScenarioRequirements = {
   scenarioId?: string;
   defenderArmySlot?: number;
+  attackerArmySlot?: number;
   deploymentZones: ScenarioDefinition["deploymentZones"];
   requiredObjects: MapScenarioObjectRequirement[];
 };
@@ -118,7 +124,7 @@ export type MapGenerationConfig = {
 };
 
 export type MapGenerationRecipe = {
-  generatorVersion: 4;
+  generatorVersion: 5;
   width: number;
   height: number;
   seed: number;

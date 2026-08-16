@@ -221,9 +221,11 @@ function UnitRulesCard({ template }: { template: UnitTemplate }) {
 
 function formatAbilityMeta(ability: (typeof abilities)[number], language: Language): string {
   const parts = [
+    ability.discipline === "command" ? (language === "pl" ? "dowódcza" : "command") : "",
     ability.type ? (language === "pl" ? ({ passive: "pasywna", active: "aktywna", aura: "aura" } as const)[ability.type] : ability.type) : (language === "pl" ? "pasywna" : "passive"),
     ability.range ? `${language === "pl" ? "zasięg" : "range"} ${ability.range}` : "",
     ability.cooldown ? `CD ${ability.cooldown}` : "",
+    ability.usesPerBattle ? `${ability.usesPerBattle}× ${language === "pl" ? "na bitwę" : "per battle"}` : "",
   ].filter(Boolean);
 
   return parts.join(" | ");

@@ -235,6 +235,7 @@ function PixiBoardScene({
           viewModel={viewModel}
         />
         <TerritoryLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
+        <DelayedStrikeLayer cellSize={cellSize} stride={stride} viewModel={viewModel} />
         <InteractionLayer
           cellSize={cellSize}
           hoveredCellKey={hoveredCellKey}
@@ -347,6 +348,40 @@ function GroundLayer({
           .fill({ color: groundColor })
           .stroke({ color: accentColor, alpha: 0.28, width: 2 });
       }} />
+    </pixiContainer>
+  );
+}
+
+function DelayedStrikeLayer({ cellSize, stride, viewModel }: LayerProps) {
+  const markers = [...viewModel.objectsByPosition.values()].filter((object) =>
+    object.status === "Active" && object.delayedStrike
+  );
+  if (markers.length === 0) return null;
+
+  return (
+    <pixiContainer eventMode="none">
+      {viewModel.positions.map(({ x, y }) => {
+        const marker = markers.find((candidate) =>
+          Math.max(
+            Math.abs(candidate.position.x - x),
+            Math.abs(candidate.position.y - y),
+          ) <= candidate.delayedStrike!.radius
+        );
+        if (!marker) return null;
+        const center = marker.position.x === x && marker.position.y === y;
+        return (
+          <pixiGraphics
+            draw={(graphics) => {
+              graphics.clear().roundRect(3, 3, cellSize - 6, cellSize - 6, 7)
+                .fill({ color: 0xff3b30, alpha: center ? 0.3 : 0.16 })
+                .stroke({ color: 0xff766d, alpha: 0.95, width: center ? 4 : 2 });
+            }}
+            key={`strike-${x}-${y}`}
+            x={x * stride}
+            y={y * stride}
+          />
+        );
+      })}
     </pixiContainer>
   );
 }
@@ -467,6 +502,7 @@ function TerrainCell({
   const decorationTexture = usePixiTexture(
     getMapTerrainDecorationUrl(mapThemeId, terrainType, gridX, gridY),
   );
+  const isOpenGround = terrainType === "Open";
   return (
     <pixiContainer x={x} y={y}>
       <pixiGraphics draw={(graphics) => {
@@ -485,10 +521,10 @@ function TerrainCell({
       {decorationTexture ? (
         <pixiSprite
           anchor={0.5}
-          alpha={0.94}
-          height={cellSize * 0.9}
+          alpha={isOpenGround ? 0.72 : 0.94}
+          height={cellSize * (isOpenGround ? 1 : 0.9)}
           texture={decorationTexture}
-          width={cellSize * 0.9}
+          width={cellSize * (isOpenGround ? 1 : 0.9)}
           x={cellSize / 2}
           y={cellSize / 2}
         />
@@ -759,7 +795,7 @@ function BattlefieldObjectToken({
         }} />
         <pixiText
           anchor={0.5}
-          text={`${getObjectCode(object.type)} ${object.currentHp}/${object.maxHp}`}
+          text={`${getObjectCode(object.type, object.visualId)} ${object.currentHp}/${object.maxHp}`}
           style={{ fill: 0xfff27a, fontFamily: "Arial", fontSize: 8, fontWeight: "800" }}
         />
       </pixiContainer>
@@ -869,12 +905,12 @@ function AnimatedUnitToken({
           .stroke({ color: 0xe8f1f9, width: 1.5 });
       }} />
       {texture ? (
-        <pixiSprite
-          anchor={0.5}
-          height={radius * 1.82}
-          texture={texture}
-          width={radius * 1.82}
-        />
+        <pixiGraphics draw={(graphics) => {
+          graphics.clear().circle(0, 0, radius * 0.91).fill({
+            texture,
+            textureSpace: "local",
+          });
+        }} />
       ) : null}
       <pixiGraphics draw={(graphics) => {
         graphics.clear().roundRect(-radius * 0.72, radius * 0.28, radius * 1.44, radius * 0.48, 3)
@@ -1184,7 +1220,10 @@ function getStatusCode(status: "Ready" | "Activated" | "Destroyed" | "Pinned"): 
   }
 }
 
-function getObjectCode(type: BattlefieldObjectType): string {
+function getObjectCode(type: BattlefieldObjectType, visualId?: string): string {
+  if (visualId === "droid-foundry") return "DF";
+  if (visualId === "field-hospital") return "MED";
+  if (visualId === "fire-mission-target") return "FIRE";
   switch (type) {
     case "DefensePoint": return "P";
     case "StrategicPoint": return "★";

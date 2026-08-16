@@ -1,6 +1,27 @@
 # Generated asset prompt set
 
-Generated on 2026-08-14 with the built-in OpenAI image generation tool. No reference images were supplied. Originals were downscaled to transparent 256×256 PNG files for runtime use.
+Generated on 2026-08-14 and 2026-08-15 with the built-in OpenAI image generation tool. No reference images were supplied. Originals were downscaled to 256×256 PNG files for runtime use.
+
+## Open-ground textures
+
+Shared prompt:
+
+> Use case: stylized-concept. Asset type: square open-ground tile for a tactical board-game map. Primary request: **[SUBJECT]**. Style/medium: polished stylized 3D game terrain texture, simplified toy-like science-fiction aesthetic, subtle material detail, family-friendly. Composition/framing: perfectly orthographic top-down view, square surface filling the entire image edge to edge, visually seamless at the edges, no perspective and no horizon. Gameplay readability: low contrast, quiet center, no large focal object, designed to sit beneath unit tokens and UI labels. Constraints: ground or floor surface only; no characters, buildings, vehicles, weapons, props, raised cover, cliffs or walls, border, game grid, symbols, logos, text, watermark, cast shadow or transparent background.
+
+Subjects:
+
+- Tatooine: windswept tan sand, shallow dune ripples, tiny pebbles and ochre variation.
+- Endor: dark forest soil, moss, muted undergrowth, tiny leaves and shallow roots.
+- Hoth: compacted snow, pale-blue ice, wind streaks and delicate cracks.
+- Mustafar: cooled black basalt, charcoal plates, dim heat seams and volcanic ash.
+- Geonosis: red-orange dust, shallow erosion, fine granular rock and muted rust patches.
+- Felucia: violet alien soil, turquoise bioluminescent moss veins and tiny fungal speckles.
+- Christophsis: pale crystalline paving, cyan mineral veins, silver facets and frost-like cracks.
+- Ryloth: burnt-orange canyon dust, terracotta grain, wind-carved lines and cracked earth.
+- Mandalore: ivory city paving, pale geometric panels, cobalt-blue and gold inlays.
+- Republic research station: white laboratory panels, graphite seams, cyan guide lights and red safety accents.
+- Separatist warship: graphite deck plates, recessed seams, dim red strips and muted green traces.
+- Republic warship: white Venator deck panels, graphite seams, red stripes and cyan-blue guide lights.
 
 ## Shared terrain prompt
 

@@ -73,7 +73,15 @@ export function resolveAttack(
       : 0;
   const supportDefenseBonus = getActiveSupportProvider(battle, defender, "defense") ? 1 : 0;
   const entrenchmentBonus = defender.activeEffects?.includes("entrenched") ? 1 : 0;
-  const coverPenalty = getDefenseBonus(battle, defender) + supportDefenseBonus + entrenchmentBonus;
+  const shatterpoint = defender.activeEffects?.includes("shatterpoint") ?? false;
+  const designatedByAttacker = defender.activeEffects?.includes(
+    `designated_target:${attacker.armyId}`,
+  ) ?? false;
+  const cloneDesignationBonus = designatedByAttacker && attackerTemplate.keywords.includes("Clone")
+    ? 1
+    : 0;
+  const baseCoverPenalty = getDefenseBonus(battle, defender) + supportDefenseBonus + entrenchmentBonus;
+  const coverPenalty = shatterpoint ? 0 : Math.max(0, baseCoverPenalty - cloneDesignationBonus);
   const highGroundBonus = getAttackBonus(battle, attacker);
   const attackerSuppressionPenalty = Math.min(2, attacker.suppression);
   const hitTarget = Math.min(6, Math.max(
@@ -81,7 +89,9 @@ export function resolveAttack(
     4 + coverPenalty + attackerSuppressionPenalty - cloneBonus - highGroundBonus,
   ));
   const supportAttackBonus = getActiveSupportProvider(battle, attacker, "attack") ? 1 : 0;
-  const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender) + supportAttackBonus;
+  const huntBonus = attacker.activeEffects?.includes(`relentless_hunt:${defender.id}`) ? 2 : 0;
+  const attackDiceBonus = getAttackDiceBonus(battle, attacker, defender) + supportAttackBonus +
+    cloneDesignationBonus + huntBonus;
   const attackDice = Math.max(1, weapon.attacks + attackDiceBonus);
   const hitRolls = rollD6Pool(attackDice, rollD6);
   const hits = hitRolls.filter((roll) => roll >= hitTarget).length;
@@ -95,7 +105,7 @@ export function resolveAttack(
       ? getNumericAbilityEffect(defenderTemplate, "ranged_shield_damage_reduction")
       : 0;
   const forceReduction = getNumericAbilityEffect(defenderTemplate, "damage_reduction");
-  const armorSave = defenderTemplate.armorSave ?? 7;
+  const armorSave = Math.min(7, (defenderTemplate.armorSave ?? 7) + (shatterpoint ? 2 : 0));
   const armorRolls = armorSave <= 6 ? rollD6Pool(hits, rollD6) : [];
   const savedHits = armorRolls.filter((roll) => roll >= armorSave).length;
   const unsavedHits = Math.max(0, hits - savedHits);

@@ -75,10 +75,18 @@ export function generateMap(config: MapGenerationConfig): GeneratedMap {
     theme,
     random,
   });
+  const dressedTiles = dressScenarioObjectives({
+    tiles,
+    objects,
+    requirements,
+    corridorCells,
+    width: recipe.width,
+    height: recipe.height,
+  });
   const objectCells = new Set(
     objects.map(({ position }) => `${position.x},${position.y}`),
   );
-  const finalTiles = tiles.filter(({ x, y }) => !objectCells.has(`${x},${y}`));
+  const finalTiles = dressedTiles.filter(({ x, y }) => !objectCells.has(`${x},${y}`));
 
   return {
     board: {
@@ -109,7 +117,7 @@ function createRecipe(
   }
 
   return {
-    generatorVersion: 4,
+    generatorVersion: 5,
     width: config.width,
     height: config.height,
     seed: config.seed,
@@ -250,6 +258,118 @@ function neighbors(position: Position, width: number, height: number): Position[
     { x: position.x, y: position.y - 1 },
     { x: position.x, y: position.y + 1 },
   ].filter(({ x, y }) => x >= 0 && y >= 0 && x < width && y < height);
+}
+
+function dressScenarioObjectives({
+  tiles,
+  objects,
+  requirements,
+  corridorCells,
+  width,
+  height,
+}: {
+  tiles: TerrainTile[];
+  objects: NonNullable<GeneratedMap["board"]["objects"]>;
+  requirements: MapScenarioRequirements;
+  corridorCells: ReadonlySet<string>;
+  width: number;
+  height: number;
+}): TerrainTile[] {
+  const storyRequirements = requirements.requiredObjects.filter(({ placement }) =>
+    placement === "defender-depth" || placement === "assault-route"
+  );
+  if (storyRequirements.length === 0) return tiles;
+
+  const attackerCells = requirements.deploymentZones
+    .find(({ armySlot }) => armySlot === requirements.attackerArmySlot)?.cells ?? [];
+  const defenderCells = requirements.deploymentZones
+    .find(({ armySlot }) => armySlot === requirements.defenderArmySlot)?.cells ?? [];
+  if (attackerCells.length === 0 || defenderCells.length === 0) return tiles;
+
+  const attacker = centroid(attackerCells);
+  const defender = centroid(defenderCells);
+  const delta = { x: defender.x - attacker.x, y: defender.y - attacker.y };
+  const forward = Math.abs(delta.x) >= Math.abs(delta.y)
+    ? { x: Math.sign(delta.x), y: 0 }
+    : { x: 0, y: Math.sign(delta.y) };
+  const occupiedCells = new Set(objects.map(({ position }) => positionKey(position)));
+  const deploymentCells = new Set(
+    requirements.deploymentZones.flatMap(({ cells }) => cells.map(positionKey)),
+  );
+  const terrainByPosition = new Map(tiles.map((tile) => [positionKey(tile), tile]));
+  const requiredCount = requirements.requiredObjects.reduce((sum, entry) => sum + entry.count, 0);
+  const requiredObjects = objects.slice(0, requiredCount);
+
+  requiredObjects.forEach((object, index) => {
+    const lateral = Math.abs(forward.x) > 0
+      ? { x: 0, y: index % 2 === 0 ? -1 : 1 }
+      : { x: index % 2 === 0 ? -1 : 1, y: 0 };
+    setFirstAvailableTerrain(
+      "DifficultTerrain",
+      [
+        offset(object.position, -forward.x, -forward.y),
+        offset(object.position, -forward.x + lateral.x, -forward.y + lateral.y),
+        offset(object.position, -forward.x - lateral.x, -forward.y - lateral.y),
+      ],
+      terrainByPosition,
+      occupiedCells,
+      deploymentCells,
+      corridorCells,
+      width,
+      height,
+    );
+    setFirstAvailableTerrain(
+      "HeavyCover",
+      [
+        offset(object.position, lateral.x, lateral.y),
+        offset(object.position, -lateral.x, -lateral.y),
+        offset(object.position, forward.x, forward.y),
+      ],
+      terrainByPosition,
+      occupiedCells,
+      deploymentCells,
+      corridorCells,
+      width,
+      height,
+    );
+  });
+
+  return [...terrainByPosition.values()];
+}
+
+function setFirstAvailableTerrain(
+  terrainType: TerrainType,
+  candidates: Array<{ x: number; y: number }>,
+  terrainByPosition: Map<string, TerrainTile>,
+  occupiedCells: ReadonlySet<string>,
+  deploymentCells: ReadonlySet<string>,
+  corridorCells: ReadonlySet<string>,
+  width: number,
+  height: number,
+): void {
+  const isAvailable = ({ x, y }: { x: number; y: number }) => {
+    const key = `${x},${y}`;
+    return x >= 0 && y >= 0 && x < width && y < height &&
+      !occupiedCells.has(key) &&
+      !deploymentCells.has(key);
+  };
+  const position = candidates.find((candidate) =>
+    isAvailable(candidate) && !corridorCells.has(positionKey(candidate))
+  ) ?? candidates.find(isAvailable);
+  if (position) {
+    terrainByPosition.set(positionKey(position), createTerrainTile(terrainType, position.x, position.y));
+  }
+}
+
+function centroid(positions: Array<{ x: number; y: number }>): { x: number; y: number } {
+  return {
+    x: positions.reduce((sum, position) => sum + position.x, 0) / positions.length,
+    y: positions.reduce((sum, position) => sum + position.y, 0) / positions.length,
+  };
+}
+
+function offset(position: { x: number; y: number }, x: number, y: number) {
+  return { x: position.x + x, y: position.y + y };
 }
 
 function clusterNeighbors(

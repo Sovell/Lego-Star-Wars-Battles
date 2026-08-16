@@ -64,6 +64,14 @@ export function DomMapBoard({
         const battlefieldObjectAssetUrl = battlefieldObject
           ? getMapObjectAssetUrl(mapThemeId, battlefieldObject.type, battlefieldObject.visualId)
           : undefined;
+        const delayedStrikeThreat = [...viewModel.objectsByPosition.values()].some((object) =>
+          object.status === "Active" &&
+          object.delayedStrike &&
+          Math.max(
+            Math.abs(object.position.x - x),
+            Math.abs(object.position.y - y),
+          ) <= object.delayedStrike.radius
+        );
 
         return (
           <button
@@ -72,6 +80,8 @@ export function DomMapBoard({
               deploymentZoneCells?.has(key) ? "deploymentZoneCell" : ""
             } ${
               scenarioZoneCells?.has(key) ? "scenarioZoneCell" : ""
+            } ${
+              delayedStrikeThreat ? "delayedStrikeCell" : ""
             } ${
               territoryFaction === "Republic"
                 ? "territoryRepublic"
@@ -109,7 +119,7 @@ export function DomMapBoard({
                 }`}
                 title={localizeObjectName(language, battlefieldObject.type, battlefieldObject.name)}
               >
-                <strong>{getObjectCode(battlefieldObject.type)}</strong>
+                <strong>{getObjectCode(battlefieldObject.type, battlefieldObject.visualId)}</strong>
                 <small>
                   {battlefieldObject.destructible
                     ? `${battlefieldObject.currentHp}/${battlefieldObject.maxHp} HP`
@@ -210,7 +220,10 @@ function getInteractionLabel(interaction: ReturnType<typeof getBoardCellInteract
   }
 }
 
-function getObjectCode(type: BattlefieldObjectType): string {
+function getObjectCode(type: BattlefieldObjectType, visualId?: string): string {
+  if (visualId === "droid-foundry") return "DF";
+  if (visualId === "field-hospital") return "MED";
+  if (visualId === "fire-mission-target") return "FIRE";
   switch (type) {
     case "DefensePoint": return "P";
     case "StrategicPoint": return "★";

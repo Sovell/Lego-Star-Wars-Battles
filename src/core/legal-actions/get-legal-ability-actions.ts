@@ -77,6 +77,9 @@ function getAbilityTargetMode(effectType: string): AbilityTargetMode {
       return "none";
     case "create_light_cover":
     case "build_field_hospital":
+    case "build_droid_foundry":
+    case "line_airstrike":
+    case "schedule_area_strike":
     case "summon_unit":
     case "bonus_move_ignore_terrain":
       return "position";
@@ -91,8 +94,14 @@ function getAbilityTargetMode(effectType: string): AbilityTargetMode {
     case "task_force_once_per_turn_movement_bonus":
     case "task_force_attack_bonus_against_damaged":
     case "task_force_attack_bonus_against_hero":
+    case "rally_and_reactivate":
+    case "mark_shatterpoint":
+    case "designate_target":
+    case "deny_activation":
+    case "mark_hunted_hero":
       return "unit";
     case "entrench":
+    case "refresh_nearby_allies":
       return "none";
     default:
       return "none";

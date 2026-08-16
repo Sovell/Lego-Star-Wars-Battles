@@ -3,6 +3,7 @@ import { areArmiesAllied, areArmiesEnemies } from "../army-relations";
 import { isPositionFree } from "../rules/occupancy";
 import type { GridPosition } from "../rules/geometry";
 import { getPathCost } from "../rules/pathfinding";
+import { getUnitMovementBonus } from "../rules/movement";
 import { getTemplate } from "../rules/state";
 import { resolveScenarioObjective } from "../scenario/scenario-objective-resolver";
 import type { MissionState, ScenarioDefinition } from "../scenario/scenario-types";
@@ -173,7 +174,7 @@ function nearestPathDistance(
 ): number {
   const costs = units.flatMap((unit) => {
     if (!unit.position) return [];
-    const movementBudget = Math.max(1, getUnitMovementBudget(unit));
+    const movementBudget = Math.max(1, getUnitMovementBudget(battle, unit));
     const cost = getPathCost(battle, unit.position, target, {
       unitId: unit.id,
       movementBudget,
@@ -184,7 +185,7 @@ function nearestPathDistance(
   return costs.length > 0 ? Math.min(...costs) : Number.MAX_SAFE_INTEGER;
 }
 
-function getUnitMovementBudget(unit: UnitInstance): number {
+function getUnitMovementBudget(battle: Battle, unit: UnitInstance): number {
   const template = getTemplate(unit);
-  return template.movement + (unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0);
+  return template.movement + getUnitMovementBonus(battle, unit);
 }

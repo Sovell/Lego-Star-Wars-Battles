@@ -126,6 +126,23 @@ describe("bot action scoring", () => {
 
     expect(best?.action).toMatchObject({ targetPosition: { x: 1, y: 3 } });
   });
+
+  it("lets a bot place Grievous's foundry toward its strategic target", () => {
+    const battle = patchUnit(createBattle(), "sep_unit_1", {
+      templateId: "general_grievous",
+      position: { x: 5, y: 5 },
+    });
+    const best = chooseBestBotAction([
+      { type: "UseAbility", unitId: "sep_unit_1", abilityId: "droid_foundry", targetPosition: { x: 6, y: 6 } },
+      { type: "UseAbility", unitId: "sep_unit_1", abilityId: "droid_foundry", targetPosition: { x: 4, y: 4 } },
+    ], {
+      battle,
+      doctrine: aggressiveBotDoctrine,
+      movementTarget: { x: 0, y: 0 },
+    });
+
+    expect(best?.action).toMatchObject({ targetPosition: { x: 4, y: 4 } });
+  });
 });
 
 function patchUnit(

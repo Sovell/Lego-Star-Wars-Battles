@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   controlTerritoryScenario,
   christophsisBreakLineScenario,
+  christophsisCrystalDataScenario,
   defendPointScenario,
   protectGeneratorScenario,
   geonosisDroidFoundryScenario,
+  geonosisHeartOfFactoryScenario,
   mandaloreBattleForSectorsScenario,
+  narrativeMissions,
   survivalTestScenario,
 } from "../scenario/scenarios";
 import type { BattlefieldObject } from "../../types";
+import type { ScenarioDefinition } from "../scenario/scenario-types";
 import { validateMapConnectivity } from "./map-connectivity";
 import { generateMap } from "./map-generator";
 import { getMapScenarioRequirements } from "./scenario-map-requirements";
@@ -34,12 +38,12 @@ describe("scenario-aware map generation", () => {
     expect(getMapScenarioRequirements(geonosisDroidFoundryScenario).requiredObjects).toEqual([{
       objectType: "Generator",
       count: 2,
-      placement: "defender-side",
+      placement: "defender-depth",
     }]);
     expect(getMapScenarioRequirements(christophsisBreakLineScenario).requiredObjects).toEqual([{
       objectType: "StrategicPoint",
       count: 3,
-      placement: "distributed",
+      placement: "assault-route",
     }]);
   });
 
@@ -69,6 +73,48 @@ describe("scenario-aware map generation", () => {
     expect(objectsOfType(result.board.objects, "Generator")).toHaveLength(2);
     expect(result.recipe.generationMotif).toBe("canyons");
     expect(result.recipe.defenderArmySlot).toBe(1);
+    expect(validateMapConnectivity(result.board).valid).toBe(true);
+  });
+
+  it("stages the foundry generators as separated objectives deep in defender territory", () => {
+    const result = generateNarrativeMap(geonosisHeartOfFactoryScenario);
+    const generators = objectsOfType(result.board.objects, "Generator")
+      .sort((left, right) =>
+        distanceToDeploymentZone(left, geonosisHeartOfFactoryScenario.deploymentZones[0].cells) -
+        distanceToDeploymentZone(right, geonosisHeartOfFactoryScenario.deploymentZones[0].cells)
+      );
+    const attackerCells = geonosisHeartOfFactoryScenario.deploymentZones[0].cells;
+
+    expect(generators).toHaveLength(2);
+    expect(distance(generators[0].position, generators[1].position)).toBeGreaterThanOrEqual(3);
+    expect(generators.every((generator) =>
+      distanceToDeploymentZone(generator, attackerCells) >= 3
+    )).toBe(true);
+    expect(distanceToDeploymentZone(generators[1], attackerCells))
+      .toBeGreaterThan(distanceToDeploymentZone(generators[0], attackerCells));
+    expect(generators.every((generator) => hasObjectiveDressing(result.board, generator)))
+      .toBe(true);
+    expect(validateMapConnectivity(result.board).valid).toBe(true);
+  });
+
+  it("turns Crystal Data into a progressive assault through enemy-held sectors", () => {
+    const result = generateNarrativeMap(christophsisCrystalDataScenario);
+    const attackerCells = christophsisCrystalDataScenario.deploymentZones[0].cells;
+    const objectives = objectsOfType(result.board.objects, "StrategicPoint")
+      .sort((left, right) =>
+        distanceToDeploymentZone(left, attackerCells) -
+        distanceToDeploymentZone(right, attackerCells)
+      );
+
+    expect(objectives).toHaveLength(2);
+    expect(objectives.every((objective) =>
+      distanceToDeploymentZone(objective, attackerCells) >= 3
+    )).toBe(true);
+    expect(distance(objectives[0].position, objectives[1].position)).toBeGreaterThanOrEqual(3);
+    expect(distanceToDeploymentZone(objectives[1], attackerCells))
+      .toBeGreaterThan(distanceToDeploymentZone(objectives[0], attackerCells));
+    expect(objectives.every((objective) => hasObjectiveDressing(result.board, objective)))
+      .toBe(true);
     expect(validateMapConnectivity(result.board).valid).toBe(true);
   });
 
@@ -200,6 +246,36 @@ describe("scenario-aware map generation", () => {
     expect(new Set(first.board.objects?.map(({ id }) => id)).size)
       .toBe(first.board.objects?.length);
   });
+
+  it.each(narrativeMissions.map((scenario) => [scenario.name, scenario] as const))(
+    "keeps the authored flow and connectivity of narrative mission %s",
+    (_name, scenario) => {
+      const result = generateNarrativeMap(scenario);
+      const requirements = getMapScenarioRequirements(
+        scenario,
+        scenario.defaultDefenderArmySlot,
+      );
+      const deploymentCells = new Set(
+        scenario.deploymentZones.flatMap(({ cells }) => cells.map(({ x, y }) => `${x},${y}`)),
+      );
+
+      expect(validateMapConnectivity(result.board).valid).toBe(true);
+      expect(result.board.objects?.every(({ position }) =>
+        !deploymentCells.has(`${position.x},${position.y}`)
+      )).toBe(true);
+
+      const storyRequirement = requirements.requiredObjects.find(({ placement }) =>
+        placement === "defender-depth" || placement === "assault-route"
+      );
+      if (!storyRequirement) return;
+
+      const objectives = objectsOfType(result.board.objects, storyRequirement.objectType);
+      expect(objectives).toHaveLength(storyRequirement.count);
+      expect(pairDistances(objectives).every((value) => value >= 3)).toBe(true);
+      expect(objectives.every((objective) => hasObjectiveDressing(result.board, objective)))
+        .toBe(true);
+    },
+  );
 });
 
 function generateScenarioMap(
@@ -212,6 +288,17 @@ function generateScenarioMap(
     seed,
     themeId: "desert-outpost",
     scenario,
+  });
+}
+
+function generateNarrativeMap(
+  scenario: ScenarioDefinition,
+) {
+  const preset = scenario.mapPreset!;
+  return generateMap({
+    ...preset,
+    scenario,
+    defenderArmySlot: scenario.defaultDefenderArmySlot,
   });
 }
 
@@ -233,6 +320,16 @@ function pairDistances(objects: BattlefieldObject[]): number[] {
   return objects.flatMap((object, index) =>
     objects.slice(index + 1).map((other) => distance(object.position, other.position))
   );
+}
+
+function hasObjectiveDressing(
+  board: ReturnType<typeof generateMap>["board"],
+  objective: BattlefieldObject,
+): boolean {
+  const adjacentTerrain = board.tiles.filter((tile) =>
+    distance(tile, objective.position) === 1
+  ).map(({ terrainType }) => terrainType);
+  return adjacentTerrain.includes("DifficultTerrain") && adjacentTerrain.includes("HeavyCover");
 }
 
 function distance(first: { x: number; y: number }, second: { x: number; y: number }): number {

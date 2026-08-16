@@ -1,4 +1,5 @@
 import type { ScenarioDefinition } from "./scenario-types";
+import { campaignPrologueMissions } from "./campaign-prologue-missions";
 
 const standardDeploymentZones = createEdgeDeploymentZones(8, 8, 2);
 
@@ -826,6 +827,7 @@ export const narrativeMissions: ScenarioDefinition[] = [
   rescueR2D2Scenario,
   rylothLiberationScenario,
   republicResearchStationScenario,
+  ...campaignPrologueMissions,
 ];
 
 export const customScenarioTemplates: ScenarioDefinition[] = [

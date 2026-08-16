@@ -22,6 +22,8 @@ import { applyVictoryState } from "./rules/victory";
 import { createD6Roller, type DiceRoller, type RandomSource } from "./random";
 import { useActiveAbility } from "./rules/active-abilities";
 import type { ScenarioDefinition } from "./scenario/scenario-types";
+import { resolveBattlefieldProduction } from "./rules/battlefield-production";
+import { resolveDelayedBattlefieldEffects } from "./rules/delayed-battlefield-effects";
 
 export type BattleAction =
   | { type: "DrawActivation" }
@@ -264,21 +266,40 @@ export function applyBattleAction(
         action,
         rollD6 ?? (() => Math.floor(Math.random() * 6) + 1),
       );
+      const nextBattle = result.battle === battle
+        ? battle
+        : context.victoryMode === "Scenario"
+          ? result.battle
+          : applyVictoryState(result.battle);
       const events: BattleEvent[] = result.battle === battle
         ? []
         : [{ type: "AbilityUsed", unitId: action.unitId, abilityId: action.abilityId }];
 
-      if (result.destroyedUnitId) {
-        events.push({ type: "UnitDestroyed", unitId: result.destroyedUnitId });
-        const destroyedArmy = result.battle.armies.find((army) =>
-          army.units.some((unit) => unit.id === result.destroyedUnitId),
-        );
-        if (destroyedArmy?.units.every((unit) => unit.status === "Destroyed")) {
-          events.push({ type: "ArmyEliminated", armyId: destroyedArmy.id });
+      const destroyedUnitIds = new Set([
+        ...(result.destroyedUnitIds ?? []),
+        ...(result.destroyedUnitId ? [result.destroyedUnitId] : []),
+      ]);
+      for (const destroyedUnitId of destroyedUnitIds) {
+        events.push({ type: "UnitDestroyed", unitId: destroyedUnitId });
+      }
+      for (const army of nextBattle.armies) {
+        if (
+          army.units.some((unit) => destroyedUnitIds.has(unit.id)) &&
+          army.units.every((unit) => unit.status === "Destroyed")
+        ) {
+          events.push({ type: "ArmyEliminated", armyId: army.id });
         }
       }
+      if (nextBattle.phase === "Finished" && battle.phase !== "Finished") {
+        events.push({
+          type: "BattleFinished",
+          winnerArmyId: nextBattle.armies.find((army) =>
+            army.units.some((unit) => unit.status !== "Destroyed")
+          )?.id,
+        });
+      }
 
-      return { battle: result.battle, events, log: result.log };
+      return { battle: nextBattle, events, log: result.log };
     }
 
     case "EndTurn": {
@@ -311,22 +332,55 @@ export function applyBattleAction(
           return resetUnitForNextTurn(healedUnit, template);
         }),
       }));
+      const delayedEffects = resolveDelayedBattlefieldEffects(
+        { ...battle, armies },
+        battle.turn + 1,
+      );
+      const production = resolveBattlefieldProduction(delayedEffects.battle, battle.turn + 1);
       const advancedBattle: Battle = {
-        ...battle,
+        ...production.battle,
         turn: battle.turn + 1,
-        armies,
-        activationBag: buildActivationBag(armies),
+        activationBag: buildActivationBag(production.battle.armies),
         activeActivation: undefined,
         phase: "Activation",
       };
       const nextBattle = context.victoryMode === "Scenario"
         ? advancedBattle
         : applyVictoryState(advancedBattle);
+      const endTurnEvents: BattleEvent[] = delayedEffects.destroyedUnitIds.map((unitId) => ({
+        type: "UnitDestroyed" as const,
+        unitId,
+      }));
+      for (const army of nextBattle.armies) {
+        if (
+          army.units.some((unit) => delayedEffects.destroyedUnitIds.includes(unit.id)) &&
+          army.units.every((unit) => unit.status === "Destroyed")
+        ) {
+          endTurnEvents.push({ type: "ArmyEliminated", armyId: army.id });
+        }
+      }
+      endTurnEvents.push({ type: "TurnEnded", turn: nextBattle.turn });
+      if (nextBattle.phase === "Finished" && battle.phase !== "Finished") {
+        endTurnEvents.push({
+          type: "BattleFinished",
+          winnerArmyId: nextBattle.armies.find((army) =>
+            army.units.some((unit) => unit.status !== "Destroyed")
+          )?.id,
+        });
+      }
 
       return {
         battle: nextBattle,
-        events: [{ type: "TurnEnded", turn: nextBattle.turn }],
-        log: `Tura ${battle.turn} zakonczona.`,
+        events: endTurnEvents,
+        log: [
+          `Tura ${battle.turn} zakonczona.`,
+          delayedEffects.resolvedStrikeCount > 0
+            ? `Wsparcie ogniowe uderzyło w ${delayedEffects.resolvedStrikeCount} oznaczony obszar.`
+            : "",
+          production.spawnedUnitIds.length > 0
+            ? `Fabryki droidów wystawiły ${production.spawnedUnitIds.length} oddział(y) B1.`
+            : "",
+        ].filter(Boolean).join(" "),
       };
     }
   }

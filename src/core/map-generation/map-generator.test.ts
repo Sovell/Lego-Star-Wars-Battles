@@ -108,7 +108,7 @@ describe("map generator foundation", () => {
     )).toBe(true);
     expect(result.board.tiles.every((tile) => tile.movementCost >= 1)).toBe(true);
     expect(result.recipe).toEqual({
-      generatorVersion: 4,
+      generatorVersion: 5,
       width: 4,
       height: 3,
       seed: 42,

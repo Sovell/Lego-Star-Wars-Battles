@@ -2,6 +2,7 @@ import { getMapTheme, type MapThemeId } from "../core/map-generation";
 import type { BattlefieldObjectType, TerrainType } from "../types";
 
 type DecoratedTerrainType =
+  | "Open"
   | "LightCover"
   | "HeavyCover"
   | "Building"
@@ -87,20 +88,21 @@ function generatedThemeAssets(
   return {
     sources: [generatedMapAssetSource, ...fallbackSources],
     terrain: {
-      Impassable: [`${root}/building.png`],
-      Hazardous: [`${root}/rough-terrain.png`],
-      HighGround: [`${root}/high-ground.png`],
-      LightCover: [`${root}/light-cover.png`],
-      HeavyCover: [`${root}/heavy-cover.png`],
-      DifficultTerrain: [`${root}/rough-terrain.png`],
-      Building: [`${root}/building.png`],
+      Open: [`${root}/open-ground-brick-v2.png`],
+      Impassable: [`${root}/building-brick-v2.png`],
+      Hazardous: [`${root}/rough-terrain-brick-v2.png`],
+      HighGround: [`${root}/high-ground-brick-v2.png`],
+      LightCover: [`${root}/light-cover-brick-v2.png`],
+      HeavyCover: [`${root}/heavy-cover-brick-v2.png`],
+      DifficultTerrain: [`${root}/rough-terrain-brick-v2.png`],
+      Building: [`${root}/building-brick-v2.png`],
     },
     objects: {
-      DefensePoint: `${root}/high-ground.png`,
-      StrategicPoint: `${root}/building.png`,
-      Generator: `${root}/heavy-cover.png`,
-      LightFortification: `${root}/light-cover.png`,
-      HeavyFortification: `${root}/heavy-cover.png`,
+      DefensePoint: `${root}/high-ground-brick-v2.png`,
+      StrategicPoint: `${root}/building-brick-v2.png`,
+      Generator: `${root}/heavy-cover-brick-v2.png`,
+      LightFortification: `${root}/light-cover-brick-v2.png`,
+      HeavyFortification: `${root}/heavy-cover-brick-v2.png`,
       ...extraObjects,
     },
   };
@@ -324,39 +326,41 @@ const legacyMapAssetSets: readonly MapAssetSet[] = [{
   id: "ryloth-badlands",
   sources: [rylothGeneratedSource],
   terrain: {
-    Impassable: ["/map-assets/ryloth/spires-heavy-a.png"],
-    Hazardous: ["/map-assets/ryloth/ruins-rough-a.png"],
-    HighGround: ["/map-assets/ryloth/high-mesa-a.png"],
-    LightCover: ["/map-assets/ryloth/rocks-light-a.png"],
-    HeavyCover: ["/map-assets/ryloth/spires-heavy-a.png"],
-    DifficultTerrain: ["/map-assets/ryloth/ruins-rough-a.png"],
-    Building: ["/map-assets/ryloth/habitat-building-a.png"],
+    Open: ["/map-assets/ryloth/open-ground-brick-v2.png"],
+    Impassable: ["/map-assets/ryloth/spires-heavy-brick-v2.png"],
+    Hazardous: ["/map-assets/ryloth/ruins-rough-brick-v2.png"],
+    HighGround: ["/map-assets/ryloth/high-mesa-brick-v2.png"],
+    LightCover: ["/map-assets/ryloth/rocks-light-brick-v2.png"],
+    HeavyCover: ["/map-assets/ryloth/spires-heavy-brick-v2.png"],
+    DifficultTerrain: ["/map-assets/ryloth/ruins-rough-brick-v2.png"],
+    Building: ["/map-assets/ryloth/habitat-building-brick-v2.png"],
   },
   objects: {
-    DefensePoint: "/map-assets/ryloth/high-mesa-a.png",
-    StrategicPoint: "/map-assets/ryloth/habitat-building-a.png",
-    Generator: "/map-assets/ryloth/habitat-building-a.png",
-    LightFortification: "/map-assets/ryloth/rocks-light-a.png",
-    HeavyFortification: "/map-assets/ryloth/spires-heavy-a.png",
+    DefensePoint: "/map-assets/ryloth/high-mesa-brick-v2.png",
+    StrategicPoint: "/map-assets/ryloth/habitat-building-brick-v2.png",
+    Generator: "/map-assets/ryloth/habitat-building-brick-v2.png",
+    LightFortification: "/map-assets/ryloth/rocks-light-brick-v2.png",
+    HeavyFortification: "/map-assets/ryloth/spires-heavy-brick-v2.png",
   },
 }, {
   id: "republic-research-station",
   sources: [researchStationGeneratedSource],
   terrain: {
-    Impassable: ["/map-assets/republic-research-station/laboratory-building-a.png"],
-    Hazardous: ["/map-assets/republic-research-station/damaged-lab-rough-a.png"],
-    HighGround: ["/map-assets/republic-research-station/research-platform-a.png"],
-    LightCover: ["/map-assets/republic-research-station/cargo-light-a.png"],
-    HeavyCover: ["/map-assets/republic-research-station/machinery-heavy-a.png"],
-    DifficultTerrain: ["/map-assets/republic-research-station/damaged-lab-rough-a.png"],
-    Building: ["/map-assets/republic-research-station/laboratory-building-a.png"],
+    Open: ["/map-assets/republic-research-station/open-ground-brick-v2.png"],
+    Impassable: ["/map-assets/republic-research-station/laboratory-building-brick-v2.png"],
+    Hazardous: ["/map-assets/republic-research-station/damaged-lab-rough-brick-v2.png"],
+    HighGround: ["/map-assets/republic-research-station/research-platform-brick-v2.png"],
+    LightCover: ["/map-assets/republic-research-station/cargo-light-brick-v2.png"],
+    HeavyCover: ["/map-assets/republic-research-station/machinery-heavy-brick-v2.png"],
+    DifficultTerrain: ["/map-assets/republic-research-station/damaged-lab-rough-brick-v2.png"],
+    Building: ["/map-assets/republic-research-station/laboratory-building-brick-v2.png"],
   },
   objects: {
-    DefensePoint: "/map-assets/republic-research-station/research-platform-a.png",
-    StrategicPoint: "/map-assets/republic-research-station/laboratory-building-a.png",
-    Generator: "/map-assets/republic-research-station/machinery-heavy-a.png",
-    LightFortification: "/map-assets/republic-research-station/cargo-light-a.png",
-    HeavyFortification: "/map-assets/republic-research-station/machinery-heavy-a.png",
+    DefensePoint: "/map-assets/republic-research-station/research-platform-brick-v2.png",
+    StrategicPoint: "/map-assets/republic-research-station/laboratory-building-brick-v2.png",
+    Generator: "/map-assets/republic-research-station/machinery-heavy-brick-v2.png",
+    LightFortification: "/map-assets/republic-research-station/cargo-light-brick-v2.png",
+    HeavyFortification: "/map-assets/republic-research-station/machinery-heavy-brick-v2.png",
   },
 }, {
   id: "mandalore-city",
@@ -487,6 +491,12 @@ export function getMapObjectAssetUrl(
 ): string | undefined {
   if (visualId === "field-hospital") {
     return "/map-assets/shared/field-hospital.png";
+  }
+  if (visualId === "droid-foundry") {
+    return "/map-assets/geonosis/foundry-building-a.png";
+  }
+  if (visualId === "fire-mission-target") {
+    return "/map-assets/mandalore/strategic-beacon.svg";
   }
   const objects = getMapAssetSet(themeId)?.objects;
   return (visualId ? objects?.[visualId] : undefined) ?? objects?.[objectType];

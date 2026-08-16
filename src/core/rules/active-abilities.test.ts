@@ -117,4 +117,87 @@ describe("active abilities", () => {
     expect(result.events).toEqual([]);
     expect(result.log).toContain("nie może zostać użyte po wykonaniu Advance");
   });
+
+  it("lets Grievous build one droid foundry per battle", () => {
+    const battle = createBattle();
+    const grievous = battle.armies[1].units[0];
+    grievous.templateId = "general_grievous";
+    grievous.position = { x: 2, y: 2 };
+    battle.armies[0].units.forEach((unit, index) => {
+      unit.position = { x: 0, y: index };
+    });
+    battle.armies[1].units.slice(1).forEach((unit, index) => {
+      unit.position = { x: 7, y: 6 + index };
+    });
+    battle.activeActivation = {
+      id: "sep-token",
+      armyId: grievous.armyId,
+      faction: "Separatists",
+      used: true,
+    };
+
+    const result = applyBattleAction(battle, {
+      type: "UseAbility",
+      unitId: grievous.id,
+      abilityId: "droid_foundry",
+      targetPosition: { x: 3, y: 3 },
+    });
+    const foundry = result.battle.board.objects?.find((object) =>
+      object.visualId === "droid-foundry"
+    );
+    expect(foundry).toMatchObject({
+      position: { x: 3, y: 3 },
+      currentHp: 10,
+      armorSave: 4,
+      controllerArmyId: grievous.armyId,
+      production: {
+        templateId: "b1_droid_squad",
+        intervalRounds: 2,
+        nextProductionTurn: 3,
+        remainingSpawns: 3,
+      },
+    });
+    expect(result.battle.armies[1].units[0].usedAbilities).toContain("droid_foundry");
+
+    const nextBattle = result.battle;
+    nextBattle.armies[1].units[0].status = "Ready";
+    nextBattle.activeActivation = {
+      id: "sep-token-2",
+      armyId: grievous.armyId,
+      faction: "Separatists",
+      used: true,
+    };
+    const repeated = applyBattleAction(nextBattle, {
+      type: "UseAbility",
+      unitId: grievous.id,
+      abilityId: "droid_foundry",
+      targetPosition: { x: 4, y: 3 },
+    });
+    expect(repeated.battle).toBe(nextBattle);
+    expect(repeated.log).toContain("już wykorzystane");
+  });
+
+  it("rejects a droid foundry next to an enemy", () => {
+    const battle = createBattle();
+    const grievous = battle.armies[1].units[0];
+    grievous.templateId = "general_grievous";
+    grievous.position = { x: 2, y: 2 };
+    battle.armies[0].units[0].position = { x: 4, y: 3 };
+    battle.activeActivation = {
+      id: "sep-token",
+      armyId: grievous.armyId,
+      faction: "Separatists",
+      used: true,
+    };
+
+    const result = applyBattleAction(battle, {
+      type: "UseAbility",
+      unitId: grievous.id,
+      abilityId: "droid_foundry",
+      targetPosition: { x: 3, y: 3 },
+    });
+
+    expect(result.battle).toBe(battle);
+    expect(result.log).toContain("poza bezpośrednim sąsiedztwem przeciwnika");
+  });
 });

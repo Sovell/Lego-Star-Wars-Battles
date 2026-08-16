@@ -243,6 +243,303 @@ const presets: ScenarioArmyPreset[] = [
   },
 ];
 
+const campaignPreset = (
+  id: string,
+  name: LocalizedText,
+  description: LocalizedText,
+  republicUnits: ScenarioReinforcementUnit[],
+  separatistUnits: ScenarioReinforcementUnit[],
+): ScenarioArmyPreset => ({
+  id: `${id}-roster`,
+  name,
+  description,
+  armies: [republic(republicUnits), separatists(separatistUnits)],
+});
+
+const campaignPresetDefinitions: Array<{
+  scenarioId: string;
+  preset: ScenarioArmyPreset;
+}> = [{
+  scenarioId: "tatooine-ghost-relay",
+  preset: campaignPreset(
+    "tatooine-ghost-relay",
+    { pl: "Łowcy widmowego sygnału", en: "Ghost Signal Hunters" },
+    { pl: "Obi-Wan i Cody prowadzą elitarny zwiad przez pustynię.", en: "Obi-Wan and Cody lead an elite desert reconnaissance force." },
+    [
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "clone_trooper_squad", count: 1 },
+      { templateId: "at_rt_scout_walker", count: 1 },
+    ],
+    [
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "jango_fett", count: 1 },
+      { templateId: "b1_battle_droid_commander_squad", count: 1 },
+      { templateId: "b1_recon_squad", count: 1 },
+      { templateId: "stap_patrol", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "endor-broken-canopy",
+  preset: campaignPreset(
+    "endor-broken-canopy",
+    { pl: "Zwiad zielonego księżyca", en: "Green Moon Recon" },
+    { pl: "Yoda, Ahsoka i Rex próbują wyprowadzić patrol z leśnej pułapki.", en: "Yoda, Ahsoka and Rex try to lead a patrol out of a forest trap." },
+    [
+      { templateId: "yoda", count: 1 },
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "at_rt_scout_walker", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "b1_battle_droid_commander_squad", count: 1 },
+      { templateId: "b1_recon_squad", count: 2 },
+      { templateId: "bx_commando_droid", count: 1 },
+      { templateId: "dwarf_spider_droid", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "hoth-white-silence",
+  preset: campaignPreset(
+    "hoth-white-silence",
+    { pl: "Obrońcy białej placówki", en: "White Outpost Defenders" },
+    { pl: "Obi-Wan, Cody i Rex bronią nadajnika podczas burzy jonowej.", en: "Obi-Wan, Cody and Rex defend the transmitter during an ion storm." },
+    [
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "clone_trooper_squad", count: 2 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "at_rt_scout_walker", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "b1_droid_regiment", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 2 },
+      { templateId: "dwarf_spider_droid", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "mustafar-black-furnace",
+  preset: campaignPreset(
+    "mustafar-black-furnace",
+    { pl: "Ostrza nad czarnym piecem", en: "Blades over the Black Furnace" },
+    { pl: "Mace, Anakin i Cody prowadzą wielki szturm na odlewnię.", en: "Mace, Anakin and Cody lead a major assault on the foundry." },
+    [
+      { templateId: "mace_windu", count: 1 },
+      { templateId: "anakin_skywalker", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_engineers_332nd", count: 1 },
+      { templateId: "clone_assault_squad", count: 1 },
+    ],
+    [
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "magnaguard_squad", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+      { templateId: "aat_battle_tank", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "geonosis-last-template",
+  preset: campaignPreset(
+    "geonosis-last-template",
+    { pl: "Rada na Geonosis", en: "Council on Geonosis" },
+    { pl: "Yoda, Mace i Cody walczą o bezcenną matrycę taktyczną.", en: "Yoda, Mace and Cody fight for a priceless tactical template." },
+    [
+      { templateId: "yoda", count: 1 },
+      { templateId: "mace_windu", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_assault_squad", count: 1 },
+      { templateId: "clone_engineers_332nd", count: 1 },
+    ],
+    [
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "jango_fett", count: 1 },
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "magnaguard_squad", count: 1 },
+      { templateId: "b1_droid_regiment", count: 1 },
+      { templateId: "aat_battle_tank", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "felucia-lost-patrol",
+  preset: campaignPreset(
+    "felucia-lost-patrol",
+    { pl: "Ratownicy 501.", en: "501st Rescue Force" },
+    { pl: "Ahsoka, Rex i Hardcase szukają patroli pośród grzybowych ostępów.", en: "Ahsoka, Rex and Hardcase search for patrols in the fungal wilds." },
+    [
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "hardcase", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "clone_trooper_squad", count: 1 },
+      { templateId: "at_rt_scout_walker", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "bx_commando_droid", count: 1 },
+      { templateId: "b1_droid_regiment", count: 2 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+      { templateId: "dwarf_spider_droid", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "christophsis-zero-junction",
+  preset: campaignPreset(
+    "christophsis-zero-junction",
+    { pl: "Bohaterowie Kryształowego Miasta", en: "Heroes of the Crystal City" },
+    { pl: "Anakin, Obi-Wan, Ahsoka i Rex prowadzą pełną grupę uderzeniową.", en: "Anakin, Obi-Wan, Ahsoka and Rex lead a full strike group." },
+    [
+      { templateId: "anakin_skywalker", count: 1 },
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_assault_squad", count: 1 },
+      { templateId: "laat_patrol", count: 1 },
+    ],
+    [
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "b1_battle_droid_commander_squad", count: 1 },
+      { templateId: "b1_droid_regiment", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+      { templateId: "aat_battle_tank", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "mandalore-palace-under-siege",
+  preset: campaignPreset(
+    "mandalore-palace-under-siege",
+    { pl: "Obrona pałacu Sundari", en: "Sundari Palace Defense" },
+    { pl: "Ahsoka, Rex i Cody stają przeciw Maulowi oraz jego łowcom.", en: "Ahsoka, Rex and Cody face Maul and his hunters." },
+    [
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_assault_squad", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+    ],
+    [
+      { templateId: "darth_maul", count: 1 },
+      { templateId: "jango_fett", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "bx_commando_droid", count: 2 },
+      { templateId: "magnaguard_squad", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "ryloth-storm-over-lessu",
+  preset: campaignPreset(
+    "ryloth-storm-over-lessu",
+    { pl: "Szturm na pierścień Lessu", en: "Assault on the Lessu Ring" },
+    { pl: "Obi-Wan, Cody i Rex prowadzą połączone oddziały przez kaniony.", en: "Obi-Wan, Cody and Rex lead combined forces through the canyons." },
+    [
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "at_rt_scout_walker", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "b1_battle_droid_commander_squad", count: 1 },
+      { templateId: "b1_droid_regiment", count: 1 },
+      { templateId: "b1_recon_squad", count: 1 },
+      { templateId: "stap_patrol", count: 1 },
+      { templateId: "dwarf_spider_droid", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "research-station-project-echo",
+  preset: campaignPreset(
+    "research-station-project-echo",
+    { pl: "Zespół odzyskiwania Echo", en: "Echo Recovery Team" },
+    { pl: "Obi-Wan, Ahsoka i Cody oczyszczają laboratoria terminal po terminalu.", en: "Obi-Wan, Ahsoka and Cody clear the laboratories terminal by terminal." },
+    [
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "clone_engineers_332nd", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "bx_commando_droid", count: 2 },
+      { templateId: "b1_battle_droid_commander_squad", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "separatist-warship-bridgefall",
+  preset: campaignPreset(
+    "separatist-warship-bridgefall",
+    { pl: "Szturm bohaterów na mostek", en: "Heroes' Bridge Assault" },
+    { pl: "Anakin, Obi-Wan, Mace i Rex prowadzą decydujący abordaż.", en: "Anakin, Obi-Wan, Mace and Rex lead the decisive boarding action." },
+    [
+      { templateId: "anakin_skywalker", count: 1 },
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "mace_windu", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "clone_commando_section", count: 1 },
+      { templateId: "clone_engineers_332nd", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "magnaguard_squad", count: 1 },
+      { templateId: "bx_commando_droid", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+    ],
+  ),
+}, {
+  scenarioId: "republic-warship-deck-seventeen",
+  preset: campaignPreset(
+    "republic-warship-deck-seventeen",
+    { pl: "Bohaterowie pokładu siedemnastego", en: "Heroes of Deck Seventeen" },
+    { pl: "Anakin, Obi-Wan, Ahsoka, Rex i Cody bronią serca okrętu.", en: "Anakin, Obi-Wan, Ahsoka, Rex and Cody defend the heart of the ship." },
+    [
+      { templateId: "anakin_skywalker", count: 1 },
+      { templateId: "obi_wan_kenobi", count: 1 },
+      { templateId: "ahsoka_tano", count: 1 },
+      { templateId: "captain_rex", count: 1 },
+      { templateId: "commander_cody", count: 1 },
+      { templateId: "clone_medic_squad", count: 1 },
+      { templateId: "clone_command_squad", count: 1 },
+    ],
+    [
+      { templateId: "general_grievous", count: 1 },
+      { templateId: "count_dooku", count: 1 },
+      { templateId: "asajj_ventress", count: 1 },
+      { templateId: "bx_commando_droid", count: 2 },
+      { templateId: "magnaguard_squad", count: 1 },
+      { templateId: "super_battle_droid_squad", count: 1 },
+    ],
+  ),
+}];
+
+presets.push(...campaignPresetDefinitions.map(({ preset }) => preset));
+
 const presetByScenarioId = new Map([
   ["christophsis-last-landing", presets[0]],
   ["geonosis-heart-of-factory", presets[1]],
@@ -252,6 +549,7 @@ const presetByScenarioId = new Map([
   ["separatist-warship-rescue-r2d2", presets[5]],
   ["ryloth-liberation", presets[6]],
   ["republic-research-station-lockdown", presets[7]],
+  ...campaignPresetDefinitions.map(({ scenarioId, preset }) => [scenarioId, preset] as const),
 ]);
 
 export function getScenarioArmyPreset(scenarioId: string): ScenarioArmyPreset | undefined {

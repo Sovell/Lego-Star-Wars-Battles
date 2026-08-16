@@ -40,21 +40,29 @@ describe("map theme assets", () => {
   it("registers generated Ryloth and research-station bundles", () => {
     expect(getMapAssetSet("ryloth-badlands")?.sources[0]?.url)
       .toBe("/map-assets/ryloth/README.md");
+    expect(getMapTerrainDecorationUrl("ryloth-badlands", "Open", 2, 3))
+      .toBe("/map-assets/ryloth/open-ground-brick-v2.png");
+    expect(getMapTerrainDecorationUrl("ryloth-badlands", "Building", 2, 3))
+      .toBe("/map-assets/ryloth/habitat-building-brick-v2.png");
     expect(getMapAssetSet("republic-research-station")?.sources[0]?.url)
       .toBe("/map-assets/republic-research-station/README.md");
+    expect(getMapTerrainDecorationUrl("republic-research-station", "Building", 2, 3))
+      .toBe("/map-assets/republic-research-station/laboratory-building-brick-v2.png");
   });
 
-  it("selects terrain decoration consistently and ignores open terrain", () => {
+  it("selects terrain decoration consistently, including open ground", () => {
     const first = getMapTerrainDecorationUrl("desert-outpost", "LightCover", 2, 3);
     const replay = getMapTerrainDecorationUrl("desert-outpost", "LightCover", 2, 3);
 
     expect(first).toBe(replay);
-    expect(getMapTerrainDecorationUrl("desert-outpost", "Open", 2, 3)).toBeUndefined();
+    expect(getMapTerrainDecorationUrl("desert-outpost", "Open", 2, 3))
+      .toBe("/map-assets/generated/tatooine/open-ground-brick-v2.png");
   });
 
   it.each(generatedThemes)("maps %s terrain to its generated theme directory", (themeId, slug) => {
     const directory = `/map-assets/generated/${slug}/`;
     for (const terrainType of [
+      "Open",
       "LightCover",
       "HeavyCover",
       "DifficultTerrain",
@@ -72,6 +80,8 @@ describe("map theme assets", () => {
     ["ryloth-badlands", "/map-assets/ryloth/"],
     ["republic-research-station", "/map-assets/republic-research-station/"],
   ] as const)("keeps %s on its dedicated generated bundle", (themeId, directory) => {
+    expect(getMapTerrainDecorationUrl(themeId, "Open", 2, 3)?.startsWith(directory))
+      .toBe(true);
     expect(getMapTerrainDecorationUrl(themeId, "LightCover", 2, 3)?.startsWith(directory))
       .toBe(true);
   });
@@ -101,5 +111,17 @@ describe("map theme assets", () => {
       .toBe("/map-assets/shared/field-hospital.png");
     expect(getMapObjectAssetUrl("republic-research-station", "LightFortification", "field-hospital"))
       .toBe("/map-assets/shared/field-hospital.png");
+  });
+
+  it("uses dedicated droid-foundry artwork on every theme", () => {
+    expect(getMapObjectAssetUrl("felucia-wilds", "HeavyFortification", "droid-foundry"))
+      .toBe("/map-assets/geonosis/foundry-building-a.png");
+    expect(getMapObjectAssetUrl("republic-research-station", "HeavyFortification", "droid-foundry"))
+      .toBe("/map-assets/geonosis/foundry-building-a.png");
+  });
+
+  it("uses a visible beacon for delayed fire missions", () => {
+    expect(getMapObjectAssetUrl("christophsis-crystal-city", "LightFortification", "fire-mission-target"))
+      .toBe("/map-assets/mandalore/strategic-beacon.svg");
   });
 });

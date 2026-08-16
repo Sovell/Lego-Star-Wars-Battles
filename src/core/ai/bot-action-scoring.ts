@@ -4,6 +4,7 @@ import type { LegalUnitAction } from "../legal-actions";
 import { distance, lineOfSight, type GridPosition } from "../rules/geometry";
 import { getUnitActiveAbilities } from "../rules/active-abilities";
 import { getPathCost } from "../rules/pathfinding";
+import { getUnitMovementBonus } from "../rules/movement";
 import { findUnit, getTemplate } from "../rules/state";
 import { getDefenseBonus, getHazardSuppression } from "../rules/terrain";
 import type { BotStrategyContext } from "./bot-strategy-context";
@@ -23,6 +24,20 @@ const offensiveAbilityEffects = new Set([
   "direct_damage",
   "damage_and_push",
   "bonus_move_then_melee_attack",
+]);
+
+const strategicPositionAbilityEffects = new Set([
+  "build_droid_foundry",
+  "line_airstrike",
+  "schedule_area_strike",
+]);
+
+const strategicUnitAbilityEffects = new Set([
+  "rally_and_reactivate",
+  "mark_shatterpoint",
+  "designate_target",
+  "deny_activation",
+  "mark_hunted_hero",
 ]);
 
 /** Scores every legal unit action through one doctrine-driven model. */
@@ -135,7 +150,37 @@ function scoreAbility(
   const ability = unit
     ? getUnitActiveAbilities(battle, unit).find((candidate) => candidate.id === action.abilityId)
     : undefined;
-  if (!unit || !ability || !offensiveAbilityEffects.has(ability.effect.type)) {
+  if (!unit || !ability) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  if (strategicPositionAbilityEffects.has(ability.effect.type)) {
+    if (!action.targetPosition) return Number.NEGATIVE_INFINITY;
+    const strategicTarget = context.protectedObjectivePosition ??
+      context.movementTarget ?? {
+        x: Math.floor((battle.board.width - 1) / 2),
+        y: Math.floor((battle.board.height - 1) / 2),
+      };
+    return doctrine.abilityBaseScore +
+      (ability.effect.value ?? 1) * doctrine.abilityEffectWeight +
+      getTileDefenseBonus(battle, action.targetPosition) * doctrine.terrainDefenseWeight -
+      distance(action.targetPosition, strategicTarget) * doctrine.remainingDistancePenaltyWeight;
+  }
+
+  if (ability.effect.type === "refresh_nearby_allies") {
+    return doctrine.abilityBaseScore +
+      (ability.effect.value ?? 1) * doctrine.abilityEffectWeight;
+  }
+
+  if (strategicUnitAbilityEffects.has(ability.effect.type)) {
+    const strategicTarget = action.targetUnitId ? findUnit(battle, action.targetUnitId) : undefined;
+    if (!strategicTarget) return Number.NEGATIVE_INFINITY;
+    return doctrine.abilityBaseScore +
+      getTemplate(strategicTarget).cost * doctrine.targetValueWeight +
+      strategicTarget.suppression * doctrine.suppressionWeight;
+  }
+
+  if (!offensiveAbilityEffects.has(ability.effect.type)) {
     return Number.NEGATIVE_INFINITY;
   }
 
@@ -158,8 +203,7 @@ function scoreMovement(
 ): number {
   const unit = findUnit(battle, action.unitId);
   if (!unit?.position || !movementTarget) return Number.NEGATIVE_INFINITY;
-  const movementBudget = getTemplate(unit).movement +
-    (unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0);
+  const movementBudget = getTemplate(unit).movement + getUnitMovementBonus(battle, unit);
   const pathOptions = {
     unitId: unit.id,
     movementBudget,

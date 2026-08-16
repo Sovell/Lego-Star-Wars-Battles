@@ -3,6 +3,7 @@ import type { BattleAction } from "../battle-actions";
 import { validateUnitActivation } from "../rules/activation";
 import { getLegalReserveEntryCells } from "../rules/deployment";
 import { getReachableCells } from "../rules/pathfinding";
+import { getUnitMovementBonus } from "../rules/movement";
 import { findUnit, getTemplate } from "../rules/state";
 import type { ScenarioDefinition } from "../scenario/scenario-types";
 
@@ -38,7 +39,7 @@ export function getLegalPositionActions(
   }
   if (unit.movedThisTurn) return [];
 
-  const movementBonus = unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0;
+  const movementBonus = getUnitMovementBonus(battle, unit);
   const movementBudget = getTemplate(unit).movement + movementBonus;
   return getReachableCells(battle, unit.position, movementBudget, { unitId }).map(
     ({ position: targetPosition }): LegalPositionAction => order === "Advance"

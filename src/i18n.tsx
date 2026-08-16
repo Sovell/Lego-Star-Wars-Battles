@@ -198,6 +198,90 @@ const scenarioText: Record<string, { name: Localized; description: Localized }> 
       en: "Fight for city districts, durasteel plazas, and Sundari strategic points.",
     },
   },
+  "tatooine-ghost-relay": {
+    name: { pl: "Tatooine: Widmowy przekaźnik", en: "Tatooine: Ghost Relay" },
+    description: {
+      pl: "Odszukaj dwa zakopane przekaźniki Separatystów i prześlij ich dane, zanim pustynny garnizon odetnie drogę odwrotu.",
+      en: "Find two buried Separatist relays and transmit their data before the desert garrison cuts off your retreat.",
+    },
+  },
+  "endor-broken-canopy": {
+    name: { pl: "Endor: Pęknięta korona", en: "Endor: Broken Canopy" },
+    description: {
+      pl: "Po zasadzce w koronach drzew utrzymaj zwiadowców przy życiu, a następnie przebij się do lądowiska po przeciwnej stronie puszczy.",
+      en: "After an ambush in the canopy, keep the scouts alive and break through to the landing zone across the forest.",
+    },
+  },
+  "hoth-white-silence": {
+    name: { pl: "Hoth: Biała cisza", en: "Hoth: White Silence" },
+    description: {
+      pl: "Chroń prototypowy nadajnik dalekiego zasięgu, dopóki burza jonowa nie przekaże jego sygnału flocie.",
+      en: "Protect the prototype long-range transmitter until the ion storm carries its signal to the fleet.",
+    },
+  },
+  "mustafar-black-furnace": {
+    name: { pl: "Mustafar: Czarny piec", en: "Mustafar: Black Furnace" },
+    description: {
+      pl: "Zejdź do głównej odlewni i zniszcz trzy węzły chłodzenia, zanim fabryka rozpocznie produkcję nowej armii.",
+      en: "Descend into the main foundry and destroy three cooling nodes before the factory begins producing a new army.",
+    },
+  },
+  "geonosis-last-template": {
+    name: { pl: "Geonosis: Ostatnia matryca", en: "Geonosis: The Last Template" },
+    description: {
+      pl: "Zdobądź matrycę taktyczną z zamkniętego archiwum fabryki i dostarcz ją do punktu ewakuacji.",
+      en: "Recover the tactical template from the sealed foundry archive and deliver it to the extraction point.",
+    },
+  },
+  "felucia-lost-patrol": {
+    name: { pl: "Felucia: Zaginiony patrol", en: "Felucia: Lost Patrol" },
+    description: {
+      pl: "Odnajdź dwa odcięte zespoły badawcze i wyprowadź je przez grzybowe ostępy do kanonierki.",
+      en: "Find two isolated research teams and lead them through the fungal wilds to the gunship.",
+    },
+  },
+  "christophsis-zero-junction": {
+    name: { pl: "Christophsis: Węzeł zero", en: "Christophsis: Junction Zero" },
+    description: {
+      pl: "Rozegraj bitwę o trzy dzielnice skupione wokół głównego węzła energetycznego Kryształowego Miasta.",
+      en: "Fight for three districts surrounding the Crystal City's main energy junction.",
+    },
+  },
+  "mandalore-palace-under-siege": {
+    name: { pl: "Mandalore: Pałac pod oblężeniem", en: "Mandalore: Palace Under Siege" },
+    description: {
+      pl: "Utrzymaj główny plac pałacowy, gdy Maul i łowcy próbują przełamać ostatni pierścień obrony Sundari.",
+      en: "Hold the palace plaza while Maul and his hunters try to break Sundari's final defensive ring.",
+    },
+  },
+  "ryloth-storm-over-lessu": {
+    name: { pl: "Ryloth: Burza nad Lessu", en: "Ryloth: Storm over Lessu" },
+    description: {
+      pl: "Przełam pierścień artylerii otaczający Lessu i zniszcz dwa generatory naprowadzania przed rozpoczęciem bombardowania.",
+      en: "Break the artillery ring around Lessu and destroy two targeting generators before the bombardment begins.",
+    },
+  },
+  "research-station-project-echo": {
+    name: { pl: "Stacja badawcza: Projekt Echo", en: "Research Station: Project Echo" },
+    description: {
+      pl: "Odzyskaj trzy fragmenty projektu Echo z laboratoriów opanowanych przez grupę abordażową Separatystów.",
+      en: "Recover three fragments of Project Echo from laboratories seized by a Separatist boarding force.",
+    },
+  },
+  "separatist-warship-bridgefall": {
+    name: { pl: "Okręt Separatystów: Upadek mostka", en: "Separatist Warship: Bridgefall" },
+    description: {
+      pl: "Przebij się przez pokłady dowodzenia i zniszcz dwa węzły zasilania mostka, zanim Grievous odetnie sekcję szturmową.",
+      en: "Fight through the command decks and destroy two bridge power nodes before Grievous isolates the assault section.",
+    },
+  },
+  "republic-warship-deck-seventeen": {
+    name: { pl: "Okręt Republiki: Pokład siedemnasty", en: "Republic Warship: Deck Seventeen" },
+    description: {
+      pl: "Odeprzyj abordaż na pokładzie siedemnastym i utrzymaj reaktor hipernapędu do chwili odcięcia wrogich kapsuł.",
+      en: "Repel the boarding action on deck seventeen and hold the hyperdrive reactor until the enemy pods are cut off.",
+    },
+  },
 };
 
 export function localizeScenarioName(language: Language, id: string, fallback: string): string {
@@ -373,9 +457,20 @@ const abilityNamesPl: Record<string, string> = {
   fear_and_momentum: "Strach i impet",
   makashi_mastery: "Mistrzostwo Makashi", force_lightning: "Błyskawice Mocy",
   jedi_hunter: "Łowca Jedi", cybernetic_warlord: "Cybernetyczny watażka",
-  claw_rush: "Szarża na pazurach", electrostaff_guard: "Garda elektropałek",
+  claw_rush: "Szarża na pazurach", droid_foundry: "Fabryka droidów",
+  electrostaff_guard: "Garda elektropałek",
   jedi_hunter_training: "Szkolenie łowców Jedi", droid_coordination: "Koordynacja droidów",
   vaapad_mastery: "Mistrzostwo Vaapad", z_6_braced_fire: "Stabilny ostrzał Z-6",
+  aggressive_air_support: "Agresywne wsparcie powietrzne",
+  coordinated_fire_mission: "Skoordynowana misja ogniowa",
+  acrobatic_flank: "Akrobatyczne oskrzydlenie",
+  guidance_of_the_force: "Przewodnictwo Mocy",
+  shatterpoint: "Punkt przełomu",
+  experience_outranks_everything: "Doświadczenie przewyższa stopień",
+  target_designation: "Wskazanie celu",
+  master_manipulator: "Mistrz manipulacji",
+  relentless_hunt: "Nieustępliwe polowanie",
+  assassins_ambush: "Zasadzka zabójczyni",
 };
 
 const abilityDescriptionsEn: Record<string, string> = {
@@ -420,11 +515,22 @@ const abilityDescriptionsEn: Record<string, string> = {
   jedi_hunter: "Grievous deals +2 damage against hero units.",
   cybernetic_warlord: "Grievous's reinforced body reduces damage from each attack by 1.",
   claw_rush: "Grievous moves up to 2 additional tiles and immediately makes a melee attack.",
+  droid_foundry: "Once per battle, Grievous builds a destructible foundry. Every 2 rounds it deploys an adjacent B1 Battle Droid Squad, up to 3 times.",
   electrostaff_guard: "Electrostaff defense reduces damage from each attack by 1.",
   jedi_hunter_training: "MagnaGuards gain +1 attack against hero units.",
   droid_coordination: "Allied droids within range 1 gain +1 attack.",
   vaapad_mastery: "Mace Windu gains +2 attacks when targeting hero units.",
   z_6_braced_fire: "Hardcase gains +1 attack if he has not moved this turn.",
+  aggressive_air_support: "Once per battle, Anakin marks an airstrike line up to 4 tiles long. Enemies on it take 3 damage and 1 suppression.",
+  coordinated_fire_mission: "Once per battle, Obi-Wan marks an area. At the start of the next round, its center and adjacent tiles take 3 damage and 2 suppression.",
+  acrobatic_flank: "Ahsoka leaps up to 2 tiles, ignoring units and zones of control, then immediately makes a melee attack.",
+  guidance_of_the_force: "Yoda reorganizes up to 2 nearby units, clears their suppression, and grants each an additional activation.",
+  shatterpoint: "Until the end of the round, attacks against the marked enemy ignore cover and worsen its armor save by 2.",
+  experience_outranks_everything: "Rex clears all suppression from an allied clone unit and grants it an additional activation.",
+  target_designation: "Until the end of the round, clones gain +1 attack and ignore 1 cover against the marked enemy.",
+  master_manipulator: "Once per battle, Dooku denies the selected enemy unit its action and spends one unused enemy activation token.",
+  relentless_hunt: "Maul marks an enemy hero for the battle, gaining +1 movement and +2 attacks against that target.",
+  assassins_ambush: "Ventress leaps up to 2 tiles through the enemy line and immediately makes a melee attack.",
 };
 
 export function localizeAbilityName(language: Language, ability: Pick<AbilityDefinition, "id" | "name">): string {
@@ -495,6 +601,12 @@ export function localizeRole(language: Language, role: string): string {
 }
 
 export function localizeObjectName(language: Language, type: BattlefieldObjectType, fallback: string): string {
+  const specialNames: Record<string, Localized> = {
+    "Droid Foundry": { pl: "Fabryka droidów", en: "Droid Foundry" },
+    "Szpital polowy": { pl: "Szpital polowy", en: "Field Hospital" },
+    "Cel misji ogniowej": { pl: "Cel misji ogniowej", en: "Fire Mission Target" },
+  };
+  if (specialNames[fallback]) return pick(language, specialNames[fallback], fallback);
   const values: Record<BattlefieldObjectType, Localized> = {
     DefensePoint: { pl: "Punkt obrony", en: "Defense Point" },
     StrategicPoint: { pl: "Punkt strategiczny ★", en: "Strategic Point ★" },

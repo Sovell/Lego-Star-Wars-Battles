@@ -52,10 +52,10 @@ describe("operational board scale", () => {
     expect(weapons.find((weapon) => weapon.id === "laat_laser_cannons")?.range).toBe(3);
   });
 
-  it("keeps special ability ranges at two fields or less", () => {
+  it("keeps special ability ranges within the four-field command horizon", () => {
     for (const ability of abilities) {
       if (ability.range !== undefined) {
-        expect(ability.range, ability.name).toBeLessThanOrEqual(2);
+        expect(ability.range, ability.name).toBeLessThanOrEqual(4);
       }
     }
   });
@@ -68,7 +68,7 @@ describe("Ahsoka Tano", () => {
     expect(ahsoka).toMatchObject({
       movement: 2,
       cost: 34,
-      abilities: ["ataru_momentum", "jar_kai_mastery", "force_prediction"],
+      abilities: ["ataru_momentum", "jar_kai_mastery", "force_prediction", "acrobatic_flank"],
     });
   });
 });

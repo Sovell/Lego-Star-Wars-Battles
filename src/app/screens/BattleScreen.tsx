@@ -1125,8 +1125,12 @@ export function BattleScreen({
                   >
                     {activeAbilities.map((ability) => (
                       <option key={ability.id} value={ability.id}>
-                          {localizeAbilityName(language, ability)} | CD{" "}
-                        {selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}
+                        {ability.discipline === "command" ? `[${text("DOWÓDCZA", "COMMAND")}] ` : ""}
+                        {localizeAbilityName(language, ability)} | {ability.usesPerBattle
+                          ? (selectedUnit?.usedAbilities?.includes(ability.id)
+                              ? text("WYKORZYSTANA", "SPENT")
+                              : text("raz na bitwę", "once per battle"))
+                          : `CD ${selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}`}
                       </option>
                     ))}
                   </select>

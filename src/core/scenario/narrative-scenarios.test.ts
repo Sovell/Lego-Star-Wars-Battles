@@ -14,8 +14,8 @@ import {
 } from "./scenarios";
 
 describe("narrative mission catalog", () => {
-  it("separates eight authored missions from custom scenario templates", () => {
-    expect(narrativeMissions).toHaveLength(8);
+  it("separates twenty authored missions from custom scenario templates", () => {
+    expect(narrativeMissions).toHaveLength(20);
     expect(narrativeMissions.every((scenario) =>
       scenario.experience === "NarrativeMission" && Boolean(scenario.mapPreset)
     )).toBe(true);
@@ -23,6 +23,30 @@ describe("narrative mission catalog", () => {
       scenario.experience !== "NarrativeMission" && !scenario.mapPreset
     )).toBe(true);
     expect(scenarios).toEqual([...narrativeMissions, ...customScenarioTemplates]);
+  });
+
+  it("adds a fresh campaign-prologue mission for every map theme", () => {
+    const prologueMissionIds = [
+      "tatooine-ghost-relay",
+      "endor-broken-canopy",
+      "hoth-white-silence",
+      "mustafar-black-furnace",
+      "geonosis-last-template",
+      "felucia-lost-patrol",
+      "christophsis-zero-junction",
+      "mandalore-palace-under-siege",
+      "ryloth-storm-over-lessu",
+      "research-station-project-echo",
+      "separatist-warship-bridgefall",
+      "republic-warship-deck-seventeen",
+    ];
+
+    expect(narrativeMissions.filter(({ id }) => prologueMissionIds.includes(id)))
+      .toHaveLength(12);
+    expect(new Set(narrativeMissions
+      .filter(({ id }) => prologueMissionIds.includes(id))
+      .map(({ recommendedMapThemeId }) => recommendedMapThemeId)).size)
+      .toBe(12);
   });
 
   it.each(narrativeMissions.map((scenario) => [scenario.id, scenario] as const))(

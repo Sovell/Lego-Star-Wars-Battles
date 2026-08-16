@@ -300,6 +300,30 @@ describe("applyBattleAction", () => {
     expect(findUnit(result.battle, "rep_unit_1")?.currentHp).toBe(3);
   });
 
+  it("adds a foundry-produced B1 squad to the new turn activation bag", () => {
+    const battle = activateAllLivingUnits(createBattle());
+    battle.board = structuredClone(battle.board);
+    battle.board.objects = [{
+      ...createBattlefieldObject("HeavyFortification", { x: 3, y: 3 }, "foundry"),
+      controllerArmyId: "army_separatists",
+      production: {
+        templateId: "b1_droid_squad",
+        intervalRounds: 2,
+        nextProductionTurn: 2,
+        remainingSpawns: 1,
+      },
+    }];
+
+    const result = applyBattleAction(battle, { type: "EndTurn" });
+    const summoned = result.battle.armies[1].units.find((unit) =>
+      unit.id.startsWith("foundry-b1_droid_squad-")
+    );
+
+    expect(summoned).toMatchObject({ templateId: "b1_droid_squad", status: "Ready" });
+    expect(result.battle.activationBag.some((token) => token.id.includes(summoned!.id))).toBe(true);
+    expect(result.log).toContain("Fabryki droidów wystawiły 1");
+  });
+
   it("rejects ending a turn while any living unit still awaits its order", () => {
     const battle = patchUnit(createBattle(), "rep_unit_1", { status: "Activated" });
 

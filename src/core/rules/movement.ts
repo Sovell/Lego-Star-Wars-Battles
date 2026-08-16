@@ -11,6 +11,15 @@ export function getMoveDistance(baseMovement: number, movementCost: number): num
   return Math.max(1, Math.floor(baseMovement / Math.max(1, movementCost)));
 }
 
+export function getUnitMovementBonus(battle: Battle, unit: UnitInstance): number {
+  const standardBonus = unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0;
+  const huntedTargetId = unit.activeEffects
+    ?.find((effect) => effect.startsWith("relentless_hunt:"))
+    ?.slice("relentless_hunt:".length);
+  const huntedTarget = huntedTargetId ? findUnit(battle, huntedTargetId) : undefined;
+  return standardBonus + (huntedTarget?.status !== "Destroyed" && huntedTarget?.position ? 1 : 0);
+}
+
 export function moveUnit(battle: Battle, unitId: string, targetPosition: GridPosition) {
   return performMovement(battle, unitId, targetPosition, false);
 }
@@ -48,7 +57,7 @@ function performMovement(
   }
 
   const template = getTemplate(unit);
-  const movementBonus = unit.activeEffects?.includes("movement_bonus:1") ? 1 : 0;
+  const movementBonus = getUnitMovementBonus(battle, unit);
   const movementBudget = template.movement + movementBonus;
   const path = findPath(
     battle,
