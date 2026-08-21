@@ -1,5 +1,5 @@
 import type { SavedArmy, SavedBattle, SavedBattleSummary, SavedCampaign, SaveFile, SaveKind } from "./save-types";
-import { createSaveFile, SAVE_SCHEMA_VERSION, summarizeBattle } from "./save-types";
+import { assertSavedCampaign, createSaveFile, SAVE_SCHEMA_VERSION, summarizeBattle } from "./save-types";
 import type { PersistenceAdapter } from "./storage-adapter";
 
 export type StorageLike = Pick<Storage, "getItem" | "key" | "length" | "removeItem" | "setItem">;
@@ -42,14 +42,22 @@ export function createLocalStoragePersistence(
       return Promise.resolve();
     },
     saveCampaign(savedCampaign) {
+      assertSavedCampaign(savedCampaign);
       writeSaveFile(storage, prefix, "campaign", savedCampaign.id, savedCampaign);
       return Promise.resolve();
     },
     async loadCampaign(id) {
-      return readSaveFile<SavedCampaign>(storage, prefix, "campaign", id);
+      const savedCampaign = readSaveFile<unknown>(storage, prefix, "campaign", id);
+      if (savedCampaign === undefined) return undefined;
+      assertSavedCampaign(savedCampaign);
+      return savedCampaign;
     },
     async listCampaigns() {
-      return listSaveFiles<SavedCampaign>(storage, prefix, "campaign").sort((left, right) =>
+      const savedCampaigns = listSaveFiles<unknown>(storage, prefix, "campaign").map((value) => {
+        assertSavedCampaign(value);
+        return value;
+      });
+      return savedCampaigns.sort((left, right) =>
         right.updatedAt.localeCompare(left.updatedAt),
       );
     },

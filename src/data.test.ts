@@ -73,6 +73,42 @@ describe("Ahsoka Tano", () => {
   });
 });
 
+describe("dedicated character artwork", () => {
+  it("uses the transparent Anakin battlefield sprite", () => {
+    const anakin = unitTemplates.find((template) => template.id === "anakin_skywalker");
+
+    expect(anakin?.battlefieldSpriteUrl)
+      .toBe("/unit-images/sprites/anakin-skywalker.png");
+  });
+
+  it("uses separate battlefield and card artwork for Darth Maul", () => {
+    const maul = unitTemplates.find((template) => template.id === "darth_maul");
+
+    expect(maul).toMatchObject({
+      imageUrl: "/unit-images/photos/darth-maul.jpg",
+      portraitImageUrl: "/unit-images/portraits/darth-maul.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/darth-maul.png",
+    });
+  });
+
+  it("uses separate battlefield and card artwork for Yoda", () => {
+    const yoda = unitTemplates.find((template) => template.id === "yoda");
+
+    expect(yoda).toMatchObject({
+      imageUrl: "/unit-images/photos/yoda.jpg",
+      portraitImageUrl: "/unit-images/portraits/yoda.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/yoda.png",
+    });
+  });
+
+  it("uses the dedicated ARC Trooper battlefield sprite", () => {
+    const arcTrooper = unitTemplates.find((template) => template.id === "arc_trooper");
+
+    expect(arcTrooper?.battlefieldSpriteUrl)
+      .toBe("/unit-images/sprites/arc-trooper.png");
+  });
+});
+
 describe("Clone Wars roster expansion", () => {
   it("includes all requested heroes and squads", () => {
     const ids = new Set(unitTemplates.map((template) => template.id));

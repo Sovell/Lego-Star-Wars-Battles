@@ -29,6 +29,8 @@ export type UnitTemplate = {
   faction: FactionId;
   category: UnitCategory;
   imageUrl?: string;
+  portraitImageUrl?: string;
+  battlefieldSpriteUrl?: string;
   role: UnitRole;
   keywords: string[];
   weapons: WeaponProfile[];

@@ -8,12 +8,14 @@ import { LanguageSwitcher, useI18n } from "../../i18n";
 
 export function MainMenu({
   onLoadBattle,
+  onOpenCampaign,
   onNewScenario,
   onOpenComposer,
   onOpenRules,
   onResumeBattle,
 }: {
   onLoadBattle: (savedBattle: SavedBattle) => void;
+  onOpenCampaign: () => void;
   onNewScenario: () => void;
   onOpenComposer: () => void;
   onOpenRules: () => void;
@@ -84,6 +86,15 @@ export function MainMenu({
           <span>{text("Nowa rozgrywka", "New game")}</span>
           <strong>{text("Rozegraj nowy scenariusz", "Play a new scenario")}</strong>
           <small>{text("Mapa → scenariusz → armie → rozmieszczenie → start", "Map → scenario → armies → deployment → start")}</small>
+        </button>
+
+        <button className="menuCard menuCardCampaign" onClick={onOpenCampaign}>
+          <span>{text("Galactic Conquest", "Galactic Conquest")}</span>
+          <strong>{text("Kampania galaktyczna", "Galactic campaign")}</strong>
+          <small>{text(
+            "Poprowadź armie przez hiperlinie, przejmuj sektory i rozwijaj bazy.",
+            "Lead armies through hyperlanes, capture sectors, and develop bases.",
+          )}</small>
         </button>
 
         <button className="menuCard" onClick={onOpenComposer}>

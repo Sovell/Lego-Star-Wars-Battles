@@ -859,6 +859,10 @@ function AnimatedUnitToken({
   const initialized = useRef(false);
   const target = useRef({ x: targetX, y: targetY });
   const texture = usePixiTexture(token.imageUrl, token.fallbackImageUrl);
+  const battlefieldTexture = usePixiTexture(token.battlefieldSpriteUrl);
+  const usesBattlefieldSprite = Boolean(
+    token.battlefieldSpriteUrl && battlefieldTexture,
+  );
   target.current = { x: targetX, y: targetY };
 
   useLayoutEffect(() => {
@@ -887,7 +891,9 @@ function AnimatedUnitToken({
     <pixiContainer
       cursor={interactionDisabled ? "default" : "pointer"}
       eventMode={interactionDisabled ? "none" : "static"}
-      hitArea={new Rectangle(-radius - 5, -radius - 5, radius * 2 + 10, radius * 2 + 18)}
+      hitArea={usesBattlefieldSprite
+        ? new Rectangle(-radius * 1.4, -radius * 2.7, radius * 2.8, radius * 3.6)
+        : new Rectangle(-radius - 5, -radius - 5, radius * 2 + 10, radius * 2 + 18)}
       onPointerTap={(event: FederatedPointerEvent) => {
         event.stopPropagation();
         onSelectedUnitChange(token.unitId);
@@ -904,7 +910,15 @@ function AnimatedUnitToken({
           .fill({ color: getFactionColor(token.faction) })
           .stroke({ color: 0xe8f1f9, width: 1.5 });
       }} />
-      {texture ? (
+      {battlefieldTexture ? (
+        <pixiSprite
+          anchor={{ x: 0.5, y: 0.94 }}
+          height={radius * 2.9}
+          texture={battlefieldTexture}
+          width={radius * 2.9}
+          y={radius * 0.44}
+        />
+      ) : texture ? (
         <pixiGraphics draw={(graphics) => {
           graphics.clear().circle(0, 0, radius * 0.91).fill({
             texture,
@@ -912,16 +926,20 @@ function AnimatedUnitToken({
           });
         }} />
       ) : null}
-      <pixiGraphics draw={(graphics) => {
-        graphics.clear().roundRect(-radius * 0.72, radius * 0.28, radius * 1.44, radius * 0.48, 3)
-          .fill({ color: 0x071019, alpha: 0.82 });
-      }} />
-      <pixiText
-        anchor={0.5}
-        text={token.initials}
-        y={radius * 0.52}
-        style={{ fill: 0xffffff, fontFamily: "Arial", fontSize: Math.max(7, radius * 0.42), fontWeight: "800" }}
-      />
+      {!usesBattlefieldSprite ? (
+        <>
+          <pixiGraphics draw={(graphics) => {
+            graphics.clear().roundRect(-radius * 0.72, radius * 0.28, radius * 1.44, radius * 0.48, 3)
+              .fill({ color: 0x071019, alpha: 0.82 });
+          }} />
+          <pixiText
+            anchor={0.5}
+            text={token.initials}
+            y={radius * 0.52}
+            style={{ fill: 0xffffff, fontFamily: "Arial", fontSize: Math.max(7, radius * 0.42), fontWeight: "800" }}
+          />
+        </>
+      ) : null}
       <HealthBar radius={radius} targetRatio={token.healthRatio} />
       <pixiGraphics x={radius * 0.72} y={-radius * 0.72} draw={(graphics) => {
         graphics.clear().circle(0, 0, 6).fill({ color: getStatusColor(token.status) })

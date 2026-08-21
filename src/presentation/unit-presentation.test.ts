@@ -2,11 +2,31 @@ import { describe, expect, it } from "vitest";
 import type { Army, UnitInstance, UnitTemplate } from "../types";
 import {
   getUnitArmyLabel,
+  getUnitPortraitImageUrl,
   getUnitTokenFallbackImageUrl,
   getUnitTokenImageUrl,
 } from "./unit-presentation";
 
 describe("unit token presentation", () => {
+  it("prefers dedicated card artwork without changing token artwork", () => {
+    const template = {
+      ...unitTemplate("/unit-images/photos/darth-maul.jpg"),
+      portraitImageUrl: "/unit-images/portraits/darth-maul.png",
+    };
+
+    expect(getUnitPortraitImageUrl(template))
+      .toBe("/unit-images/portraits/darth-maul.png");
+    expect(getUnitTokenImageUrl(template))
+      .toBe("/unit-images/tokens/darth-maul.jpg");
+  });
+
+  it("uses the regular image when dedicated card artwork is absent", () => {
+    const template = unitTemplate("/unit-images/photos/clone-trooper.jpg");
+
+    expect(getUnitPortraitImageUrl(template))
+      .toBe("/unit-images/photos/clone-trooper.jpg");
+  });
+
   it("uses an optimized token portrait with the original photo as fallback", () => {
     const template = unitTemplate("/unit-images/photos/clone-trooper.jpg");
 

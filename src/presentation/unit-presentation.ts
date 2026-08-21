@@ -10,6 +10,10 @@ export function getUnitInitials(template: UnitTemplate): string {
     .toUpperCase();
 }
 
+export function getUnitPortraitImageUrl(template: UnitTemplate): string | undefined {
+  return template.portraitImageUrl ?? template.imageUrl;
+}
+
 export function getUnitTokenImageUrl(template: UnitTemplate): string | undefined {
   const photoPrefix = "/unit-images/photos/";
 

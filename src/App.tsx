@@ -25,6 +25,7 @@ import { PanelTitle } from "./app/components/PanelTitle";
 import { RulesView } from "./app/screens/RulesView";
 import { MainMenu } from "./app/screens/MainMenu";
 import { BattleScreen } from "./app/screens/BattleScreen";
+import { CampaignScreen } from "./app/screens/CampaignScreen";
 import type { GamePhase } from "./app/types/game-phase";
 import {
   areArmiesEnemies,
@@ -50,7 +51,7 @@ import {
 } from "./core/scenario/scenario-army-presets";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import { createPersistenceAdapter } from "./core/persistence/create-persistence-adapter";
-import type { SavedBattle } from "./core/persistence/save-types";
+import type { SavedBattle, SavedCampaign } from "./core/persistence/save-types";
 import { createScenarioStartSave } from "./app/scenario-start-save";
 import {
   clearActiveSessionRecovery,
@@ -84,7 +85,7 @@ import {
   type Language,
 } from "./i18n";
 
-type AppView = RecoverableAppView;
+type AppView = RecoverableAppView | "campaign";
 type DraftCounts = Record<string, number>;
 type ComposerArmyDraft = {
   id: string;
@@ -103,6 +104,7 @@ export function App() {
   const scenarioStartInProgress = useRef(false);
   const [recoveredSession] = useState(() => loadActiveSessionRecovery());
   const [view, setView] = useState<AppView>(() => recoveredSession?.view ?? "home");
+  const [savedCampaign, setSavedCampaign] = useState<SavedCampaign>();
   const [battle, setBattle] = useState<Battle>(() =>
     recoveredSession?.battle ?? createNewGameBattle()
   );
@@ -172,12 +174,16 @@ export function App() {
   const mapHasManualChanges = hasManualScenarioMap(scenarioDraft);
 
   useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [view]);
+
+  useEffect(() => {
     if (gamePhase !== "Playing") {
       clearActiveSessionRecovery();
       return;
     }
     saveActiveSessionRecovery({
-      view,
+      view: view === "campaign" ? "home" : view,
       gamePhase,
       battle,
       battleStartSnapshot,
@@ -778,6 +784,7 @@ export function App() {
       {view === "home" ? (
         <MainMenu
           onNewScenario={prepareNewScenario}
+          onOpenCampaign={() => setView("campaign")}
           onOpenComposer={() => openComposer("menu")}
           onOpenRules={() => setView("rules")}
           onResumeBattle={
@@ -794,6 +801,8 @@ export function App() {
             ? text("Kreator scenariusza", "Scenario Builder")
             : view === "battle"
               ? text("Panel dowodzenia", "Command Panel")
+              : view === "campaign"
+                ? text("Kampania galaktyczna", "Galactic Campaign")
               : view === "composer"
                 ? text("Kreator armii", "Army Composer")
                 : text("Kompendium", "Compendium")}</h1>
@@ -893,6 +902,13 @@ export function App() {
             loadArmies(armies, text("Armie z kreatora armii zostały wczytane do scenariusza.", "Armies from Army Composer were loaded into the scenario builder."));
             setView("setup");
           }}
+        />
+      ) : null}
+
+      {view === "campaign" ? (
+        <CampaignScreen
+          savedCampaign={savedCampaign}
+          onCampaignChange={setSavedCampaign}
         />
       ) : null}
 

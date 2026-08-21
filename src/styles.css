@@ -141,6 +141,14 @@ button:disabled {
   border-color: rgba(84, 190, 120, 0.38);
 }
 
+.menuCardCampaign {
+  background:
+    radial-gradient(circle at 82% 24%, rgba(91, 174, 215, 0.2), transparent 24%),
+    linear-gradient(145deg, rgba(65, 125, 161, 0.12), transparent 65%),
+    #151a21;
+  border-color: rgba(91, 174, 215, 0.38);
+}
+
 .menuLoadCard {
   grid-template-columns: minmax(0, 1fr) auto;
 }

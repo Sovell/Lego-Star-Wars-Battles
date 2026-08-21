@@ -21,6 +21,13 @@ export type ProvinceBattleArchetype =
 
 export type GalacticPosition = { x: number; y: number };
 
+export type HyperlaneDefinition = {
+  id: string;
+  fromPlanetId: string;
+  toPlanetId: string;
+  movementCost: number;
+};
+
 export type ProvinceTemplate = {
   id: string;
   name: string;
@@ -31,16 +38,26 @@ export type ProvinceTemplate = {
   fixed?: boolean;
 };
 
-export type GalacticPlanetDefinition = {
+export type GalacticLocationDefinition = {
   id: string;
   name: string;
   region: GalacticRegion;
   position: GalacticPosition;
+  playable: boolean;
+  capitalOf?: StrategicFaction;
+};
+
+export type GalacticPlanetDefinition = GalacticLocationDefinition & {
+  playable: true;
   mapThemeId: MapThemeId;
   initialController: ProvinceController;
   neighbors: string[];
   fixedProvince: ProvinceTemplate;
   variableProvincePool: ProvinceTemplate[];
+};
+
+export type LockedGalacticLocationDefinition = GalacticLocationDefinition & {
+  playable: false;
 };
 
 export type GalacticProvinceState = ProvinceTemplate & {

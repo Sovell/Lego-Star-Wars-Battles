@@ -193,6 +193,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "hero",
     imageUrl: "/unit-images/photos/yoda.jpg",
+    portraitImageUrl: "/unit-images/portraits/yoda.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/yoda.png",
     role: "support/control",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
     weapons: [
@@ -245,6 +247,7 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "hero",
     imageUrl: "/unit-images/photos/anakin-skywalker.jpg",
+    battlefieldSpriteUrl: "/unit-images/sprites/anakin-skywalker.png",
     role: "assault/damage",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
     weapons: [
@@ -461,6 +464,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "hero",
     imageUrl: "/unit-images/photos/darth-maul.jpg",
+    portraitImageUrl: "/unit-images/portraits/darth-maul.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/darth-maul.png",
     role: "assault/duelist",
     keywords: ["Hero", "Sith", "ForceUser", "Infantry"],
     weapons: [
@@ -513,6 +518,7 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "infantry",
     imageUrl: "/unit-images/photos/arc-trooper.jpg",
+    battlefieldSpriteUrl: "/unit-images/sprites/arc-trooper.png",
     role: "elite assault",
     keywords: ["Clone", "Infantry", "Elite"],
     weapons: [

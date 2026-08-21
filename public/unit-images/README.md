@@ -57,3 +57,16 @@ files in `photos/`. Infantry tokens focus on the complete head, helmet, or headp
 while vehicle tokens retain the recognizable vehicle silhouette. The map applies
 faction-colored circular borders and falls back to the generated CSS token when a
 photo crop is unavailable.
+
+## Battlefield sprites
+
+The `sprites/` directory contains transparent 512x512 full-figure renders for
+units with a dedicated battlefield presentation. Pixi anchors each render at
+the figure's feet and falls back to the existing circular photo token when the
+sprite is absent or cannot be loaded.
+
+## Card portraits
+
+The `portraits/` directory contains square character renders prepared
+specifically for unit cards. A unit can use `portraitImageUrl` without changing
+the photo and optimized crop used by its battlefield token fallback.

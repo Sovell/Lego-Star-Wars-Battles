@@ -68,6 +68,7 @@ import {
 import {
   getUnitArmyLabel,
   getUnitInitials,
+  getUnitPortraitImageUrl,
 } from "../../presentation/unit-presentation";
 import { getUnitPresentationProfile } from "../../presentation/unit-profile";
 import {
@@ -1393,6 +1394,7 @@ function UnitDetails({
     template.abilities.includes(ability.id) && ability.type !== "active"
   );
   const presentation = getUnitPresentationProfile(template.id, template.faction);
+  const portraitImageUrl = getUnitPortraitImageUrl(template);
   const themeStyle = {
     "--unit-accent": presentation.theme.accent,
     "--unit-accent-soft": presentation.theme.accentSoft,
@@ -1402,10 +1404,10 @@ function UnitDetails({
   return (
     <div className="mapReadout unitDetailPanel" style={themeStyle}>
       <div className="unitPortrait">
-        {template.imageUrl ? (
+        {portraitImageUrl ? (
           <img
-            key={template.imageUrl}
-            src={template.imageUrl}
+            key={portraitImageUrl}
+            src={portraitImageUrl}
             alt={localizeUnitName(language, template.id, template.name)}
             onLoad={(event) => {
               event.currentTarget.hidden = false;

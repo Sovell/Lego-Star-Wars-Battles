@@ -1,5 +1,7 @@
 import type {
   GalacticConquestState,
+  HyperlaneDefinition,
+  LockedGalacticLocationDefinition,
   GalacticPlanetDefinition,
   GalacticPlanetState,
   GalacticProvinceState,
@@ -23,6 +25,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Mandalore",
     region: "Outer Rim",
     position: { x: 47, y: 15 },
+    playable: true,
     mapThemeId: "mandalore-city",
     initialController: "Neutral",
     neighbors: ["endor", "ryloth", "christophsis"],
@@ -39,6 +42,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Christophsis",
     region: "Outer Rim",
     position: { x: 61, y: 31 },
+    playable: true,
     mapThemeId: "christophsis-crystal-city",
     initialController: "Separatists",
     neighbors: ["mandalore", "ryloth", "geonosis"],
@@ -55,6 +59,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Ryloth",
     region: "Outer Rim",
     position: { x: 69, y: 47 },
+    playable: true,
     mapThemeId: "ryloth-badlands",
     initialController: "Separatists",
     neighbors: ["mandalore", "christophsis", "geonosis", "tatooine"],
@@ -71,6 +76,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Geonosis",
     region: "Outer Rim",
     position: { x: 61, y: 65 },
+    playable: true,
     mapThemeId: "geonosis-foundry",
     initialController: "Separatists",
     neighbors: ["christophsis", "ryloth", "tatooine", "mustafar"],
@@ -87,6 +93,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Tatooine",
     region: "Outer Rim",
     position: { x: 76, y: 78 },
+    playable: true,
     mapThemeId: "desert-outpost",
     initialController: "Neutral",
     neighbors: ["ryloth", "geonosis", "mustafar"],
@@ -103,6 +110,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Mustafar",
     region: "Outer Rim",
     position: { x: 48, y: 84 },
+    playable: true,
     mapThemeId: "volcanic-foundry",
     initialController: "Separatists",
     neighbors: ["geonosis", "tatooine", "felucia"],
@@ -119,6 +127,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Felucia",
     region: "Outer Rim",
     position: { x: 27, y: 71 },
+    playable: true,
     mapThemeId: "felucia-wilds",
     initialController: "Republic",
     neighbors: ["mustafar", "hoth", "endor"],
@@ -135,6 +144,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Hoth",
     region: "Outer Rim",
     position: { x: 13, y: 59 },
+    playable: true,
     mapThemeId: "ice-front",
     initialController: "Neutral",
     neighbors: ["felucia", "endor"],
@@ -151,6 +161,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     name: "Endor",
     region: "Outer Rim",
     position: { x: 22, y: 31 },
+    playable: true,
     mapThemeId: "forest-moon",
     initialController: "Republic",
     neighbors: ["hoth", "felucia", "mandalore"],
@@ -163,6 +174,65 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     ],
   },
 ];
+
+export const lockedGalacticLocations: readonly LockedGalacticLocationDefinition[] = [
+  {
+    id: "coruscant",
+    name: "Coruscant",
+    region: "Core",
+    position: { x: 43, y: 40 },
+    playable: false,
+    capitalOf: "Republic",
+  },
+  {
+    id: "raxus-secundus",
+    name: "Raxus Secundus",
+    region: "Outer Rim",
+    position: { x: 88, y: 25 },
+    playable: false,
+    capitalOf: "Separatists",
+  },
+  {
+    id: "kamino",
+    name: "Kamino",
+    region: "Outer Rim",
+    position: { x: 86, y: 58 },
+    playable: false,
+  },
+  {
+    id: "naboo",
+    name: "Naboo",
+    region: "Mid Rim",
+    position: { x: 57, y: 53 },
+    playable: false,
+  },
+  {
+    id: "kashyyyk",
+    name: "Kashyyyk",
+    region: "Mid Rim",
+    position: { x: 34, y: 50 },
+    playable: false,
+  },
+  {
+    id: "utapau",
+    name: "Utapau",
+    region: "Outer Rim",
+    position: { x: 54, y: 73 },
+    playable: false,
+  },
+];
+
+/** Unique, bidirectional strategic routes. Rendering coordinates never determine movement. */
+export const galacticHyperlanes: readonly HyperlaneDefinition[] = galacticPlanets.flatMap(
+  (planet) => planet.neighbors
+    .filter((neighborId) => planet.id.localeCompare(neighborId) < 0)
+    .map((neighborId) => ({
+      id: `${planet.id}--${neighborId}`,
+      fromPlanetId: planet.id,
+      toPlanetId: neighborId,
+      movementCost: 1,
+    })),
+);
 
 export function createGalacticConquest(seed: number): GalacticConquestState {
   if (!Number.isInteger(seed)) throw new Error("Galactic conquest seed must be an integer.");

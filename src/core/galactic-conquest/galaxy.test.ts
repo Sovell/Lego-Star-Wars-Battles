@@ -3,8 +3,10 @@ import { getMapTheme } from "../map-generation";
 import {
   createGalacticConquest,
   createProvinceBattleRequest,
+  galacticHyperlanes,
   galacticPlanets,
   getGalacticPlanet,
+  lockedGalacticLocations,
 } from "./galaxy";
 
 describe("galactic conquest galaxy", () => {
@@ -39,6 +41,28 @@ describe("galactic conquest galaxy", () => {
         expect(getGalacticPlanet(neighborId).neighbors).toContain(planet.id);
       }
     }
+  });
+
+  it("exposes each hyperlane once and keeps movement independent from render distance", () => {
+    expect(new Set(galacticHyperlanes.map(({ id }) => id)).size).toBe(galacticHyperlanes.length);
+    expect(galacticHyperlanes.every(({ movementCost }) => movementCost === 1)).toBe(true);
+    for (const lane of galacticHyperlanes) {
+      expect(getGalacticPlanet(lane.fromPlanetId).neighbors).toContain(lane.toPlanetId);
+      expect(getGalacticPlanet(lane.toPlanetId).neighbors).toContain(lane.fromPlanetId);
+    }
+  });
+
+  it("keeps future locations visible in the galaxy model without making them playable", () => {
+    const allLocationIds = [
+      ...galacticPlanets.map(({ id }) => id),
+      ...lockedGalacticLocations.map(({ id }) => id),
+    ];
+    expect(new Set(allLocationIds).size).toBe(allLocationIds.length);
+    expect(lockedGalacticLocations.every(({ playable }) => !playable)).toBe(true);
+    expect(lockedGalacticLocations.find(({ id }) => id === "coruscant")?.capitalOf)
+      .toBe("Republic");
+    expect(lockedGalacticLocations.find(({ id }) => id === "raxus-secundus")?.capitalOf)
+      .toBe("Separatists");
   });
 
   it("routes a province conflict into the existing battle generator contract", () => {
