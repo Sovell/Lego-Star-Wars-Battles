@@ -9,6 +9,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/clone-trooper.jpg",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-trooper.png",
+    battlefieldSpriteScale: 0.86,
     role: "Line",
     keywords: ["Clone", "Infantry"],
     weapons: [
@@ -201,6 +202,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/yoda.jpg",
     portraitImageUrl: "/unit-images/portraits/yoda.png",
     battlefieldSpriteUrl: "/unit-images/sprites/yoda.png",
+    battlefieldSpriteScale: 0.86,
     role: "support/control",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
     weapons: [
@@ -257,6 +259,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/anakin-skywalker.jpg",
     portraitImageUrl: "/unit-images/portraits/anakin-skywalker.png",
     battlefieldSpriteUrl: "/unit-images/sprites/anakin-skywalker.png",
+    battlefieldSpriteScale: 0.86,
     role: "assault/damage",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
     weapons: [
@@ -286,6 +289,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/clone-trooper.jpg",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-trooper.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry"],
     weapons: [
       {
@@ -322,6 +326,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/clone-command-squad.jpg",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-command-squad.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry", "Commander"],
     weapons: [
       {
@@ -350,6 +355,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/clone-assault-squad.jpg",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-assault-squad.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry"],
     weapons: [
       {
@@ -378,6 +384,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/clone-engineers.jpg",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-engineers-332nd.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry", "Engineer", "332nd"],
     weapons: [
       {
@@ -489,6 +496,7 @@ export const unitTemplates: UnitTemplate[] = [
     imageUrl: "/unit-images/photos/darth-maul.jpg",
     portraitImageUrl: "/unit-images/portraits/darth-maul.png",
     battlefieldSpriteUrl: "/unit-images/sprites/darth-maul.png",
+    battlefieldSpriteScale: 0.8,
     role: "assault/duelist",
     keywords: ["Hero", "Sith", "ForceUser", "Infantry"],
     weapons: [
@@ -544,6 +552,7 @@ export const unitTemplates: UnitTemplate[] = [
     category: "infantry",
     imageUrl: "/unit-images/photos/arc-trooper.jpg",
     battlefieldSpriteUrl: "/unit-images/sprites/arc-trooper.png",
+    battlefieldSpriteScale: 0.86,
     role: "elite assault",
     keywords: ["Clone", "Infantry", "Elite"],
     weapons: [
@@ -580,6 +589,7 @@ export const unitTemplates: UnitTemplate[] = [
     role: "elite special operations",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-commando.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry", "Elite", "Commando"],
     weapons: [
       {
@@ -615,6 +625,7 @@ export const unitTemplates: UnitTemplate[] = [
     role: "medical support",
     portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
     battlefieldSpriteUrl: "/unit-images/sprites/clone-medic.png",
+    battlefieldSpriteScale: 0.86,
     keywords: ["Clone", "Infantry", "Medic"],
     weapons: [{
       id: "medic_dc_15s_blaster",

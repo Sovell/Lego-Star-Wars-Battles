@@ -863,6 +863,7 @@ function AnimatedUnitToken({
   const usesBattlefieldSprite = Boolean(
     token.battlefieldSpriteUrl && battlefieldTexture,
   );
+  const spriteScale = token.battlefieldSpriteScale ?? 1;
   target.current = { x: targetX, y: targetY };
 
   useLayoutEffect(() => {
@@ -901,26 +902,26 @@ function AnimatedUnitToken({
       ref={containerRef}
     >
       <pixiGraphics ref={ringRef} draw={(graphics) => {
-        graphics.clear().circle(0, 0, radius + 4)
-          .fill({ color: selected ? 0xffef67 : getFactionColor(token.faction), alpha: selected ? 0.22 : 0.12 })
-          .stroke({ color: selected ? 0xffef67 : getFactionColor(token.faction), width: selected ? 3 : 2 });
+        graphics.clear().circle(0, 0, radius * 0.91)
+          .fill({ color: selected ? 0xffef67 : getFactionColor(token.faction), alpha: selected ? 0.16 : 0.07 })
+          .stroke({ color: selected ? 0xffef67 : getFactionColor(token.faction), width: selected ? 2.5 : 1.5 });
       }} />
       <pixiGraphics draw={(graphics) => {
-        graphics.clear().circle(0, 0, radius)
-          .fill({ color: getFactionColor(token.faction) })
-          .stroke({ color: 0xe8f1f9, width: 1.5 });
+        graphics.clear().circle(0, 0, radius * 0.82)
+          .fill({ color: getFactionColor(token.faction), alpha: 0.2 })
+          .stroke({ color: 0xe8f1f9, alpha: 0.72, width: 1.25 });
       }} />
       {battlefieldTexture ? (
         <pixiSprite
           anchor={{ x: 0.5, y: 0.94 }}
-          height={radius * 2.9}
+          height={radius * 2.9 * spriteScale}
           texture={battlefieldTexture}
-          width={radius * 2.9}
+          width={radius * 2.9 * spriteScale}
           y={radius * 0.44}
         />
       ) : texture ? (
         <pixiGraphics draw={(graphics) => {
-          graphics.clear().circle(0, 0, radius * 0.91).fill({
+          graphics.clear().circle(0, 0, radius * 0.76).fill({
             texture,
             textureSpace: "local",
           });
@@ -941,15 +942,15 @@ function AnimatedUnitToken({
         </>
       ) : null}
       <HealthBar radius={radius} targetRatio={token.healthRatio} />
-      <pixiGraphics x={radius * 0.72} y={-radius * 0.72} draw={(graphics) => {
+      <pixiGraphics x={radius * 0.61} y={-radius * 0.61} draw={(graphics) => {
         graphics.clear().circle(0, 0, 6).fill({ color: getStatusColor(token.status) })
           .stroke({ color: 0xffffff, width: 1 });
       }} />
       <pixiText
         anchor={0.5}
         text={getStatusCode(token.status)}
-        x={radius * 0.72}
-        y={-radius * 0.72}
+        x={radius * 0.61}
+        y={-radius * 0.61}
         style={{ fill: 0xffffff, fontFamily: "Arial", fontSize: 7, fontWeight: "800" }}
       />
     </pixiContainer>
@@ -963,8 +964,8 @@ function HealthBar({ radius, targetRatio }: { radius: number; targetRatio: numbe
     ratio.current += (targetRatio - ratio.current) * (1 - Math.exp(-ticker.deltaMS / 140));
     const graphics = graphicsRef.current;
     if (!graphics) return;
-    const width = radius * 2.1;
-    const y = radius + 4;
+    const width = radius * 1.82;
+    const y = radius * 0.85 + 4;
     graphics.clear().roundRect(-width / 2, y, width, 6, 3)
       .fill({ color: 0x071019, alpha: 0.95 })
       .stroke({ color: 0xd9e2eb, width: 0.7 });

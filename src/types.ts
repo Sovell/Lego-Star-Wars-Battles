@@ -31,6 +31,8 @@ export type UnitTemplate = {
   imageUrl?: string;
   portraitImageUrl?: string;
   battlefieldSpriteUrl?: string;
+  /** Multiplier used to normalize visual height across battlefield sprite renders. */
+  battlefieldSpriteScale?: number;
   role: UnitRole;
   keywords: string[];
   weapons: WeaponProfile[];

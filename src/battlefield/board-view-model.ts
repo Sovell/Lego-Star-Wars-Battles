@@ -30,6 +30,7 @@ export type BoardTokenViewModel = {
   imageUrl?: string;
   fallbackImageUrl?: string;
   battlefieldSpriteUrl?: string;
+  battlefieldSpriteScale?: number;
   currentHp: number;
   maxHp: number;
   healthRatio: number;
@@ -91,6 +92,7 @@ export function createBoardViewModel(
         imageUrl: getUnitTokenImageUrl(template),
         fallbackImageUrl: getUnitTokenFallbackImageUrl(template),
         battlefieldSpriteUrl: template.battlefieldSpriteUrl,
+        battlefieldSpriteScale: template.battlefieldSpriteScale,
         currentHp: unit.currentHp,
         maxHp: template.maxHp,
         healthRatio,

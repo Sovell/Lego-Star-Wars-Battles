@@ -235,6 +235,27 @@ describe("dedicated character artwork", () => {
       { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-medic.png" },
     ]);
   });
+
+  it("normalizes legacy battlefield sprite height to the newer render scale", () => {
+    const scaledSpriteIds = [
+      "clone_trooper_battalion",
+      "clone_trooper_squad",
+      "clone_command_squad",
+      "clone_assault_squad",
+      "clone_engineers_332nd",
+      "clone_commando_section",
+      "clone_medic_squad",
+      "yoda",
+      "anakin_skywalker",
+      "arc_trooper",
+    ];
+    const scaledSprites = unitTemplates.filter((template) => scaledSpriteIds.includes(template.id));
+
+    expect(scaledSprites).toHaveLength(scaledSpriteIds.length);
+    expect(scaledSprites.every((template) => template.battlefieldSpriteScale === 0.86)).toBe(true);
+    expect(unitTemplates.find((template) => template.id === "darth_maul")?.battlefieldSpriteScale)
+      .toBe(0.8);
+  });
 });
 
 describe("Clone Wars roster expansion", () => {
