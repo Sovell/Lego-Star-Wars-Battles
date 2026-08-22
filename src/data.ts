@@ -7,6 +7,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "infantry",
     imageUrl: "/unit-images/photos/clone-trooper.jpg",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-trooper.png",
     role: "Line",
     keywords: ["Clone", "Infantry"],
     weapons: [
@@ -90,6 +92,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "droid",
     imageUrl: "/unit-images/photos/b1-battle-droid.jpg",
+    portraitImageUrl: "/unit-images/portraits/b1-droid.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/b1-droid.png",
     role: "Line",
     keywords: ["Droid", "Infantry"],
     weapons: [
@@ -141,6 +145,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "droid",
     imageUrl: "/unit-images/photos/b2-super-battle-droid.jpg",
+    portraitImageUrl: "/unit-images/portraits/b2-droid.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/b2-droid.png",
     role: "Heavy",
     keywords: ["Droid", "Infantry", "Armor", "SuperBattleDroid"],
     weapons: [
@@ -221,6 +227,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "hero",
     imageUrl: "/unit-images/photos/obi-wan-kenobi.jpg",
+    portraitImageUrl: "/unit-images/portraits/obi-wan-kenobi.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/obi-wan-kenobi.png",
     role: "tank/defense",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
     weapons: [
@@ -247,6 +255,7 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "hero",
     imageUrl: "/unit-images/photos/anakin-skywalker.jpg",
+    portraitImageUrl: "/unit-images/portraits/anakin-skywalker.png",
     battlefieldSpriteUrl: "/unit-images/sprites/anakin-skywalker.png",
     role: "assault/damage",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander"],
@@ -275,6 +284,8 @@ export const unitTemplates: UnitTemplate[] = [
     category: "infantry",
     role: "basic infantry",
     imageUrl: "/unit-images/photos/clone-trooper.jpg",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-trooper.png",
     keywords: ["Clone", "Infantry"],
     weapons: [
       {
@@ -309,6 +320,8 @@ export const unitTemplates: UnitTemplate[] = [
     category: "commander",
     role: "command/support",
     imageUrl: "/unit-images/photos/clone-command-squad.jpg",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-command-squad.png",
     keywords: ["Clone", "Infantry", "Commander"],
     weapons: [
       {
@@ -335,6 +348,8 @@ export const unitTemplates: UnitTemplate[] = [
     category: "infantry",
     role: "assault",
     imageUrl: "/unit-images/photos/clone-assault-squad.jpg",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-assault-squad.png",
     keywords: ["Clone", "Infantry"],
     weapons: [
       {
@@ -361,6 +376,8 @@ export const unitTemplates: UnitTemplate[] = [
     category: "infantry",
     role: "engineering/support",
     imageUrl: "/unit-images/photos/clone-engineers.jpg",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-engineers-332nd.png",
     keywords: ["Clone", "Infantry", "Engineer", "332nd"],
     weapons: [
       {
@@ -387,6 +404,8 @@ export const unitTemplates: UnitTemplate[] = [
     category: "droid",
     role: "basic infantry",
     imageUrl: "/unit-images/photos/b1-battle-droid.jpg",
+    portraitImageUrl: "/unit-images/portraits/b1-droid.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/b1-droid.png",
     keywords: ["Droid", "Infantry"],
     weapons: [
       {
@@ -412,6 +431,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "hero",
     imageUrl: "/unit-images/photos/asajj-ventress.jpg",
+    portraitImageUrl: "/unit-images/portraits/asajj-ventress.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/asajj-ventress.png",
     role: "assassin",
     keywords: ["Hero", "Sith", "ForceUser", "Infantry"],
     weapons: [
@@ -438,6 +459,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "hero",
     imageUrl: "/unit-images/photos/jango-fett.jpg",
+    portraitImageUrl: "/unit-images/portraits/jango-fett.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/jango-fett.png",
     role: "bounty hunter/skirmisher",
     keywords: ["Hero", "BountyHunter", "Mandalorian", "Infantry", "Jetpack"],
     weapons: [
@@ -492,6 +515,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "hero",
     imageUrl: "/unit-images/photos/ahsoka-tano.jpg",
+    portraitImageUrl: "/unit-images/portraits/ahsoka-tano.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/ahsoka-tano.png",
     role: "mobile duelist/support",
     keywords: ["Hero", "Jedi", "ForceUser", "Infantry"],
     weapons: [
@@ -553,6 +578,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "infantry",
     role: "elite special operations",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-commando.png",
     keywords: ["Clone", "Infantry", "Elite", "Commando"],
     weapons: [
       {
@@ -586,6 +613,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Republic",
     category: "infantry",
     role: "medical support",
+    portraitImageUrl: "/unit-images/portraits/clone-trooper.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/clone-medic.png",
     keywords: ["Clone", "Infantry", "Medic"],
     weapons: [{
       id: "medic_dc_15s_blaster",
@@ -721,6 +750,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "droid",
     role: "reconnaissance",
+    portraitImageUrl: "/unit-images/portraits/b1-droid.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/b1-droid.png",
     keywords: ["Droid", "Infantry", "Scout"],
     weapons: [{
       id: "b1_recon_e_5s_rifle",
@@ -743,6 +774,8 @@ export const unitTemplates: UnitTemplate[] = [
     name: "Count Dooku",
     faction: "Separatists",
     category: "hero",
+    portraitImageUrl: "/unit-images/portraits/count-dooku.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/count-dooku.png",
     role: "duelist/control",
     keywords: ["Hero", "Sith", "ForceUser", "Commander", "Infantry"],
     weapons: [
@@ -768,6 +801,8 @@ export const unitTemplates: UnitTemplate[] = [
     name: "General Grievous",
     faction: "Separatists",
     category: "hero",
+    portraitImageUrl: "/unit-images/portraits/general-grievous.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/general-grievous.png",
     role: "assault/jedi hunter",
     keywords: ["Hero", "Droid", "Cyborg", "Commander", "Infantry"],
     weapons: [
@@ -819,6 +854,8 @@ export const unitTemplates: UnitTemplate[] = [
     faction: "Separatists",
     category: "commander",
     role: "droid command/support",
+    portraitImageUrl: "/unit-images/portraits/b1-droid.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/b1-droid.png",
     keywords: ["Droid", "Infantry", "Commander"],
     weapons: [
       {
@@ -843,6 +880,8 @@ export const unitTemplates: UnitTemplate[] = [
     name: "Mace Windu",
     faction: "Republic",
     category: "hero",
+    portraitImageUrl: "/unit-images/portraits/mace-windu.png",
+    battlefieldSpriteUrl: "/unit-images/sprites/mace-windu.png",
     role: "assault/duelist",
     keywords: ["Hero", "Jedi", "ForceUser", "Commander", "Infantry"],
     weapons: [

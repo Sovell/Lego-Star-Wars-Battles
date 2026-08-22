@@ -42,6 +42,7 @@ describe("board view model", () => {
       initials: "CTB",
       imageUrl: "/unit-images/tokens/clone-trooper.jpg",
       fallbackImageUrl: "/unit-images/photos/clone-trooper.jpg",
+      battlefieldSpriteUrl: "/unit-images/sprites/clone-trooper.png",
       currentHp: 3,
       maxHp: 3,
       healthRatio: 1,

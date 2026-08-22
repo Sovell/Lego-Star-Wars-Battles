@@ -74,11 +74,69 @@ describe("Ahsoka Tano", () => {
 });
 
 describe("dedicated character artwork", () => {
-  it("uses the transparent Anakin battlefield sprite", () => {
+  it("uses separate battlefield and card artwork for Anakin", () => {
     const anakin = unitTemplates.find((template) => template.id === "anakin_skywalker");
 
-    expect(anakin?.battlefieldSpriteUrl)
-      .toBe("/unit-images/sprites/anakin-skywalker.png");
+    expect(anakin).toMatchObject({
+      imageUrl: "/unit-images/photos/anakin-skywalker.jpg",
+      portraitImageUrl: "/unit-images/portraits/anakin-skywalker.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/anakin-skywalker.png",
+    });
+  });
+
+  it("uses separate battlefield and card artwork for Obi-Wan", () => {
+    const obiWan = unitTemplates.find((template) => template.id === "obi_wan_kenobi");
+
+    expect(obiWan).toMatchObject({
+      imageUrl: "/unit-images/photos/obi-wan-kenobi.jpg",
+      portraitImageUrl: "/unit-images/portraits/obi-wan-kenobi.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/obi-wan-kenobi.png",
+    });
+  });
+
+  it("uses dedicated battlefield and card artwork for Dooku, Mace and Ventress", () => {
+    const dooku = unitTemplates.find((template) => template.id === "count_dooku");
+    const mace = unitTemplates.find((template) => template.id === "mace_windu");
+    const ventress = unitTemplates.find((template) => template.id === "asajj_ventress");
+
+    expect(dooku).toMatchObject({
+      portraitImageUrl: "/unit-images/portraits/count-dooku.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/count-dooku.png",
+    });
+    expect(mace).toMatchObject({
+      portraitImageUrl: "/unit-images/portraits/mace-windu.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/mace-windu.png",
+    });
+    expect(ventress).toMatchObject({
+      imageUrl: "/unit-images/photos/asajj-ventress.jpg",
+      portraitImageUrl: "/unit-images/portraits/asajj-ventress.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/asajj-ventress.png",
+    });
+  });
+
+  it("uses dedicated battlefield and card artwork for Ahsoka and Grievous", () => {
+    const ahsoka = unitTemplates.find((template) => template.id === "ahsoka_tano");
+    const grievous = unitTemplates.find((template) => template.id === "general_grievous");
+
+    expect(ahsoka).toMatchObject({
+      imageUrl: "/unit-images/photos/ahsoka-tano.jpg",
+      portraitImageUrl: "/unit-images/portraits/ahsoka-tano.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/ahsoka-tano.png",
+    });
+    expect(grievous).toMatchObject({
+      portraitImageUrl: "/unit-images/portraits/general-grievous.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/general-grievous.png",
+    });
+  });
+
+  it("uses separate battlefield and card artwork for Jango Fett", () => {
+    const jango = unitTemplates.find((template) => template.id === "jango_fett");
+
+    expect(jango).toMatchObject({
+      imageUrl: "/unit-images/photos/jango-fett.jpg",
+      portraitImageUrl: "/unit-images/portraits/jango-fett.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/jango-fett.png",
+    });
   });
 
   it("uses separate battlefield and card artwork for Darth Maul", () => {
@@ -106,6 +164,76 @@ describe("dedicated character artwork", () => {
 
     expect(arcTrooper?.battlefieldSpriteUrl)
       .toBe("/unit-images/sprites/arc-trooper.png");
+  });
+
+  it("shares B1 Droid battlefield and card artwork across its variants", () => {
+    const b1Templates = unitTemplates.filter((template) => [
+      "b1_droid_regiment",
+      "b1_droid_squad",
+      "b1_recon_squad",
+      "b1_battle_droid_commander_squad",
+    ].includes(template.id));
+
+    expect(b1Templates).toHaveLength(4);
+    expect(b1Templates.map((template) => ({
+      portrait: template.portraitImageUrl,
+      sprite: template.battlefieldSpriteUrl,
+    }))).toEqual(Array.from({ length: 4 }, () => ({
+      portrait: "/unit-images/portraits/b1-droid.png",
+      sprite: "/unit-images/sprites/b1-droid.png",
+    })));
+  });
+
+  it("uses separate battlefield and card artwork for B2 Super Battle Droids", () => {
+    const b2 = unitTemplates.find((template) => template.id === "super_battle_droid_squad");
+
+    expect(b2).toMatchObject({
+      imageUrl: "/unit-images/photos/b2-super-battle-droid.jpg",
+      portraitImageUrl: "/unit-images/portraits/b2-droid.png",
+      battlefieldSpriteUrl: "/unit-images/sprites/b2-droid.png",
+    });
+  });
+
+  it("shares Clone Trooper battlefield and card artwork across the battalion and squad", () => {
+    const cloneTemplates = unitTemplates.filter((template) =>
+      ["clone_trooper_battalion", "clone_trooper_squad"].includes(template.id)
+    );
+
+    expect(cloneTemplates).toHaveLength(2);
+    expect(cloneTemplates.map((template) => ({
+      portrait: template.portraitImageUrl,
+      sprite: template.battlefieldSpriteUrl,
+    }))).toEqual([
+      {
+        portrait: "/unit-images/portraits/clone-trooper.png",
+        sprite: "/unit-images/sprites/clone-trooper.png",
+      },
+      {
+        portrait: "/unit-images/portraits/clone-trooper.png",
+        sprite: "/unit-images/sprites/clone-trooper.png",
+      },
+    ]);
+  });
+
+  it("reuses the Clone Trooper artwork with role-specific armor markings", () => {
+    const cloneVariants = unitTemplates.filter((template) => [
+      "clone_command_squad",
+      "clone_assault_squad",
+      "clone_engineers_332nd",
+      "clone_commando_section",
+      "clone_medic_squad",
+    ].includes(template.id));
+
+    expect(cloneVariants.map((template) => ({
+      portrait: template.portraitImageUrl,
+      sprite: template.battlefieldSpriteUrl,
+    }))).toEqual([
+      { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-command-squad.png" },
+      { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-assault-squad.png" },
+      { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-engineers-332nd.png" },
+      { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-commando.png" },
+      { portrait: "/unit-images/portraits/clone-trooper.png", sprite: "/unit-images/sprites/clone-medic.png" },
+    ]);
   });
 });
 
