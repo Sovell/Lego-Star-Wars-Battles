@@ -79,6 +79,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     playable: true,
     mapThemeId: "geonosis-foundry",
     initialController: "Separatists",
+    capitalOf: "Separatists",
     neighbors: ["christophsis", "ryloth", "tatooine", "mustafar"],
     fixedProvince: { ...province("primary-foundry", "Główna fabryka", "Industrial", "DestroyObjects", 2, 5), fixed: true },
     variableProvincePool: [
@@ -164,6 +165,7 @@ export const galacticPlanets: readonly GalacticPlanetDefinition[] = [
     playable: true,
     mapThemeId: "forest-moon",
     initialController: "Republic",
+    capitalOf: "Republic",
     neighbors: ["hoth", "felucia", "mandalore"],
     fixedProvince: { ...province("bright-tree", "Jasne Drzewo", "Settlement", "DefendPoint", 3, 1), fixed: true },
     variableProvincePool: [

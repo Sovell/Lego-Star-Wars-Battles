@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { processCampaignEconomy } from "./campaign-economy";
-import { beginCampaignActivationPhase } from "./campaign-movement";
+import { beginCampaignActivationPhase, startNextCampaignTurn } from "./campaign-movement";
 import {
   attackCampaignSector,
   getCampaignPlanetController,
@@ -120,7 +120,7 @@ describe("campaign sector control", () => {
   });
 
   it("locks a capital command sector until the other two sectors are captured", () => {
-    const campaign = withCapital(createCampaign(), "geonosis", "Separatists");
+    const campaign = createCampaign();
     const geonosis = getPlanet(campaign, "geonosis");
     const command = geonosis.sectors.find(({ role }) => role === "Command")!;
     const landing = geonosis.sectors.find(({ role }) => role === "Landing")!;
@@ -166,6 +166,45 @@ describe("campaign sector control", () => {
     expect(resolution.state.phase).toBe("Finished");
     expect(resolution.state.winnerFactionId).toBe("Republic");
     expect(getCampaignPlanetController(resolution.state, "geonosis")).toBe("Republic");
+    expect(() => beginCampaignActivationPhase(resolution.state)).toThrow(/Finished/);
+    expect(() => startNextCampaignTurn(resolution.state)).toThrow(/Finished/);
+  });
+
+  it("ends the campaign when Separatists capture every sector of Endor", () => {
+    const campaign = createCampaign();
+    const endor = getPlanet(campaign, "endor");
+    const command = endor.sectors.find(({ role }) => role === "Command")!;
+    const landing = endor.sectors.find(({ role }) => role === "Landing")!;
+    const infrastructure = endor.sectors.find(({ role }) => role === "Infrastructure")!;
+    const state = beginCampaignActivationPhase({
+      ...campaign,
+      planets: campaign.planets.map((planet) => planet.planetId === "endor"
+        ? {
+            ...planet,
+            sectors: planet.sectors.map((sector) =>
+              sector.sectorId === landing.sectorId || sector.sectorId === infrastructure.sectorId
+                ? { ...sector, ownerFactionId: "Separatists", controllerPlayerId: "player-2" }
+                : sector),
+          }
+        : planet),
+      armies: campaign.armies.map((army) => army.id === "player-2-army-1"
+        ? { ...army, planetId: "endor", sectorId: landing.sectorId }
+        : army),
+    }, ["player-2", "player-1"]);
+
+    const attack = attackCampaignSector(state, "player-2-army-1", command.sectorId);
+    expect(attack.action.type).toBe("BattleRequired");
+    const resolution = resolveCampaignConflict(attack.state, {
+      conflictId: attack.state.pendingConflict!.id,
+      winnerFactionId: "Separatists",
+    });
+
+    expect(resolution.state).toMatchObject({
+      phase: "Finished",
+      winnerFactionId: "Separatists",
+      activePlayerId: undefined,
+    });
+    expect(getCampaignPlanetController(resolution.state, "endor")).toBe("Separatists");
   });
 
   it("destroys a captured base without ending the campaign on an ordinary planet", () => {
@@ -234,18 +273,5 @@ function withSeparatistArmyOn(state: CampaignState, planetId: string): CampaignS
     armies: state.armies.map((army) => army.factionId === "Separatists"
       ? { ...army, planetId, sectorId }
       : army),
-  };
-}
-
-function withCapital(
-  state: CampaignState,
-  planetId: string,
-  capitalOf: "Republic" | "Separatists",
-): CampaignState {
-  return {
-    ...state,
-    planets: state.planets.map((planet) => planet.planetId === planetId
-      ? { ...planet, capitalOf }
-      : planet),
   };
 }

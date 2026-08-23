@@ -6,7 +6,7 @@ Galactic Conquest łączy mapę strategiczną z istniejącym generatorem bitew. 
 
 Pierwsza pula obejmuje dziewięć światów, dla których gra ma już teren: Tatooine, Endor, Hoth, Mustafar, Geonosis, Felucia, Christophsis, Mandalore i Ryloth. Okręt Republiki, okręt Separatystów i stacja badawcza pozostają specjalnymi teatrami wydarzeń, a nie stałymi planetami.
 
-Katalog zawiera też przygaszone, niedostępne jeszcze lokalizacje: Coruscant, Raxus Secundus, Kamino, Naboo, Kashyyyk i Utapau. Coruscant oraz Raxus Secundus są już oznaczone jako przyszłe stolice Republiki i Separatystów, ale nie trafiają jeszcze do grywalnego stanu kampanii.
+Katalog zawiera też przygaszone, niedostępne jeszcze lokalizacje: Coruscant, Raxus Secundus, Kamino, Naboo, Kashyyyk i Utapau. Coruscant oraz Raxus Secundus pozostają przyszłymi stolicami fabularnymi Republiki i Separatystów, ale nie trafiają jeszcze do grywalnego stanu kampanii. Do czasu ich udostępnienia Endor jest tymczasową kwaterą główną Republiki, a Geonosis tymczasową kwaterą główną Separatystów: ich pełne przejęcie kończy kampanię.
 
 ## Definicje galaktyki i stan kampanii
 
@@ -51,9 +51,9 @@ Typ sektora wyznacza domyślny archetyp bitwy:
 - odwrót na planetę startową bez przyczółka oraz odwrót pokonanego obrońcy;
 - zniszczenie odciętej armii, która nie ma własnego sektora ani sąsiedniej drogi odwrotu;
 - blokada sektora dowodzenia stolicy do czasu zdobycia dwóch pozostałych sektorów;
-- zakończenie kampanii po przejęciu wszystkich sektorów wrogiej stolicy.
+- zakończenie kampanii po przejęciu wszystkich sektorów wrogiej tymczasowej kwatery głównej (Endor albo Geonosis).
 - dochód 2–4 kredyty z każdego kontrolowanego sektora i +2 za pełną planetę;
-- stypendium +5 kredytów dla każdego dowódcy frakcji kontrolującej swoją stolicę;
+- stypendium +5 kredytów dla każdego dowódcy frakcji kontrolującej swoją tymczasową kwaterę główną;
 - jedna baza na w pełni kontrolowanej planecie: budowa poziomu 1 za 20 kredytów, poziom 2 za 40 i poziom 3 za 60;
 - ukończenie budowy, ulepszeń i rekrutacji na początku następnej tury;
 - poziom 1 dla podstawowej piechoty, poziom 2 dla wsparcia, elit, dowódców i bohaterów oraz poziom 3 dla pojazdów i jednostek ciężkich;

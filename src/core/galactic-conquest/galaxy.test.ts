@@ -65,6 +65,17 @@ describe("galactic conquest galaxy", () => {
       .toBe("Separatists");
   });
 
+  it("uses Endor and Geonosis as the playable campaign headquarters", () => {
+    expect(getGalacticPlanet("endor")).toMatchObject({
+      playable: true,
+      capitalOf: "Republic",
+    });
+    expect(getGalacticPlanet("geonosis")).toMatchObject({
+      playable: true,
+      capitalOf: "Separatists",
+    });
+  });
+
   it("routes a province conflict into the existing battle generator contract", () => {
     const state = createGalacticConquest(77);
     const target = state.planets.find(({ planetId }) => planetId === "geonosis")!.provinces[0];

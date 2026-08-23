@@ -32,20 +32,19 @@ describe("campaign economy", () => {
     expect(getCampaignArmyPointCost([{ templateId: "clone_trooper_squad" }])).toBe(10);
   });
 
-  it("awards a full-planet bonus to its command-sector player and a capital stipend", () => {
-    const controlled = fullyControlPlanet(createCampaign(), "felucia", "player-1", "Republic");
-    const ordinary = getCampaignIncomeBreakdown(controlled, "player-1");
-    const capital = {
-      ...controlled,
-      planets: controlled.planets.map((planet) => planet.planetId === "felucia"
-        ? { ...planet, capitalOf: "Republic" as const }
-        : planet),
-    };
-    const capitalIncome = getCampaignIncomeBreakdown(capital, "player-1");
+  it("awards a full-planet bonus and the stipend for each controlled campaign headquarters", () => {
+    const state = fullyControlPlanet(
+      fullyControlPlanet(createCampaign(), "endor", "player-1", "Republic"),
+      "geonosis",
+      "player-2",
+      "Separatists",
+    );
+    const republicIncome = getCampaignIncomeBreakdown(state, "player-1");
+    const separatistIncome = getCampaignIncomeBreakdown(state, "player-2");
 
-    expect(ordinary.planetControlBonus).toBeGreaterThanOrEqual(2);
-    expect(capitalIncome.capitalStipend).toBe(5);
-    expect(capitalIncome.total).toBe(ordinary.total + 5);
+    expect(republicIncome.planetControlBonus).toBeGreaterThanOrEqual(2);
+    expect(republicIncome.capitalStipend).toBe(5);
+    expect(separatistIncome.capitalStipend).toBe(5);
   });
 
   it("builds and upgrades one base per fully controlled planet on following turns", () => {
