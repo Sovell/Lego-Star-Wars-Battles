@@ -630,6 +630,113 @@
   padding: 16px;
 }
 
+.campaignEconomyPanel {
+  background: rgba(20, 24, 30, 0.95);
+  border: 1px solid rgba(86, 190, 135, 0.32);
+  border-radius: 10px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.campaignEconomyPanel .campaignPanelHeading > strong {
+  color: #8ee0b4;
+  font-size: 0.9rem;
+}
+
+.campaignEconomySection {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 8px;
+  padding-top: 13px;
+}
+
+.campaignEconomySection h4 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.campaignEconomySelect {
+  color: #aeb8c5;
+  display: grid;
+  font-size: 0.64rem;
+  font-weight: 850;
+  gap: 5px;
+  text-transform: uppercase;
+}
+
+.campaignEconomySelect select,
+.campaignEconomySelect input {
+  background: #0f1318;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 5px;
+  color: #e3e9ee;
+  font-size: 0.75rem;
+  min-height: 33px;
+  padding: 0 8px;
+  text-transform: none;
+}
+
+.campaignEconomyRow {
+  align-items: center;
+  background: #101419;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  padding: 9px;
+}
+
+.campaignEconomyRow > div {
+  display: grid;
+  gap: 2px;
+}
+
+.campaignEconomyRow small,
+.campaignEconomyHint,
+.campaignQueueRow {
+  color: #9aa6b5;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.campaignEconomyRow .secondaryButton,
+.campaignEconomySection > .secondaryButton {
+  font-size: 0.67rem;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.campaignQueueRow {
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 5px;
+  margin: 0;
+  padding: 7px 8px;
+}
+
+.campaignReserveList {
+  display: grid;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.campaignReserveList label {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 4px;
+  color: #d9e1e7;
+  display: flex;
+  font-size: 0.7rem;
+  gap: 7px;
+  padding: 6px 7px;
+}
+
+.campaignReserveList .campaignEconomyHint {
+  margin: 4px 0;
+}
+
 .campaignActivationPanel > .campaignPanelHeading > span,
 .campaignSectorActions > span {
   color: #8f9aa8;
