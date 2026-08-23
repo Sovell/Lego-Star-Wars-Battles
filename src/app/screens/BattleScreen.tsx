@@ -118,11 +118,13 @@ export function BattleScreen({
   selectedUnitId,
   selectedWeaponId,
   targetUnitId,
+  readOnlyMap = false,
   onActiveArmyChange,
   onAddLog,
   onArmyJsonChange,
   onArmyConfigChange,
   onBattleChange,
+  onCampaignBattleComplete,
   onInitialBattleChange,
   onGamePhaseChange,
   onImportError,
@@ -163,6 +165,7 @@ export function BattleScreen({
   selectedUnitId: string;
   selectedWeaponId: string;
   targetUnitId: string;
+  readOnlyMap?: boolean;
   onActiveArmyChange: (armyId: string | undefined) => void;
   onAddLog: (message: string) => void;
   onArmyJsonChange: (json: string) => void;
@@ -171,6 +174,7 @@ export function BattleScreen({
     patch: Partial<Pick<Army, "teamId" | "control">>,
   ) => void;
   onBattleChange: (battle: Battle) => void;
+  onCampaignBattleComplete?: (battle: Battle, mission: MissionState) => void;
   onInitialBattleChange: (battle: Battle) => void;
   onGamePhaseChange: (phase: GamePhase) => void;
   onImportError: (error: string) => void;
@@ -227,6 +231,7 @@ export function BattleScreen({
   const [selectedObjectType, setSelectedObjectType] = useState<
     BattlefieldObjectType | "Remove"
   >("DefensePoint");
+  const completedCampaignBattleId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     try {
@@ -311,7 +316,7 @@ export function BattleScreen({
   const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active" && gamePhase === "Playing";
   const preparationActive = gamePhase === "Preparation";
-  const mapEditingLocked = Boolean(scenario.mapPreset);
+  const mapEditingLocked = Boolean(scenario.mapPreset) || readOnlyMap;
   const selectedDeploymentArmySlot = battle.armies.findIndex(
     (army) => army.id === selectedDeploymentArmyId,
   );
@@ -351,6 +356,15 @@ export function BattleScreen({
       setSelectedDeploymentArmyId(battle.armies[0]?.id ?? "");
     }
   }, [battle.armies, selectedDeploymentArmyId]);
+
+  useEffect(() => {
+    if (!onCampaignBattleComplete || gamePhase !== "Playing") return;
+    if (mission.status === "Active" && battle.phase !== "Finished") return;
+    const completionId = `${battle.id}:${battle.phase}:${mission.status}`;
+    if (completedCampaignBattleId.current === completionId) return;
+    completedCampaignBattleId.current = completionId;
+    onCampaignBattleComplete(battle, mission);
+  }, [battle, gamePhase, mission, onCampaignBattleComplete]);
 
   useEffect(() => {
     if (mapEditingLocked && mapMode !== "units") setMapMode("units");

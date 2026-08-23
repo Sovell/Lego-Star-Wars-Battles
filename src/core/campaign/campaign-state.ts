@@ -170,15 +170,22 @@ function createHeroCampaignStates(heroLives: number): HeroCampaignState[] {
 
 export function createStandardCampaignPlayers(
   playerNames: readonly string[],
+  controls: readonly ("Human" | "Bot")[] = playerNames.map((_, index) =>
+    index < playerNames.length / 2 ? "Human" : "Bot"
+  ),
 ): CampaignPlayerSetup[] {
   if (playerNames.length !== 2 && playerNames.length !== 4) {
     throw new Error("Provide exactly 2 or 4 player names.");
+  }
+  if (controls.length !== playerNames.length) {
+    throw new Error("Provide one tactical controller for every campaign player.");
   }
   const perFaction = playerNames.length / 2;
   return playerNames.map((name, index) => ({
     id: `player-${index + 1}`,
     name,
     factionId: index < perFaction ? "Republic" : "Separatists",
+    control: controls[index],
   }));
 }
 

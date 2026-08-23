@@ -280,7 +280,7 @@ function createTacticalArmy(
       playerName: player?.name ?? campaignArmy.name,
       faction: campaignArmy.factionId,
       teamId,
-      control: "Human",
+      control: player?.control ?? "Human",
       units: bindings.map((binding) => createBattleUnit(
         binding.battleUnitId,
         binding.templateId,

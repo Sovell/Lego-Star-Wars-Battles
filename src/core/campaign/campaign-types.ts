@@ -13,6 +13,8 @@ export type CampaignPlayer = {
   id: string;
   name: string;
   factionId: StrategicFaction;
+  /** Missing only in saves created before tactical controller selection was added. */
+  control?: "Human" | "Bot";
   credits: number;
 };
 
@@ -265,7 +267,7 @@ export type CampaignState = {
   winnerFactionId?: StrategicFaction;
 };
 
-export type CampaignPlayerSetup = Pick<CampaignPlayer, "id" | "name" | "factionId">;
+export type CampaignPlayerSetup = Pick<CampaignPlayer, "id" | "name" | "factionId" | "control">;
 
 export type CreateCampaignInput = {
   id: string;

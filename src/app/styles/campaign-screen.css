@@ -89,6 +89,15 @@
   padding: 0 12px;
 }
 
+.campaignSetupCard select {
+  background: #0f1318;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 6px;
+  color: #f4f5f7;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
 .campaignSectionHeading,
 .campaignPanelHeading {
   align-items: center;
@@ -715,6 +724,22 @@
   display: flex;
   justify-content: space-between;
   padding: 16px 20px;
+}
+
+.campaignBattleResume {
+  align-items: center;
+  background: rgba(236, 224, 108, 0.08);
+  border: 1px solid rgba(236, 224, 108, 0.32);
+  border-radius: 10px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.campaignBattleResume > div {
+  display: grid;
+  gap: 4px;
 }
 
 .campaignTurnControls > div {

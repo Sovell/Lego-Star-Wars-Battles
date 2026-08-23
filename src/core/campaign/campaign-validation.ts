@@ -43,6 +43,7 @@ export function assertCampaignState(value: unknown): asserts value is CampaignSt
     nonEmptyString(player.id, `campaign.players[${index}].id`);
     nonEmptyString(player.name, `campaign.players[${index}].name`);
     oneOf(player.factionId, FACTIONS, `campaign.players[${index}].factionId`);
+    if (player.control !== undefined) oneOf(player.control, ["Human", "Bot"] as const, `campaign.players[${index}].control`);
     nonNegativeInteger(player.credits, `campaign.players[${index}].credits`);
     return player;
   });

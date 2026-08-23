@@ -36,6 +36,7 @@ describe("campaign battle bridge", () => {
     expect(first.armies).toHaveLength(2);
     expect(first.armies[0].units).toHaveLength(3);
     expect(first.armies[0].units.some(({ templateId }) => templateId === "yoda")).toBe(true);
+    expect(first.armies.map(({ control }) => control)).toEqual(["Human", "Bot"]);
     expect(first.battle.phase).toBe("Setup");
     expect(first.battle.board.width).toBe(8);
     expect(first.deploymentZones).toHaveLength(2);

@@ -38,15 +38,25 @@ import "../styles/campaign-screen.css";
 type CampaignScreenProps = {
   savedCampaign?: SavedCampaign;
   onCampaignChange: (campaign: SavedCampaign | undefined) => void;
+  onCampaignBattleStart: (campaign: SavedCampaign) => Promise<void>;
+  onCampaignBattleResume: (campaign: SavedCampaign) => Promise<void>;
+  campaignBattleReport?: string;
 };
 
-export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScreenProps) {
+export function CampaignScreen({
+  savedCampaign,
+  onCampaignChange,
+  onCampaignBattleStart,
+  onCampaignBattleResume,
+  campaignBattleReport,
+}: CampaignScreenProps) {
   const { language, text } = useI18n();
   const persistence = useMemo(() => createPersistenceAdapter(), []);
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [campaignName, setCampaignName] = useState(text("Wojna o Zewnętrzne Rubieże", "Outer Rim War"));
   const [playerCount, setPlayerCount] = useState<2 | 4>(2);
   const [playerNames, setPlayerNames] = useState<string[]>(() => defaultCommanderNames(language, 2));
+  const [opponentControl, setOpponentControl] = useState<"Human" | "Bot">("Bot");
   const [seed, setSeed] = useState(() => Math.floor(Date.now() / 1000) % 1_000_000);
   const [selectedPlanetId, setSelectedPlanetId] = useState<string>();
   const [selectedArmyId, setSelectedArmyId] = useState<string>();
@@ -104,7 +114,10 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
         id: `campaign-${crypto.randomUUID()}`,
         name: campaignName.trim(),
         seed,
-        players: createStandardCampaignPlayers(normalizedNames),
+        players: createStandardCampaignPlayers(
+          normalizedNames,
+          normalizedNames.map((_, index) => index < playerCount / 2 ? "Human" : opponentControl),
+        ),
       });
       const saved = createSavedCampaign({ campaign });
       await persistence.saveCampaign(saved);
@@ -142,7 +155,7 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
     }
   }
 
-  async function commitCampaign(campaign: CampaignState, message: string) {
+  async function commitCampaign(campaign: CampaignState, message: string): Promise<SavedCampaign | undefined> {
     const saved = createSavedCampaign({
       campaign,
       battleIds: savedCampaign?.battleIds,
@@ -153,8 +166,10 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
       await persistence.saveCampaign(saved);
       setStatus(message);
       await refreshCampaigns();
+      return saved;
     } catch (error) {
       setStatus(errorMessage(error, text("Zmiana działa w pamięci, ale zapis się nie udał.", "The change is active in memory, but saving failed.")));
+      return undefined;
     }
   }
 
@@ -176,6 +191,8 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
           current.map((value, currentIndex) => currentIndex === index ? name : value)
         )}
         onSeedChange={setSeed}
+        opponentControl={opponentControl}
+        onOpponentControlChange={setOpponentControl}
       />
     );
   }
@@ -203,13 +220,16 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
     }
   }
 
-  function confirmActivationAction() {
+  async function confirmActivationAction() {
     if (!pendingActivationAction) return;
     try {
       const result = applyCampaignActivationAction(campaign, pendingActivationAction);
       setPendingActivationAction(undefined);
       setSelectedArmyId(undefined);
-      void commitCampaign(result.state, activationResultMessage(result.outcome, text));
+      const saved = await commitCampaign(result.state, activationResultMessage(result.outcome, text));
+      if (saved && result.outcome === "BattleRequired") {
+        await onCampaignBattleStart(saved);
+      }
     } catch (error) {
       setStatus(errorMessage(error, text("Nie udało się wykonać aktywacji.", "Could not complete activation.")));
     }
@@ -243,7 +263,7 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
         </button>
       </header>
 
-      {status ? <p className="campaignStatus" role="status">{status}</p> : null}
+      {status || campaignBattleReport ? <p className="campaignStatus" role="status">{campaignBattleReport ?? status}</p> : null}
 
       <section className="campaignPlayerStrip">
         {campaign.players.map((player) => (
@@ -289,10 +309,22 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
             }}
             onActionSelect={setPendingActivationAction}
             onCancel={() => setPendingActivationAction(undefined)}
-            onConfirm={confirmActivationAction}
+          onConfirm={confirmActivationAction}
           />
         </div>
       </section>
+
+      {campaign.phase === "Battle" ? (
+        <section className="campaignBattleResume">
+          <div>
+            <p className="eyebrow">{text("Oczekujący konflikt", "Pending conflict")}</p>
+            <strong>{text("Bitwa kampanijna czeka na rozegranie.", "A campaign battle is ready to play.")}</strong>
+          </div>
+          <button className="primaryButton" onClick={() => void onCampaignBattleResume(savedCampaign)}>
+            {text("Kontynuuj bitwę kampanijną", "Continue campaign battle")}
+          </button>
+        </section>
+      ) : null}
 
       <footer className="campaignTurnControls">
         <div>
@@ -346,6 +378,8 @@ function CampaignLauncher({
   onPlayerCountChange,
   onPlayerNameChange,
   onSeedChange,
+  opponentControl,
+  onOpponentControlChange,
 }: {
   campaignName: string;
   playerCount: 2 | 4;
@@ -360,6 +394,8 @@ function CampaignLauncher({
   onPlayerCountChange: (count: 2 | 4) => void;
   onPlayerNameChange: (index: number, name: string) => void;
   onSeedChange: (seed: number) => void;
+  opponentControl: "Human" | "Bot";
+  onOpponentControlChange: (control: "Human" | "Bot") => void;
 }) {
   const { text } = useI18n();
   return (
@@ -400,6 +436,13 @@ function CampaignLauncher({
           <label>
             {text("Ziarno galaktyki", "Galaxy seed")}
             <input type="number" value={seed} onChange={(event) => onSeedChange(Number(event.target.value))} />
+          </label>
+          <label>
+            {text("Kontrola Separatystów w bitwach", "Separatist tactical control")}
+            <select value={opponentControl} onChange={(event) => onOpponentControlChange(event.target.value as "Human" | "Bot")}>
+              <option value="Bot">{text("AI", "AI")}</option>
+              <option value="Human">{text("Człowiek (hot-seat)", "Human (hot-seat)")}</option>
+            </select>
           </label>
           <button className="primaryButton" onClick={onCreate}>{text("Utwórz kampanię", "Create campaign")}</button>
         </section>

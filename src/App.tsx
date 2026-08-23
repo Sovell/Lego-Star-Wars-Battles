@@ -26,6 +26,11 @@ import { RulesView } from "./app/screens/RulesView";
 import { MainMenu } from "./app/screens/MainMenu";
 import { BattleScreen } from "./app/screens/BattleScreen";
 import { CampaignScreen } from "./app/screens/CampaignScreen";
+import {
+  createActiveCampaignBattle,
+  resolveActiveCampaignBattle,
+  type ActiveCampaignBattle,
+} from "./app/campaign/campaign-battle-session";
 import type { GamePhase } from "./app/types/game-phase";
 import {
   areArmiesEnemies,
@@ -51,7 +56,7 @@ import {
 } from "./core/scenario/scenario-army-presets";
 import type { MissionState, ScenarioDefinition } from "./core/scenario/scenario-types";
 import { createPersistenceAdapter } from "./core/persistence/create-persistence-adapter";
-import type { SavedBattle, SavedCampaign } from "./core/persistence/save-types";
+import { createSavedBattle, type SavedBattle, type SavedCampaign } from "./core/persistence/save-types";
 import { createScenarioStartSave } from "./app/scenario-start-save";
 import {
   clearActiveSessionRecovery,
@@ -102,9 +107,12 @@ export function App() {
   const { language, text } = useI18n();
   const persistence = useMemo(() => createPersistenceAdapter(), []);
   const scenarioStartInProgress = useRef(false);
+  const campaignResolutionInProgress = useRef<string | undefined>(undefined);
   const [recoveredSession] = useState(() => loadActiveSessionRecovery());
   const [view, setView] = useState<AppView>(() => recoveredSession?.view ?? "home");
   const [savedCampaign, setSavedCampaign] = useState<SavedCampaign>();
+  const [activeCampaignBattle, setActiveCampaignBattle] = useState<ActiveCampaignBattle>();
+  const [campaignBattleReport, setCampaignBattleReport] = useState<string>();
   const [battle, setBattle] = useState<Battle>(() =>
     recoveredSession?.battle ?? createNewGameBattle()
   );
@@ -148,7 +156,7 @@ export function App() {
   const [gamePhase, setGamePhase] = useState<GamePhase>(
     () => recoveredSession?.gamePhase ?? "Preparation",
   );
-  const baseScenario = scenarios.find((scenario) => scenario.id === mission.scenarioId)
+  const baseScenario = activeCampaignBattle?.battlePackage.scenario ?? scenarios.find((scenario) => scenario.id === mission.scenarioId)
     ?? survivalTestScenario;
   const configuredDeploymentZones = gamePhase === "Preparation"
     ? scenarioDraft.deploymentZones
@@ -500,6 +508,84 @@ export function App() {
     });
   }
 
+  async function openCampaignBattle(saved: SavedCampaign) {
+    try {
+      const active = createActiveCampaignBattle(saved);
+      const persistedBattle = await persistence.loadBattle(active.battleId);
+      const loadedBattle = persistedBattle?.battle ?? active.battlePackage.battle;
+      const loadedMission = persistedBattle?.mission ?? createMissionState(
+        active.battlePackage.scenario,
+        loadedBattle.armies,
+        active.battlePackage.request.battleDefenderArmyId,
+      );
+      const initialBattle = persistedBattle?.initialBattle ?? createInitialBattleSnapshot(loadedBattle);
+      setActiveCampaignBattle(active);
+      setScenarioDraft(createScenarioDraft(active.battlePackage.scenario.id, {
+        armies: structuredClone(loadedBattle.armies),
+        board: structuredClone(loadedBattle.board),
+        defenderArmyId: active.battlePackage.request.battleDefenderArmyId,
+        deploymentZones: structuredClone(active.battlePackage.deploymentZones),
+        scheduledEvents: structuredClone(active.battlePackage.scenario.scheduledEvents ?? []),
+        mapGeneration: {
+          themeId: active.battlePackage.request.themeId,
+          seed: active.battlePackage.request.scenarioSeed,
+        },
+      }));
+      setBattle(structuredClone(loadedBattle));
+      setBattleStartSnapshot(structuredClone(initialBattle));
+      setMission(loadedMission);
+      setLogs(persistedBattle?.logs ?? [createLog(1, text(
+        "Utworzono bitwę kampanijną.",
+        "Campaign battle created.",
+      ))]);
+      setActiveArmyId(loadedBattle.activeActivation?.armyId);
+      setSelectedUnitId("");
+      setTargetUnitId("");
+      setSelectedWeaponId("");
+      setGamePhase(persistedBattle ? "Playing" : "Preparation");
+      setView(persistedBattle ? "battle" : "setup");
+    } catch (error) {
+      setCampaignBattleReport(error instanceof Error ? error.message : text(
+        "Nie udało się przygotować bitwy kampanijnej.",
+        "Could not prepare the campaign battle.",
+      ));
+    }
+  }
+
+  async function handleCampaignBattleCompleted(finalBattle: Battle, finalMission: MissionState) {
+    const active = activeCampaignBattle;
+    if (!active || !savedCampaign || finalBattle.id !== active.battleId) return;
+    if (campaignResolutionInProgress.current === active.battleId) return;
+    campaignResolutionInProgress.current = active.battleId;
+    try {
+      const resolved = resolveActiveCampaignBattle(savedCampaign, active, finalBattle, finalMission);
+      const finalSave = createSavedBattle({
+        id: active.battleId,
+        name: `Campaign battle — ${active.battlePackage.request.planetId}`,
+        battle: structuredClone(finalBattle),
+        initialBattle: battleStartSnapshot ? structuredClone(battleStartSnapshot) : undefined,
+        logs: structuredClone(logs),
+        mission: structuredClone(finalMission),
+        campaignId: savedCampaign.id,
+        scenarioId: active.battlePackage.scenario.id,
+      });
+      await persistence.saveBattle(finalSave);
+      await persistence.saveCampaign(resolved.savedCampaign);
+      setSavedCampaign(resolved.savedCampaign);
+      setCampaignBattleReport(formatCampaignBattleReport(resolved, text));
+      setActiveCampaignBattle(undefined);
+      setView("campaign");
+    } catch (error) {
+      setCampaignBattleReport(error instanceof Error ? error.message : text(
+        "Nie udało się rozliczyć bitwy kampanijnej.",
+        "Could not resolve the campaign battle.",
+      ));
+      setView("campaign");
+    } finally {
+      campaignResolutionInProgress.current = undefined;
+    }
+  }
+
   async function handleStartScenario() {
     if (
       scenarioDraft.armies.length < 2 ||
@@ -522,7 +608,10 @@ export function App() {
     scenarioStartInProgress.current = true;
 
     try {
-      const preparedBattle = startBattleFromDraft(scenarioDraft, activeScenario);
+      const draftedBattle = startBattleFromDraft(scenarioDraft, activeScenario);
+      const preparedBattle = activeCampaignBattle
+        ? { ...draftedBattle, id: activeCampaignBattle.battleId }
+        : draftedBattle;
       const initialBattle = structuredClone(preparedBattle);
       const preparedMission = {
         ...createMissionState(
@@ -561,14 +650,25 @@ export function App() {
       ];
 
       try {
-        await persistence.saveBattle(createScenarioStartSave({
-          battle: nextBattle,
-          initialBattle,
-          logs: nextLogs,
-          mission: nextMission,
-          scenarioName: localizedScenarioName,
-          saveNamePrefix: text("Początek", "Start"),
-        }));
+        await persistence.saveBattle(activeCampaignBattle
+          ? createSavedBattle({
+              id: activeCampaignBattle.battleId,
+              name: `Campaign battle — ${activeCampaignBattle.battlePackage.request.planetId}`,
+              battle: nextBattle,
+              initialBattle,
+              logs: nextLogs,
+              mission: nextMission,
+              campaignId: activeCampaignBattle.campaignId,
+              scenarioId: activeScenario.id,
+            })
+          : createScenarioStartSave({
+              battle: nextBattle,
+              initialBattle,
+              logs: nextLogs,
+              mission: nextMission,
+              scenarioName: localizedScenarioName,
+              saveNamePrefix: text("Początek", "Start"),
+            }));
       } catch (error) {
         const detail = error instanceof Error ? ` ${error.message}` : "";
         nextLogs = [
@@ -865,11 +965,13 @@ export function App() {
           selectedUnitId={selectedUnitId}
           selectedWeaponId={selectedWeaponId}
           targetUnitId={targetUnitId}
+          readOnlyMap={Boolean(activeCampaignBattle)}
           onActiveArmyChange={setActiveArmyId}
           onAddLog={addLog}
           onArmyJsonChange={setArmyJson}
           onArmyConfigChange={handleArmyConfigChange}
           onBattleChange={setBattle}
+          onCampaignBattleComplete={handleCampaignBattleCompleted}
           onInitialBattleChange={setBattleStartSnapshot}
           onGamePhaseChange={setGamePhase}
           onImportError={setImportError}
@@ -909,6 +1011,9 @@ export function App() {
         <CampaignScreen
           savedCampaign={savedCampaign}
           onCampaignChange={setSavedCampaign}
+          onCampaignBattleStart={openCampaignBattle}
+          onCampaignBattleResume={openCampaignBattle}
+          campaignBattleReport={campaignBattleReport}
         />
       ) : null}
 
@@ -1348,4 +1453,28 @@ function formatDuplicateHeroError(
   return language === "pl"
     ? `Nie można powielać bohaterów w jednej bitwie. Usuń dodatkowe kopie: ${names}.`
     : `Heroes cannot be duplicated in one battle. Remove extra copies of: ${names}.`;
+}
+
+function formatCampaignBattleReport(
+  result: ReturnType<typeof resolveActiveCampaignBattle>,
+  text: (pl: string, en: string) => string,
+): string {
+  const resolution = result.resolution;
+  const losses = resolution.outcome.destroyedCampaignUnitIds.length;
+  const heroesLost = resolution.heroesLostPermanently.length;
+  const heroesReturning = resolution.heroesAwaitingReturn.length;
+  const retreats = resolution.retreatedArmyIds.length;
+  const eliminated = resolution.eliminatedArmyIds.length;
+  const strategicResult = resolution.capturedSector
+    ? text("Sektor zdobyty.", "Sector captured.")
+    : text("Sektor obroniony.", "Sector defended.");
+  const campaignResult = resolution.state.phase === "Finished"
+    ? text(` Kampania zakończona: zwycięża ${result.winnerFactionId}.`, ` Campaign finished: ${result.winnerFactionId} wins.`)
+    : resolution.state.phase === "Resolution"
+      ? text(" Wszystkie aktywacje wykonane — można zakończyć turę.", " All activations are complete — the turn can end.")
+      : text(" Inicjatywa wraca na mapę kampanii.", " Initiative returns to the campaign map.");
+  return text(
+    `Wynik bitwy: ${result.winnerFactionId}. ${strategicResult} Straty: ${losses} jednostek, ${heroesReturning} bohaterów niedostępnych, ${heroesLost} bohaterów utraconych na stałe, odwroty: ${retreats}, eliminacje armii: ${eliminated}.${campaignResult}`,
+    `Battle result: ${result.winnerFactionId}. ${strategicResult} Losses: ${losses} units, ${heroesReturning} heroes unavailable, ${heroesLost} heroes permanently lost, retreats: ${retreats}, armies eliminated: ${eliminated}.${campaignResult}`,
+  );
 }

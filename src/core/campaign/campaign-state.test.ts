@@ -20,6 +20,7 @@ describe("campaign core", () => {
       "Republic",
       "Separatists",
     ]);
+    expect(campaign.players.map(({ control }) => control)).toEqual(["Human", "Bot"]);
     expect(campaign.planets).toHaveLength(9);
     expect(campaign.planets.every(({ sectors }) => sectors.length === 3)).toBe(true);
     expect(campaign.armies).toHaveLength(2);
@@ -98,5 +99,17 @@ describe("campaign core", () => {
         { id: "r2", name: "R2", factionId: "Republic" },
       ],
     })).toThrow(/same number/);
+  });
+
+  it("allows a hot-seat campaign to keep both tactical commanders human", () => {
+    const players = createStandardCampaignPlayers(
+      ["Rex", "Grievous"],
+      ["Human", "Human"],
+    );
+    expect(createCampaignState({ id: "hot-seat", name: "Hot seat", seed: 3, players }).players)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: "player-1", control: "Human" }),
+        expect.objectContaining({ id: "player-2", control: "Human" }),
+      ]));
   });
 });
