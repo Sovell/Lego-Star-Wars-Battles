@@ -31,6 +31,7 @@ import {
   type SavedCampaign,
 } from "../../core/persistence/save-types";
 import { useI18n } from "../../i18n";
+import { CampaignLauncher } from "../campaign/CampaignLauncher";
 import {
   buildCampaignMapNodes,
   getCampaignOverview,
@@ -422,7 +423,7 @@ export function CampaignScreen({
   );
 }
 
-function CampaignLauncher({
+function CampaignLauncherLegacy({
   campaignName,
   playerCount,
   playerNames,

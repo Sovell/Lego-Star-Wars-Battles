@@ -72,6 +72,14 @@ Typ sektora wyznacza domyślny archetyp bitwy:
 - podsumowanie początku i końca tury, prognoza dochodu oraz koszt i termin ukończenia każdej operacji gospodarczej na ekranie kampanii;
 - rozdzielone panele człowieka i strategicznego AI oraz potwierdzenia nieodwracalnych wydatków.
 
+## Stabilizacja interfejsu i testów
+
+- obsługa sesji `kampania → bitwa taktyczna → wynik → kampania` działa w osobnym hooku `useCampaignBattleSession`, poza powłoką `App`;
+- ekran startowy kampanii jest wydzielonym komponentem `CampaignLauncher`, a ekran sesji pozostaje złożony z niezależnych paneli mapy, gospodarki, aktywacji, planety i historii;
+- ciężki `BattleScreen` (wraz z warstwą PixiJS) jest ładowany dynamicznie dopiero po przejściu do przygotowania lub bitwy;
+- test integracyjny obejmuje dochód, aktywację, bitwę, rozliczenie, następną turę oraz zwycięstwo przez przejęcie kwatery głównej;
+- ręczny smoke test potwierdził utworzenie kampanii 1v1 i 2v2 z ludzkimi dowódcami Republiki i strategicznym AI Separatystów.
+
 ## Docelowa pętla rundy strategicznej
 
 1. Dochód, ukończenie rekrutacji i budów oraz powrót dostępnych bohaterów.

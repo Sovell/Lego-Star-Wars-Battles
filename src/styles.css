@@ -53,6 +53,14 @@ button:disabled {
   position: relative;
 }
 
+.battleLoadingState {
+  align-items: center;
+  color: #dce8f2;
+  display: grid;
+  min-height: calc(100vh - 120px);
+  place-items: center;
+}
+
 .mainMenu > .languageSwitcher {
   position: absolute;
   right: 0;
