@@ -1,4 +1,5 @@
 import { galacticHyperlanes } from "../galactic-conquest/galaxy";
+import { appendCampaignEvent } from "./campaign-history";
 import type { StrategicFaction } from "../galactic-conquest/galaxy-model";
 import {
   finishCampaignArmyActivation,
@@ -213,7 +214,13 @@ function settleSectorAction(
       attacker.id,
     );
     return {
-      state: capturedState,
+      state: appendCampaignEvent(capturedState, {
+        type: "SectorCaptured",
+        playerId: attacker.ownerPlayerId,
+        armyId: attacker.id,
+        planetId: sector.planetId,
+        sectorId: sector.sectorId,
+      }),
       action: {
         type: "CapturedWithoutBattle",
         planetId: sector.planetId,
@@ -240,12 +247,18 @@ function settleSectorAction(
     ...(resumeState.activePlayerId ? { resumePlayerId: resumeState.activePlayerId } : {}),
   };
   return {
-    state: {
-      ...resumeState,
-      phase: "Battle",
-      activePlayerId: undefined,
-      pendingConflict: conflict,
-    },
+      state: appendCampaignEvent({
+        ...resumeState,
+        phase: "Battle",
+        activePlayerId: undefined,
+        pendingConflict: conflict,
+      }, {
+        type: "BattleStarted",
+        playerId: attacker.ownerPlayerId,
+        armyId: attacker.id,
+        planetId: sector.planetId,
+        sectorId: sector.sectorId,
+      }),
     action: {
       type: "BattleRequired",
       planetId: sector.planetId,

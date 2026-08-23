@@ -67,6 +67,10 @@ Typ sektora wyznacza domyślny archetyp bitwy:
 - pełne odtworzenie HP i suppression ocalałych przed następnym starciem;
 - utrata jednego z trzech żyć bohatera, jedna pełna tura niedostępności i permanentna eliminacja przy 0 życia;
 - zastosowanie wyniku bitwy do kontroli sektora, przyczółka, odwrotu i zwycięstwa w kampanii.
+- trwały, ograniczony do ostatnich 160 wpisów dziennik kampanii zapisujący dochody, gospodarkę, aktywacje, ruch, przejęcia sektorów i wyniki bitew wraz ze stratami bohaterów;
+- historia działa również dla istniejących zapisów bez dziennika — kolejne działania po prostu tworzą nową historię;
+- podsumowanie początku i końca tury, prognoza dochodu oraz koszt i termin ukończenia każdej operacji gospodarczej na ekranie kampanii;
+- rozdzielone panele człowieka i strategicznego AI oraz potwierdzenia nieodwracalnych wydatków.
 
 ## Docelowa pętla rundy strategicznej
 

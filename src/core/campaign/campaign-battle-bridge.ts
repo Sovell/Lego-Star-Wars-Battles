@@ -4,6 +4,7 @@ import { createBattle } from "../battle-state";
 import { generateMap } from "../map-generation";
 import type { ScenarioDefinition, ScenarioVictoryCondition } from "../scenario/scenario-types";
 import { resolveCampaignConflict } from "./campaign-sector-control";
+import { appendCampaignEvent } from "./campaign-history";
 import type {
   CampaignArmy,
   CampaignBattleOutcome,
@@ -126,7 +127,16 @@ export function applyCampaignBattleOutcome(
   ])];
   return {
     ...conflictResolution,
-    state: strategicHeroLoss.state,
+    state: appendCampaignEvent(strategicHeroLoss.state, {
+      type: "BattleResolved",
+      playerId: conflict.attackerPlayerId,
+      armyId: conflict.attackerArmyId,
+      planetId: conflict.planetId,
+      sectorId: conflict.sectorId,
+      winnerFactionId: outcome.winnerFactionId,
+      destroyedUnitCount: outcome.destroyedCampaignUnitIds.length,
+      heroIds: outcome.destroyedHeroIds,
+    }),
     eliminatedArmyIds: allEliminatedArmyIds,
     outcome,
     heroesLostPermanently: [...new Set([

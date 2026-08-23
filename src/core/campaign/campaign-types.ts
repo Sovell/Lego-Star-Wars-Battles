@@ -188,6 +188,38 @@ export type CampaignIncomeBreakdown = {
   total: number;
 };
 
+export type CampaignEventType =
+  | "CampaignStarted"
+  | "TurnStarted"
+  | "TurnEnded"
+  | "IncomeCollected"
+  | "BaseConstructionQueued"
+  | "BaseUpgradeQueued"
+  | "RecruitmentQueued"
+  | "ReservesDeployed"
+  | "ArmyMoved"
+  | "ArmyActivationFinished"
+  | "SectorCaptured"
+  | "BattleStarted"
+  | "BattleResolved";
+
+export type CampaignEvent = {
+  id: string;
+  turn: number;
+  phase: CampaignPhase;
+  type: CampaignEventType;
+  playerId?: string;
+  armyId?: string;
+  planetId?: string;
+  sectorId?: string;
+  templateId?: string;
+  amount?: number;
+  completesOnTurn?: number;
+  winnerFactionId?: StrategicFaction;
+  destroyedUnitCount?: number;
+  heroIds?: string[];
+};
+
 export type CampaignBattleUnitBinding = {
   battleUnitId: string;
   battleArmyId: string;
@@ -263,6 +295,8 @@ export type CampaignState = {
   heroes: HeroCampaignState[];
   rules: CampaignRules;
   incomeCollectedForTurn: number;
+  /** Optional only for campaign saves created before the event journal existed. */
+  history?: CampaignEvent[];
   pendingConflict?: CampaignConflict;
   winnerFactionId?: StrategicFaction;
 };

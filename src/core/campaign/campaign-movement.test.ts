@@ -147,6 +147,10 @@ describe("campaign hyperlane movement", () => {
     state = startNextCampaignTurn(state);
     expect(state.turn).toBe(2);
     expect(state.phase).toBe("Income");
+    expect(state.history?.slice(-2).map(({ type }) => type)).toEqual([
+      "TurnEnded",
+      "TurnStarted",
+    ]);
     expect(state.armies.every((army) =>
       !army.activatedThisTurn && army.movementPointsRemaining === 3
     )).toBe(true);

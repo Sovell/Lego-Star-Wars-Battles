@@ -106,6 +106,12 @@ describe("campaign battle bridge", () => {
       availableFromTurn: 3,
       assignedArmyId: undefined,
     });
+    expect(resolution.state.history?.at(-1)).toMatchObject({
+      type: "BattleResolved",
+      winnerFactionId: "Republic",
+      destroyedUnitCount: 1,
+      heroIds: ["yoda"],
+    });
   });
 
   it("keeps damaged survivors in the campaign and restores full HP next battle", () => {

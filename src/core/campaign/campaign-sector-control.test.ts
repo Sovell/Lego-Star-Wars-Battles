@@ -32,6 +32,11 @@ describe("campaign sector control", () => {
       fortificationLevel: 0,
     });
     expect(getCampaignPlanetController(state, "felucia")).toBe("Republic");
+    expect(state.history?.at(-1)).toMatchObject({
+      type: "SectorCaptured",
+      planetId: "felucia",
+      sectorId: neutralSector.sectorId,
+    });
   });
 
   it("creates a conflict for a defended sector and retreats the defeated defender", () => {
@@ -58,6 +63,11 @@ describe("campaign sector control", () => {
     expect(attack.state.pendingConflict).toMatchObject({
       kind: "SectorAssault",
       defenderArmyId: "player-2-army-1",
+    });
+    expect(attack.state.history?.at(-1)).toMatchObject({
+      type: "BattleStarted",
+      planetId: "felucia",
+      sectorId: target.sectorId,
     });
 
     const resolution = resolveCampaignConflict(attack.state, {

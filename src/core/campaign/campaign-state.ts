@@ -1,5 +1,6 @@
 import { unitTemplates } from "../../data";
 import { isHeroTemplate } from "../army-roster";
+import { appendCampaignEvent } from "./campaign-history";
 import { createGalacticConquest, getGalacticPlanet } from "../galactic-conquest/galaxy";
 import type { GalacticPlanetState, StrategicFaction } from "../galactic-conquest/galaxy-model";
 import type {
@@ -59,7 +60,7 @@ export function createCampaignState(input: CreateCampaignInput): CampaignState {
   });
   const armies = createStartingArmies(players, planets);
 
-  return {
+  return appendCampaignEvent({
     id: input.id,
     name: input.name,
     seed: input.seed,
@@ -76,7 +77,7 @@ export function createCampaignState(input: CreateCampaignInput): CampaignState {
     heroes: createHeroCampaignStates(DEFAULT_CAMPAIGN_RULES.heroLives),
     rules: { ...DEFAULT_CAMPAIGN_RULES },
     incomeCollectedForTurn: 0,
-  };
+  }, { type: "CampaignStarted" });
 }
 
 function validateCampaignInput(input: CreateCampaignInput): void {

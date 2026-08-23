@@ -7,6 +7,7 @@ import {
   createStandardCampaignPlayers,
   deployCampaignReserves,
   getCampaignPlanetController,
+  getCampaignIncomeBreakdown,
   processCampaignEconomy,
   queueBaseConstruction,
   queueBaseUpgrade,
@@ -16,6 +17,7 @@ import {
   startNextCampaignTurn,
   type CampaignPhase,
   type CampaignBotAction,
+  type CampaignEvent,
   type CampaignRoute,
   type CampaignState,
 } from "../../core/campaign";
@@ -321,6 +323,7 @@ export function CampaignScreen({
             <span>{player.factionId === "Republic" ? text("Republika", "Republic") : text("Separatyści", "Separatists")}</span>
             <strong>{player.name}</strong>
             <small>{player.credits} {text("kredytów", "credits")}</small>
+            <small>{player.control === "Bot" ? text("AI strategiczne", "Strategic AI") : text("Gracz", "Human")}</small>
           </article>
         ))}
       </section>
@@ -365,6 +368,7 @@ export function CampaignScreen({
             onCancel={() => setPendingActivationAction(undefined)}
           onConfirm={confirmActivationAction}
           />
+          <CampaignHistoryPanel campaign={campaign} />
         </div>
       </section>
 
@@ -665,6 +669,7 @@ function CampaignEconomyPanel({
   if (!details.economyOpen || !details.player) return null;
 
   const player = details.player;
+  const incomeForecast = getCampaignIncomeBreakdown(campaign, player.id);
   const isBotPlayer = player.control === "Bot";
   if (isBotPlayer) {
     return (
@@ -703,6 +708,7 @@ function CampaignEconomyPanel({
         </div>
         <strong>{player.credits} CR</strong>
       </div>
+      <p className="campaignEconomyHint">{text(`Prognoza dochodu: ${incomeForecast.total} CR/turę.`, `Income forecast: ${incomeForecast.total} CR/turn.`)}</p>
 
       <label className="campaignEconomySelect">
         {text("Dowódca", "Commander")}
@@ -731,7 +737,7 @@ function CampaignEconomyPanel({
               {!base ? <button
                 className="secondaryButton"
                 disabled={Boolean(construction) || player.credits < 20}
-                onClick={() => onAction(
+                onClick={() => confirmCampaignAction(text("Wydać 20 CR na budowę bazy?", "Spend 20 CR to build this base?")) && onAction(
                   (state) => queueBaseConstruction(state, player.id, planet.planetId),
                   text(`Zlecono budowę bazy na ${planetName}.`, `Base construction ordered on ${planetName}.`),
                 )}
@@ -739,7 +745,7 @@ function CampaignEconomyPanel({
               {base && base.level < 3 ? <button
                 className="secondaryButton"
                 disabled={Boolean(construction) || player.credits < (upgradeCost ?? 0)}
-                onClick={() => onAction(
+                onClick={() => confirmCampaignAction(text(`Wydać ${upgradeCost} CR na ulepszenie bazy?`, `Spend ${upgradeCost} CR to upgrade this base?`)) && onAction(
                   (state) => queueBaseUpgrade(state, player.id, base.id),
                   text(`Zlecono ulepszenie bazy na ${planetName}.`, `Base upgrade ordered on ${planetName}.`),
                 )}
@@ -752,8 +758,8 @@ function CampaignEconomyPanel({
       <section className="campaignEconomySection">
         <h4>{text("Kolejki", "Queues")}</h4>
         {details.constructionQueue.length + details.recruitmentQueue.length === 0 ? <p className="campaignEconomyHint">{text("Brak aktywnych zleceń.", "No active orders.")}</p> : null}
-        {details.constructionQueue.map((order) => <p className="campaignQueueRow" key={order.id}>{order.kind === "BuildBase" ? text("Budowa bazy", "Base construction") : text("Ulepszenie bazy", "Base upgrade")} · {order.planetId} · {text("tura", "turn")} {order.completesOnTurn}</p>)}
-        {details.recruitmentQueue.map((order) => <p className="campaignQueueRow" key={order.id}>{unitTemplates.find(({ id }) => id === order.templateId)?.name ?? order.templateId} ×{order.quantity} · {order.planetId} · {text("tura", "turn")} {order.completesOnTurn}</p>)}
+        {details.constructionQueue.map((order) => <p className="campaignQueueRow" key={order.id}>{order.kind === "BuildBase" ? text("Budowa bazy", "Base construction") : text("Ulepszenie bazy", "Base upgrade")} · {order.cost} CR · {order.planetId} · {text("tura", "turn")} {order.completesOnTurn}</p>)}
+        {details.recruitmentQueue.map((order) => <p className="campaignQueueRow" key={order.id}>{unitTemplates.find(({ id }) => id === order.templateId)?.name ?? order.templateId} ×{order.quantity} · {order.cost} CR · {order.planetId} · {text("tura", "turn")} {order.completesOnTurn}</p>)}
       </section>
 
       <section className="campaignEconomySection">
@@ -776,7 +782,7 @@ function CampaignEconomyPanel({
         <button
           className="secondaryButton"
           disabled={!canRecruit || !recruitBase || !recruitTemplate}
-          onClick={() => recruitBase && recruitTemplate && onAction(
+          onClick={() => recruitBase && recruitTemplate && confirmCampaignAction(text(`Wydać ${recruitTemplate.cost} CR na rekrutację?`, `Spend ${recruitTemplate.cost} CR on recruitment?`)) && onAction(
             (state) => queueCampaignRecruitment(state, player.id, recruitBase.id, recruitTemplate.templateId),
             text(`Dodano ${recruitTemplate.name} do kolejki rekrutacji.`, `${recruitTemplate.name} added to the recruitment queue.`),
           )}
@@ -815,7 +821,7 @@ function CampaignEconomyPanel({
           <button
             className="secondaryButton"
             disabled={!deployment.canDeploy}
-            onClick={() => onAction(
+            onClick={() => confirmCampaignAction(text("Przydzielić wybrane rezerwy do armii?", "Assign selected reserves to an army?")) && onAction(
               (state) => deployCampaignReserves(state, {
                 playerId: player.id,
                 planetId: deployPlanetId!,
@@ -829,6 +835,29 @@ function CampaignEconomyPanel({
           >{deployArmyId ? text("Wzmocnij armię", "Reinforce army") : text("Utwórz armię", "Create army")}</button>
         </> : null}
       </section>
+    </aside>
+  );
+}
+
+function CampaignHistoryPanel({ campaign }: { campaign: CampaignState }) {
+  const { text } = useI18n();
+  const events = [...(campaign.history ?? [])].reverse().slice(0, 12);
+  return (
+    <aside className="campaignHistoryPanel">
+      <div className="campaignPanelHeading">
+        <div>
+          <p className="eyebrow">{text("Dziennik kampanii", "Campaign history")}</p>
+          <h3>{text("Ostatnie wydarzenia", "Recent events")}</h3>
+        </div>
+        <span>{campaign.history?.length ?? 0}</span>
+      </div>
+      {events.length === 0 ? <p className="campaignEconomyHint">{text("Brak zapisanych wydarzeń.", "No events recorded yet.")}</p> : null}
+      <ol className="campaignHistoryList">
+        {events.map((event) => <li key={event.id}>
+          <small>{text("Tura", "Turn")} {event.turn}</small>
+          <span>{campaignEventLabel(event, text)}</span>
+        </li>)}
+      </ol>
     </aside>
   );
 }
@@ -1177,6 +1206,33 @@ function campaignBotActionMessage(
   if (action.kind === "Invasion") return text(`AI rozpoczyna inwazję na ${planetName(action.planetId)}.`, `AI invades ${planetName(action.planetId)}.`);
   if (action.kind === "Move") return text(`AI przemieszcza armię do ${planetName(action.planetId)}.`, `AI moves an army to ${planetName(action.planetId)}.`);
   return text("AI kończy aktywację armii.", "AI finishes an army activation.");
+}
+
+function campaignEventLabel(
+  event: CampaignEvent,
+  text: (pl: string, en: string) => string,
+): string {
+  const player = event.playerId ? event.playerId.replace("player-", "P") : "";
+  if (event.type === "CampaignStarted") return text("Rozpoczęto kampanię.", "Campaign started.");
+  if (event.type === "TurnStarted") return text("Rozpoczęto nową turę.", "A new turn started.");
+  if (event.type === "TurnEnded") return text("Podsumowanie tury: wszystkie aktywacje zakończone.", "Turn summary: all activations completed.");
+  if (event.type === "IncomeCollected") return text(`${player} otrzymuje ${event.amount ?? 0} CR dochodu.`, `${player} receives ${event.amount ?? 0} CR income.`);
+  if (event.type === "BaseConstructionQueued") return text(`Zlecono budowę bazy na ${planetName(event.planetId ?? "")}; ukończenie: tura ${event.completesOnTurn}.`, `Base construction ordered on ${planetName(event.planetId ?? "")}; completes turn ${event.completesOnTurn}.`);
+  if (event.type === "BaseUpgradeQueued") return text(`Zlecono ulepszenie bazy na ${planetName(event.planetId ?? "")}; ukończenie: tura ${event.completesOnTurn}.`, `Base upgrade ordered on ${planetName(event.planetId ?? "")}; completes turn ${event.completesOnTurn}.`);
+  if (event.type === "RecruitmentQueued") return text(`Zlecono rekrutację: ${unitName(event.templateId ?? "")} (${event.amount ?? 0} CR), tura ${event.completesOnTurn}.`, `Recruitment ordered: ${unitName(event.templateId ?? "")} (${event.amount ?? 0} CR), turn ${event.completesOnTurn}.`);
+  if (event.type === "ReservesDeployed") return text(`Przydzielono ${event.amount ?? 0} rezerw do armii.`, `${event.amount ?? 0} reserves assigned to an army.`);
+  if (event.type === "ArmyMoved") return text(`Armia przemieściła się na ${planetName(event.planetId ?? "")} (${event.amount ?? 0} MP).`, `An army moved to ${planetName(event.planetId ?? "")} (${event.amount ?? 0} MP).`);
+  if (event.type === "ArmyActivationFinished") return text("Armia zakończyła aktywację.", "An army finished activation.");
+  if (event.type === "SectorCaptured") return text(`Zdobyto sektor na ${planetName(event.planetId ?? "")}.`, `A sector was captured on ${planetName(event.planetId ?? "")}.`);
+  if (event.type === "BattleStarted") return text(`Rozpoczęto konflikt na ${planetName(event.planetId ?? "")}.`, `A conflict began on ${planetName(event.planetId ?? "")}.`);
+  const heroes = event.heroIds?.length
+    ? text(` Bohaterowie: ${event.heroIds.map(unitName).join(", ")}.`, ` Heroes: ${event.heroIds.map(unitName).join(", ")}.`)
+    : "";
+  return text(`Bitwa rozstrzygnięta: ${localizeController(event.winnerFactionId ?? "Neutral", text)} zwycięża; straty: ${event.destroyedUnitCount ?? 0}.${heroes}`, `Battle resolved: ${localizeController(event.winnerFactionId ?? "Neutral", text)} wins; losses: ${event.destroyedUnitCount ?? 0}.${heroes}`);
+}
+
+function confirmCampaignAction(message: string): boolean {
+  return typeof window === "undefined" || window.confirm(message);
 }
 
 function localizeEncounter(

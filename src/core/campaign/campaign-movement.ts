@@ -1,4 +1,5 @@
 import { galacticHyperlanes } from "../galactic-conquest/galaxy";
+import { appendCampaignEvent } from "./campaign-history";
 import type { HyperlaneDefinition, StrategicFaction } from "../galactic-conquest/galaxy-model";
 import type {
   CampaignArmy,
@@ -110,7 +111,16 @@ export function moveCampaignArmy(
         }
       : candidate),
   };
-  const nextState = finishCampaignArmyActivation(movedState, armyId, false);
+  const nextState = appendCampaignEvent(
+    finishCampaignArmyActivation(movedState, armyId, false, false),
+    {
+      type: "ArmyMoved",
+      playerId: army.ownerPlayerId,
+      armyId,
+      planetId: destinationPlanetId,
+      amount: route.movementCost,
+    },
+  );
   return {
     state: nextState,
     movement: {
@@ -126,6 +136,7 @@ export function finishCampaignArmyActivation(
   state: CampaignState,
   armyId: string,
   spendRemainingMovement = true,
+  recordEvent = true,
 ): CampaignState {
   const army = requireActivatableArmy(state, armyId);
   const activatedState: CampaignState = {
@@ -139,16 +150,22 @@ export function finishCampaignArmyActivation(
       : candidate),
   };
   const activePlayerId = findNextEligiblePlayer(activatedState, army.ownerPlayerId);
-  return activePlayerId
+  const nextState: CampaignState = activePlayerId
     ? { ...activatedState, activePlayerId }
     : { ...activatedState, phase: "Resolution", activePlayerId: undefined };
+  return recordEvent ? appendCampaignEvent(nextState, {
+    type: "ArmyActivationFinished",
+    playerId: army.ownerPlayerId,
+    armyId,
+    planetId: army.planetId,
+  }) : nextState;
 }
 
 export function startNextCampaignTurn(state: CampaignState): CampaignState {
   if (state.phase !== "Resolution") {
     throw new Error(`Cannot start the next campaign turn during ${state.phase}.`);
   }
-  return {
+  const nextState: CampaignState = {
     ...state,
     turn: state.turn + 1,
     phase: "Income",
@@ -159,6 +176,10 @@ export function startNextCampaignTurn(state: CampaignState): CampaignState {
       movementPointsRemaining: state.rules.movementPointsPerActivation,
     })),
   };
+  return appendCampaignEvent(
+    appendCampaignEvent(nextState, { type: "TurnEnded", turn: state.turn, phase: "Resolution" }),
+    { type: "TurnStarted", turn: state.turn + 1, phase: "Income" },
+  );
 }
 
 function requireActivatableArmy(state: CampaignState, armyId: string): CampaignArmy {

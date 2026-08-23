@@ -2,6 +2,7 @@ import { unitTemplates } from "../../data";
 import type { UnitTemplate } from "../../types";
 import { isHeroTemplate } from "../army-roster";
 import { getCampaignPlanetController } from "./campaign-sector-control";
+import { appendCampaignEvent } from "./campaign-history";
 import type {
   CampaignArmy,
   CampaignBaseLevel,
@@ -86,7 +87,12 @@ export function processCampaignEconomy(
     })),
     incomeCollectedForTurn: nextState.turn,
   };
-  return { state: nextState, income };
+  const stateWithIncome = income.reduce((current, entry) => appendCampaignEvent(current, {
+    type: "IncomeCollected",
+    playerId: entry.playerId,
+    amount: entry.total,
+  }), nextState);
+  return { state: stateWithIncome, income };
 }
 
 export function queueBaseConstruction(
@@ -117,10 +123,16 @@ export function queueBaseConstruction(
     orderedOnTurn: state.turn,
     completesOnTurn: state.turn + 1,
   };
-  return spendCredits({
+  return appendCampaignEvent(spendCredits({
     ...state,
     constructionQueue: [...state.constructionQueue, order],
-  }, playerId, cost);
+  }, playerId, cost), {
+    type: "BaseConstructionQueued",
+    playerId,
+    planetId,
+    amount: cost,
+    completesOnTurn: order.completesOnTurn,
+  });
 }
 
 export function queueBaseUpgrade(
@@ -153,10 +165,16 @@ export function queueBaseUpgrade(
     completesOnTurn: state.turn + 1,
     baseId,
   };
-  return spendCredits({
+  return appendCampaignEvent(spendCredits({
     ...state,
     constructionQueue: [...state.constructionQueue, order],
-  }, playerId, cost);
+  }, playerId, cost), {
+    type: "BaseUpgradeQueued",
+    playerId,
+    planetId: base.planetId,
+    amount: cost,
+    completesOnTurn: order.completesOnTurn,
+  });
 }
 
 export function queueCampaignRecruitment(
@@ -218,7 +236,14 @@ export function queueCampaignRecruitment(
         : hero)
       : state.heroes,
   };
-  return spendCredits(queuedState, playerId, cost);
+  return appendCampaignEvent(spendCredits(queuedState, playerId, cost), {
+    type: "RecruitmentQueued",
+    playerId,
+    planetId: base.planetId,
+    templateId,
+    amount: cost,
+    completesOnTurn: order.completesOnTurn,
+  });
 }
 
 export function getRequiredBaseLevel(templateId: string): CampaignBaseLevel {
@@ -310,7 +335,7 @@ export function deployCampaignReserves(
         activatedThisTurn: false,
         movementPointsRemaining: state.rules.movementPointsPerActivation,
       };
-  return {
+  return appendCampaignEvent({
     ...state,
     armies: existingArmy
       ? state.armies.map((candidate) => candidate.id === armyId ? army : candidate)
@@ -324,7 +349,14 @@ export function deployCampaignReserves(
           reservePlanetId: undefined,
         }
       : hero),
-  };
+  }, {
+    type: "ReservesDeployed",
+    playerId: input.playerId,
+    armyId,
+    planetId: input.planetId,
+    amount: unitIds.length + heroIds.length,
+    heroIds,
+  });
 }
 
 export function getCampaignArmyPointCost(
