@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { unitTemplates } from "../../data";
 import {
   beginCampaignActivationPhase,
   createCampaignState,
   createStandardCampaignPlayers,
   getCampaignPlanetController,
   processCampaignEconomy,
+  startNextCampaignTurn,
   type CampaignPhase,
+  type CampaignRoute,
   type CampaignState,
 } from "../../core/campaign";
 import {
@@ -23,6 +26,13 @@ import {
   getCampaignOverview,
   getSectorName,
 } from "../campaign/campaign-screen-model";
+import {
+  applyCampaignActivationAction,
+  getCampaignActivationDetails,
+  getCampaignDestinationAction,
+  type CampaignActivationAction,
+  type CampaignActivationResult,
+} from "../campaign/campaign-activation-model";
 import "../styles/campaign-screen.css";
 
 type CampaignScreenProps = {
@@ -39,6 +49,8 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
   const [playerNames, setPlayerNames] = useState<string[]>(() => defaultCommanderNames(language, 2));
   const [seed, setSeed] = useState(() => Math.floor(Date.now() / 1000) % 1_000_000);
   const [selectedPlanetId, setSelectedPlanetId] = useState<string>();
+  const [selectedArmyId, setSelectedArmyId] = useState<string>();
+  const [pendingActivationAction, setPendingActivationAction] = useState<CampaignActivationAction>();
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -53,6 +65,20 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
         : savedCampaign.campaign.planets[0]?.planetId
     );
   }, [savedCampaign]);
+
+  useEffect(() => {
+    const campaign = savedCampaign?.campaign;
+    if (!campaign) {
+      setSelectedArmyId(undefined);
+      setPendingActivationAction(undefined);
+      return;
+    }
+    const selectableArmies = getCampaignActivationDetails(campaign, selectedArmyId).selectableArmies;
+    if (!selectableArmies.some(({ id }) => id === selectedArmyId)) {
+      setSelectedArmyId(undefined);
+      setPendingActivationAction(undefined);
+    }
+  }, [savedCampaign?.campaign.activePlayerId, savedCampaign?.campaign.phase]);
 
   async function refreshCampaigns() {
     try {
@@ -159,6 +185,35 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
     ?? campaign.planets[0];
   const overview = getCampaignOverview(campaign);
   const activePlayer = campaign.players.find(({ id }) => id === campaign.activePlayerId);
+  const activationDetails = getCampaignActivationDetails(campaign, selectedArmyId);
+  const pendingPreview = pendingActivationAction
+    ? safeActivationPreview(campaign, pendingActivationAction)
+    : undefined;
+
+  function selectDestination(destinationPlanetId: string) {
+    if (!activationDetails.selectedArmy) return;
+    try {
+      setPendingActivationAction(getCampaignDestinationAction(
+        campaign,
+        activationDetails.selectedArmy.id,
+        destinationPlanetId,
+      ));
+    } catch (error) {
+      setStatus(errorMessage(error, text("Nie można wybrać tej trasy.", "This route cannot be selected.")));
+    }
+  }
+
+  function confirmActivationAction() {
+    if (!pendingActivationAction) return;
+    try {
+      const result = applyCampaignActivationAction(campaign, pendingActivationAction);
+      setPendingActivationAction(undefined);
+      setSelectedArmyId(undefined);
+      void commitCampaign(result.state, activationResultMessage(result.outcome, text));
+    } catch (error) {
+      setStatus(errorMessage(error, text("Nie udało się wykonać aktywacji.", "Could not complete activation.")));
+    }
+  }
 
   return (
     <section className="campaignScreen">
@@ -214,9 +269,29 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
         <CampaignGalaxy
           campaign={campaign}
           selectedPlanetId={selectedPlanet?.planetId}
+          selectedArmyId={activationDetails.selectedArmy?.id}
+          legalRoutes={activationDetails.legalRoutes}
+          pendingAction={pendingActivationAction}
           onPlanetSelect={setSelectedPlanetId}
+          onRouteSelect={selectDestination}
         />
-        {selectedPlanet ? <PlanetInspector campaign={campaign} planetId={selectedPlanet.planetId} /> : null}
+        <div className="campaignSidebar">
+          {selectedPlanet ? <PlanetInspector campaign={campaign} planetId={selectedPlanet.planetId} /> : null}
+          <CampaignActivationPanel
+            campaign={campaign}
+            activePlayerName={activePlayer?.name}
+            details={activationDetails}
+            pendingAction={pendingActivationAction}
+            pendingPreview={pendingPreview}
+            onArmySelect={(armyId) => {
+              setSelectedArmyId(armyId);
+              setPendingActivationAction(undefined);
+            }}
+            onActionSelect={setPendingActivationAction}
+            onCancel={() => setPendingActivationAction(undefined)}
+            onConfirm={confirmActivationAction}
+          />
+        </div>
       </section>
 
       <footer className="campaignTurnControls">
@@ -242,6 +317,14 @@ export function CampaignScreen({ savedCampaign, onCampaignChange }: CampaignScre
             text("Rozpoczęto fazę aktywacji.", "Activation phase started."),
           )}>
             {text("Rozpocznij aktywacje", "Begin activations")}
+          </button>
+        ) : null}
+        {campaign.phase === "Resolution" ? (
+          <button className="primaryButton" onClick={() => void commitCampaign(
+            startNextCampaignTurn(campaign),
+            text("Zakończono turę. Następna tura czeka na rozliczenie dochodu.", "Turn ended. The next turn is ready for income."),
+          )}>
+            {text("Zakończ turę", "End turn")}
           </button>
         ) : null}
       </footer>
@@ -353,14 +436,38 @@ function CampaignLauncher({
   );
 }
 
-function CampaignGalaxy({ campaign, selectedPlanetId, onPlanetSelect }: {
+function CampaignGalaxy({
+  campaign,
+  selectedPlanetId,
+  selectedArmyId,
+  legalRoutes,
+  pendingAction,
+  onPlanetSelect,
+  onRouteSelect,
+}: {
   campaign: CampaignState;
   selectedPlanetId?: string;
+  selectedArmyId?: string;
+  legalRoutes: CampaignRoute[];
+  pendingAction?: CampaignActivationAction;
   onPlanetSelect: (planetId: string) => void;
+  onRouteSelect: (planetId: string) => void;
 }) {
   const { text } = useI18n();
   const nodes = buildCampaignMapNodes(campaign);
   const positionById = new Map(nodes.map((node) => [node.id, node]));
+  const routeByDestination = new Map(legalRoutes.map((route) => [route.destinationPlanetId, route]));
+  const highlightedLinks = new Set(
+    legalRoutes.flatMap(({ planetIds }) => planetIds.slice(1).map((planetId, index) =>
+      routeKey(planetIds[index], planetId)
+    )),
+  );
+  const selectedRoute = pendingAction && "destinationPlanetId" in pendingAction
+    ? routeByDestination.get(pendingAction.destinationPlanetId)
+    : undefined;
+  const selectedLinks = new Set(selectedRoute?.planetIds.slice(1).map((planetId, index) =>
+    routeKey(selectedRoute.planetIds[index], planetId)
+  ));
   return (
     <section className="campaignGalaxyPanel">
       <div className="campaignPanelHeading">
@@ -379,28 +486,218 @@ function CampaignGalaxy({ campaign, selectedPlanetId, onPlanetSelect }: {
           {galacticHyperlanes.map((lane) => {
             const from = positionById.get(lane.fromPlanetId)!;
             const to = positionById.get(lane.toPlanetId)!;
-            return <line key={lane.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} />;
+            const key = routeKey(lane.fromPlanetId, lane.toPlanetId);
+            return <line
+              className={`${highlightedLinks.has(key) ? "isLegalRoute" : ""} ${selectedLinks.has(key) ? "isSelectedRoute" : ""}`}
+              key={lane.id}
+              x1={from.x}
+              y1={from.y}
+              x2={to.x}
+              y2={to.y}
+            />;
           })}
         </svg>
-        {nodes.map((node) => (
+        {nodes.map((node) => {
+          const route = routeByDestination.get(node.id);
+          const armyIsHere = selectedArmyId && campaign.armies.some((army) =>
+            army.id === selectedArmyId && army.planetId === node.id
+          );
+          return (
+            <button
+              aria-label={node.playable ? node.name : `${node.name} — ${text("niedostępna", "unavailable")}`}
+              className={`campaignPlanetNode controller${node.controller} ${selectedPlanetId === node.id ? "isSelected" : ""} ${route ? "isRouteTarget" : ""} ${armyIsHere ? "isArmyOrigin" : ""} ${node.playable ? "" : "isLocked"}`}
+              disabled={!node.playable}
+              key={node.id}
+              style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              onClick={() => {
+                onPlanetSelect(node.id);
+                if (route) onRouteSelect(node.id);
+              }}
+            >
+              <span className="campaignPlanetOrb">
+                {node.playable ? node.sectorControllers.map((controller, index) => (
+                  <i className={`sectorPip controller${controller}`} key={index} />
+                )) : <i className="planetLock">×</i>}
+              </span>
+              <strong>{node.name}</strong>
+              {route ? <small className="campaignRouteBadge">{route.movementCost} MP{route.encounter ? " !" : ""}</small> : null}
+              {node.armyCount > 0 ? <small className="planetArmyBadge">{node.armyCount}A</small> : null}
+              {node.baseLevel ? <small className="planetBaseBadge">B{node.baseLevel}</small> : null}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CampaignActivationPanel({
+  campaign,
+  activePlayerName,
+  details,
+  pendingAction,
+  pendingPreview,
+  onArmySelect,
+  onActionSelect,
+  onCancel,
+  onConfirm,
+}: {
+  campaign: CampaignState;
+  activePlayerName?: string;
+  details: ReturnType<typeof getCampaignActivationDetails>;
+  pendingAction?: CampaignActivationAction;
+  pendingPreview?: CampaignActivationResult;
+  onArmySelect: (armyId: string) => void;
+  onActionSelect: (action: CampaignActivationAction) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { text } = useI18n();
+  if (campaign.phase !== "Activation" && campaign.phase !== "Resolution") return null;
+  if (campaign.phase === "Resolution") {
+    return (
+      <aside className="campaignActivationPanel campaignResolutionPanel">
+        <p className="eyebrow">{text("Podsumowanie tury", "Turn summary")}</p>
+        <h3>{text("Wszystkie armie zakończyły aktywacje", "All armies have completed activations")}</h3>
+        <p>{text(
+          `${campaign.armies.filter(({ activatedThisTurn }) => activatedThisTurn).length}/${campaign.armies.length} armii wykorzystało turę. Zakończ turę, aby wrócić do dochodu.`,
+          `${campaign.armies.filter(({ activatedThisTurn }) => activatedThisTurn).length}/${campaign.armies.length} armies acted. End the turn to return to income.`,
+        )}</p>
+      </aside>
+    );
+  }
+  return (
+    <aside className="campaignActivationPanel">
+      <div className="campaignPanelHeading">
+        <div>
+          <p className="eyebrow">{text("Aktywacja", "Activation")}</p>
+          <h3>{activePlayerName ?? text("Wybierz armię", "Select an army")}</h3>
+        </div>
+        <span>{details.selectableArmies.length} {text("gotowe", "ready")}</span>
+      </div>
+      <div className="campaignActivationArmyList">
+        {campaign.armies.map((army) => {
+          const isSelectable = details.selectableArmies.some(({ id }) => id === army.id);
+          const owner = campaign.players.find(({ id }) => id === army.ownerPlayerId);
+          return (
+            <button
+              className={`campaignActivationArmy faction${army.factionId} ${details.selectedArmy?.id === army.id ? "isSelected" : ""}`}
+              disabled={!isSelectable}
+              key={army.id}
+              onClick={() => onArmySelect(army.id)}
+            >
+              <strong>{army.name}</strong>
+              <small>{owner?.name} · {army.activatedThisTurn ? text("wykorzystana", "activated") : text("gotowa", "ready")}</small>
+            </button>
+          );
+        })}
+      </div>
+      {details.selectedArmy ? (
+        <div className="campaignSelectedArmy">
+          <div>
+            <p className="eyebrow">{text("Wybrana armia", "Selected army")}</p>
+            <h3>{details.selectedArmy.name}</h3>
+            <p>{text("Planeta", "Planet")}: {planetName(details.selectedArmy.planetId)} · {getSectorName(details.selectedArmy.planetId, details.selectedArmy.sectorId)}</p>
+          </div>
+          <div className="campaignArmyMetrics">
+            <span>{details.selectedArmy.units.length} {text("jednostek", "units")}</span>
+            <span>{details.selectedArmy.heroIds.length} {text("bohaterów", "heroes")}</span>
+            <span>{details.selectedArmyPointCost}/{campaign.rules.armyPointLimit} pkt</span>
+            <span>{details.selectedArmy.movementPointsRemaining} MP</span>
+          </div>
+          <p className="campaignArmyComposition">
+            {text("Skład", "Composition")}: {details.selectedArmy.units.map(({ templateId }) => unitName(templateId)).join(", ")}
+          </p>
+          <p className="campaignArmyComposition">
+            {text("Bohaterowie", "Heroes")}: {details.selectedArmy.heroIds.length > 0
+              ? details.selectedArmy.heroIds.map(unitName).join(", ")
+              : text("brak", "none")}
+          </p>
+          <p className="campaignActivationHint">{text(
+            "Kliknij podświetloną planetę, aby wybrać legalną trasę. Trasy z ! prowadzą do spotkania z wrogiem.",
+            "Click a highlighted planet to select a legal route. Routes marked ! lead to an enemy encounter.",
+          )}</p>
+          {details.legalSectorTargets.length > 0 ? (
+            <div className="campaignSectorActions">
+              <span>{text("Atak na obecnej planecie", "Attack on current planet")}</span>
+              {details.legalSectorTargets.map((sector) => (
+                <button
+                  className="secondaryButton"
+                  key={sector.sectorId}
+                  onClick={() => onActionSelect({
+                    kind: "SectorAssault",
+                    armyId: details.selectedArmy!.id,
+                    sectorId: sector.sectorId,
+                  })}
+                >
+                  {text("Atakuj", "Attack")} {getSectorName(sector.planetId, sector.sectorId)}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <button
-            aria-label={node.playable ? node.name : `${node.name} — ${text("niedostępna", "unavailable")}`}
-            className={`campaignPlanetNode controller${node.controller} ${selectedPlanetId === node.id ? "isSelected" : ""} ${node.playable ? "" : "isLocked"}`}
-            disabled={!node.playable}
-            key={node.id}
-            style={{ left: `${node.x}%`, top: `${node.y}%` }}
-            onClick={() => onPlanetSelect(node.id)}
+            className="secondaryButton"
+            onClick={() => onActionSelect({ kind: "Finish", armyId: details.selectedArmy!.id })}
           >
-            <span className="campaignPlanetOrb">
-              {node.playable ? node.sectorControllers.map((controller, index) => (
-                <i className={`sectorPip controller${controller}`} key={index} />
-              )) : <i className="planetLock">×</i>}
-            </span>
-            <strong>{node.name}</strong>
-            {node.armyCount > 0 ? <small className="planetArmyBadge">{node.armyCount}A</small> : null}
-            {node.baseLevel ? <small className="planetBaseBadge">B{node.baseLevel}</small> : null}
+            {text("Zakończ aktywację bez ruchu", "Finish activation without moving")}
           </button>
-        ))}
+        </div>
+      ) : <p className="campaignActivationHint">{text("Wybierz armię aktywnego dowódcy.", "Select an army of the active commander.")}</p>}
+      {pendingAction && pendingPreview ? (
+        <ActivationConfirmation
+          campaign={campaign}
+          action={pendingAction}
+          outcome={pendingPreview.outcome}
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+        />
+      ) : null}
+    </aside>
+  );
+}
+
+function ActivationConfirmation({
+  campaign,
+  action,
+  outcome,
+  onCancel,
+  onConfirm,
+}: {
+  campaign: CampaignState;
+  action: CampaignActivationAction;
+  outcome: CampaignActivationResult["outcome"];
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { text } = useI18n();
+  const army = campaign.armies.find(({ id }) => id === action.armyId)!;
+  const route = "destinationPlanetId" in action
+    ? getCampaignActivationDetails(campaign, action.armyId).legalRoutes.find((candidate) =>
+      candidate.destinationPlanetId === action.destinationPlanetId
+    )
+    : undefined;
+  const target = action.kind === "SectorAssault"
+    ? getSectorName(army.planetId, action.sectorId)
+    : "destinationPlanetId" in action
+      ? planetName(action.destinationPlanetId)
+      : text("bez ruchu", "no movement");
+  return (
+    <section className="campaignActionConfirmation">
+      <p className="eyebrow">{text("Potwierdź działanie", "Confirm action")}</p>
+      <strong>{army.name}</strong>
+      <p>{activationActionLabel(action, text)}: {target}</p>
+      {route ? <p>{text("Koszt", "Cost")}: {route.movementCost} MP · {route.planetIds.map(planetName).join(" → ")}</p> : null}
+      {route?.encounter ? <p>{text("Spotkanie", "Encounter")}: {localizeEncounter(route.encounter, text)}</p> : null}
+      <p>{outcome === "CapturedWithoutBattle"
+        ? text("Sektor zostanie zajęty bez bitwy.", "The sector will be captured without a battle.")
+        : outcome === "BattleRequired"
+          ? text("Powstanie bitwa taktyczna.", "A tactical battle will begin.")
+          : outcome === "Moved"
+            ? text("Armia wykona ruch i przekaże inicjatywę kolejnemu dowódcy.", "The army will move and pass initiative to the next commander.")
+          : text("Armia zakończy aktywację.", "The army will finish its activation.")}</p>
+      <div className="campaignConfirmationActions">
+        <button className="secondaryButton" onClick={onCancel}>{text("Wróć", "Back")}</button>
+        <button className="primaryButton" onClick={onConfirm}>{text("Potwierdź", "Confirm")}</button>
       </div>
     </section>
   );
@@ -507,6 +804,58 @@ function nextStepLabel(campaign: CampaignState, text: (pl: string, en: string) =
   if (campaign.phase === "Battle") return text("Rozegraj oczekującą bitwę", "Play the pending battle");
   if (campaign.phase === "Resolution") return text("Zakończ turę strategiczną", "End the strategic turn");
   return text("Kampania została rozstrzygnięta", "The campaign has been decided");
+}
+
+function safeActivationPreview(
+  campaign: CampaignState,
+  action: CampaignActivationAction,
+): CampaignActivationResult | undefined {
+  try {
+    return applyCampaignActivationAction(campaign, action);
+  } catch {
+    return undefined;
+  }
+}
+
+function routeKey(leftPlanetId: string, rightPlanetId: string): string {
+  return [leftPlanetId, rightPlanetId].sort().join(":");
+}
+
+function planetName(planetId: string): string {
+  return galacticPlanets.find(({ id }) => id === planetId)?.name ?? planetId;
+}
+
+function unitName(templateId: string): string {
+  return unitTemplates.find(({ id }) => id === templateId)?.name ?? templateId;
+}
+
+function activationActionLabel(
+  action: CampaignActivationAction,
+  text: (pl: string, en: string) => string,
+): string {
+  if (action.kind === "Move") return text("Ruch", "Move");
+  if (action.kind === "Invasion") return text("Inwazja", "Invasion");
+  if (action.kind === "SectorAssault") return text("Atak sektora", "Sector assault");
+  return text("Zakończenie aktywacji", "Finish activation");
+}
+
+function activationResultMessage(
+  outcome: CampaignActivationResult["outcome"],
+  text: (pl: string, en: string) => string,
+): string {
+  if (outcome === "Moved") return text("Armia wykonała ruch; inicjatywa przechodzi dalej.", "Army moved; initiative passes on.");
+  if (outcome === "Finished") return text("Armia zakończyła aktywację.", "Army activation finished.");
+  if (outcome === "CapturedWithoutBattle") return text("Sektor zdobyty bez bitwy.", "Sector captured without a battle.");
+  return text("Powstał konflikt: bitwa taktyczna wymaga rozegrania.", "Conflict created: a tactical battle must be played.");
+}
+
+function localizeEncounter(
+  encounter: NonNullable<CampaignRoute["encounter"]>,
+  text: (pl: string, en: string) => string,
+): string {
+  if (encounter === "EnemyArmy") return text("wroga armia", "enemy army");
+  if (encounter === "EnemyBase") return text("wroga baza", "enemy base");
+  return text("wroga armia i baza", "enemy army and base");
 }
 
 function errorMessage(error: unknown, fallback: string): string {
