@@ -8,6 +8,7 @@ import {
 } from "../../core/campaign";
 import {
   createSavedCampaign,
+  type SavedBattle,
   type SavedCampaign,
 } from "../../core/persistence/save-types";
 import type { MissionState } from "../../core/scenario/scenario-types";
@@ -35,6 +36,26 @@ export function createActiveCampaignBattle(savedCampaign: SavedCampaign): Active
   };
 }
 
+/** Restores only the battle that is still awaited by the campaign conflict. */
+export function restoreActiveCampaignBattle(
+  savedCampaign: SavedCampaign,
+  savedBattle?: SavedBattle,
+): ActiveCampaignBattle {
+  const activeBattle = createActiveCampaignBattle(savedCampaign);
+  if (savedCampaign.battleIds.includes(activeBattle.battleId)) {
+    throw new Error("Campaign battle has already been resolved and cannot be resumed.");
+  }
+  if (!savedBattle) return activeBattle;
+
+  if (savedBattle.campaignId !== savedCampaign.id) {
+    throw new Error("Campaign battle save does not belong to the loaded campaign.");
+  }
+  if (savedBattle.id !== activeBattle.battleId) {
+    throw new Error("Campaign battle save does not match the pending campaign conflict.");
+  }
+  return activeBattle;
+}
+
 export function resolveActiveCampaignBattle(
   savedCampaign: SavedCampaign,
   activeBattle: ActiveCampaignBattle,
@@ -45,6 +66,9 @@ export function resolveActiveCampaignBattle(
   resolution: CampaignBattleResolution;
   winnerFactionId: "Republic" | "Separatists";
 } {
+  if (savedCampaign.battleIds.includes(activeBattle.battleId)) {
+    throw new Error("Campaign battle was already resolved.");
+  }
   if (
     activeBattle.campaignId !== savedCampaign.campaign.id ||
     activeBattle.savedCampaignId !== savedCampaign.id ||

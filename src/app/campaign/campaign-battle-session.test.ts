@@ -14,6 +14,7 @@ import type { Battle } from "../../types";
 import {
   createActiveCampaignBattle,
   resolveActiveCampaignBattle,
+  restoreActiveCampaignBattle,
 } from "./campaign-battle-session";
 
 describe("campaign battle session", () => {
@@ -40,7 +41,7 @@ describe("campaign battle session", () => {
     expect(resolved.savedCampaign.campaign.armies.find(({ id }) => id === "player-1-army-1")?.units)
       .toHaveLength(1);
     expect(() => resolveActiveCampaignBattle(resolved.savedCampaign, activeBattle, finalBattle, mission))
-      .toThrow(/no pending conflict|no battle awaiting resolution/i);
+      .toThrow(/already resolved|no pending conflict|no battle awaiting resolution/i);
 
     const persistence = createLocalStoragePersistence(createMemoryStorage(), "campaign-battle-session");
     await persistence.saveBattle(createSavedBattle({
@@ -62,6 +63,72 @@ describe("campaign battle session", () => {
       }),
     });
     expect(await persistence.loadCampaign(resolved.savedCampaign.id)).toEqual(resolved.savedCampaign);
+  });
+
+  it("restores the same pending campaign battle from the campaign or its tactical save after restart", async () => {
+    const savedCampaign = createSavedCampaign({
+      campaign: createDefendedConflict(),
+      now: "2026-08-23T10:00:00.000Z",
+    });
+    const activeBattle = createActiveCampaignBattle(savedCampaign);
+    const mission = createMissionState(
+      activeBattle.battlePackage.scenario,
+      activeBattle.battlePackage.battle.armies,
+      activeBattle.battlePackage.request.battleDefenderArmyId,
+    );
+    const savedBattle = createSavedBattle({
+      id: activeBattle.battleId,
+      name: "Pending campaign battle",
+      battle: activeBattle.battlePackage.battle,
+      initialBattle: activeBattle.battlePackage.battle,
+      logs: [],
+      mission,
+      campaignId: savedCampaign.id,
+      scenarioId: activeBattle.battlePackage.scenario.id,
+      now: "2026-08-23T10:01:00.000Z",
+    });
+    const persistence = createLocalStoragePersistence(createMemoryStorage(), "campaign-battle-restart");
+    await persistence.saveCampaign(savedCampaign);
+    await persistence.saveBattle(savedBattle);
+
+    const restoredCampaign = await persistence.loadCampaign(savedCampaign.id);
+    const restoredBattle = await persistence.loadBattle(savedBattle.id);
+    expect(restoredCampaign).toBeDefined();
+    expect(restoredBattle).toBeDefined();
+    expect(restoreActiveCampaignBattle(restoredCampaign!)).toMatchObject({
+      battleId: activeBattle.battleId,
+      campaignId: savedCampaign.id,
+    });
+    expect(restoreActiveCampaignBattle(restoredCampaign!, restoredBattle!)).toMatchObject({
+      battleId: activeBattle.battleId,
+      request: activeBattle.request,
+    });
+  });
+
+  it("rejects orphaned, mismatched, and previously resolved campaign battle saves", () => {
+    const savedCampaign = createSavedCampaign({ campaign: createDefendedConflict() });
+    const activeBattle = createActiveCampaignBattle(savedCampaign);
+    const matchingSave = createSavedBattle({
+      id: activeBattle.battleId,
+      name: "Pending campaign battle",
+      battle: activeBattle.battlePackage.battle,
+      logs: [],
+      campaignId: savedCampaign.id,
+      scenarioId: activeBattle.battlePackage.scenario.id,
+    });
+
+    expect(() => restoreActiveCampaignBattle(savedCampaign, {
+      ...matchingSave,
+      campaignId: "missing-campaign",
+    })).toThrow(/does not belong/i);
+    expect(() => restoreActiveCampaignBattle(savedCampaign, {
+      ...matchingSave,
+      id: "different-battle",
+    })).toThrow(/does not match/i);
+    expect(() => restoreActiveCampaignBattle({
+      ...savedCampaign,
+      battleIds: [activeBattle.battleId],
+    })).toThrow(/already been resolved/i);
   });
 });
 

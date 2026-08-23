@@ -13,6 +13,7 @@ export function MainMenu({
   onOpenComposer,
   onOpenRules,
   onResumeBattle,
+  status: externalStatus,
 }: {
   onLoadBattle: (savedBattle: SavedBattle) => void;
   onOpenCampaign: () => void;
@@ -20,6 +21,7 @@ export function MainMenu({
   onOpenComposer: () => void;
   onOpenRules: () => void;
   onResumeBattle?: () => void;
+  status?: string;
 }) {
   const { text } = useI18n();
   const persistence = useMemo(() => createPersistenceAdapter(), []);
@@ -135,7 +137,7 @@ export function MainMenu({
           {savedBattles.length === 0 ? (
             <small>{text("Brak lokalnych zapisów.", "No local saves.")}</small>
           ) : null}
-          {status ? <p className="errorText">{status}</p> : null}
+          {status || externalStatus ? <p className="errorText">{status || externalStatus}</p> : null}
         </section>
       </section>
     </section>

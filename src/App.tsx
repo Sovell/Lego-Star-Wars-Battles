@@ -27,8 +27,8 @@ import { MainMenu } from "./app/screens/MainMenu";
 import { BattleScreen } from "./app/screens/BattleScreen";
 import { CampaignScreen } from "./app/screens/CampaignScreen";
 import {
-  createActiveCampaignBattle,
   resolveActiveCampaignBattle,
+  restoreActiveCampaignBattle,
   type ActiveCampaignBattle,
 } from "./app/campaign/campaign-battle-session";
 import type { GamePhase } from "./app/types/game-phase";
@@ -113,6 +113,7 @@ export function App() {
   const [savedCampaign, setSavedCampaign] = useState<SavedCampaign>();
   const [activeCampaignBattle, setActiveCampaignBattle] = useState<ActiveCampaignBattle>();
   const [campaignBattleReport, setCampaignBattleReport] = useState<string>();
+  const [menuStatus, setMenuStatus] = useState<string>();
   const [battle, setBattle] = useState<Battle>(() =>
     recoveredSession?.battle ?? createNewGameBattle()
   );
@@ -508,10 +509,10 @@ export function App() {
     });
   }
 
-  async function openCampaignBattle(saved: SavedCampaign) {
+  async function openCampaignBattle(saved: SavedCampaign, savedBattle?: SavedBattle): Promise<void> {
     try {
-      const active = createActiveCampaignBattle(saved);
-      const persistedBattle = await persistence.loadBattle(active.battleId);
+      const active = restoreActiveCampaignBattle(saved, savedBattle);
+      const persistedBattle = savedBattle ?? await persistence.loadBattle(active.battleId);
       const loadedBattle = persistedBattle?.battle ?? active.battlePackage.battle;
       const loadedMission = persistedBattle?.mission ?? createMissionState(
         active.battlePackage.scenario,
@@ -519,7 +520,9 @@ export function App() {
         active.battlePackage.request.battleDefenderArmyId,
       );
       const initialBattle = persistedBattle?.initialBattle ?? createInitialBattleSnapshot(loadedBattle);
+      setSavedCampaign(saved);
       setActiveCampaignBattle(active);
+      setMenuStatus(undefined);
       setScenarioDraft(createScenarioDraft(active.battlePackage.scenario.id, {
         armies: structuredClone(loadedBattle.armies),
         board: structuredClone(loadedBattle.board),
@@ -545,10 +548,12 @@ export function App() {
       setGamePhase(persistedBattle ? "Playing" : "Preparation");
       setView(persistedBattle ? "battle" : "setup");
     } catch (error) {
-      setCampaignBattleReport(error instanceof Error ? error.message : text(
+      const message = error instanceof Error ? error.message : text(
         "Nie udało się przygotować bitwy kampanijnej.",
         "Could not prepare the campaign battle.",
-      ));
+      );
+      setCampaignBattleReport(message);
+      setMenuStatus(message);
     }
   }
 
@@ -694,7 +699,28 @@ export function App() {
     }
   }
 
-  function handleLoadSavedBattle(savedBattle: SavedBattle) {
+  async function handleLoadSavedBattle(savedBattle: SavedBattle) {
+    if (savedBattle.campaignId) {
+      try {
+        const campaign = await persistence.loadCampaign(savedBattle.campaignId);
+        if (!campaign) {
+          throw new Error(text(
+            "Nie znaleziono kampanii powiązanej z tym zapisem bitwy.",
+            "The campaign linked to this battle save no longer exists.",
+          ));
+        }
+        await openCampaignBattle(campaign, savedBattle);
+      } catch (error) {
+        setMenuStatus(error instanceof Error ? error.message : text(
+          "Nie udało się wznowić bitwy kampanijnej.",
+          "Could not resume the campaign battle.",
+        ));
+      }
+      return;
+    }
+    setActiveCampaignBattle(undefined);
+    setSavedCampaign(undefined);
+    setMenuStatus(undefined);
     const loadedScenario = scenarios.find(
       (scenario) => scenario.id === savedBattle.mission?.scenarioId,
     ) ?? survivalTestScenario;
@@ -891,6 +917,7 @@ export function App() {
             gamePhase === "Playing" ? () => setView("battle") : undefined
           }
           onLoadBattle={handleLoadSavedBattle}
+          status={menuStatus}
         />
       ) : (
         <>
