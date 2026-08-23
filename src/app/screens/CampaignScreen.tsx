@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { unitTemplates } from "../../data";
 import {
   beginCampaignActivationPhase,
@@ -11,8 +11,11 @@ import {
   queueBaseConstruction,
   queueBaseUpgrade,
   queueCampaignRecruitment,
+  chooseCampaignBotAction,
+  runNextCampaignBotAction,
   startNextCampaignTurn,
   type CampaignPhase,
+  type CampaignBotAction,
   type CampaignRoute,
   type CampaignState,
 } from "../../core/campaign";
@@ -72,6 +75,8 @@ export function CampaignScreen({
   const [selectedEconomyPlayerId, setSelectedEconomyPlayerId] = useState<string>();
   const [pendingActivationAction, setPendingActivationAction] = useState<CampaignActivationAction>();
   const [status, setStatus] = useState("");
+  const [botAutomationTick, setBotAutomationTick] = useState(0);
+  const botAutomationInProgress = useRef(false);
 
   useEffect(() => {
     void refreshCampaigns();
@@ -190,6 +195,22 @@ export function CampaignScreen({
     }
   }
 
+  useEffect(() => {
+    const campaign = savedCampaign?.campaign;
+    if (!campaign || botAutomationInProgress.current) return;
+    const step = runNextCampaignBotAction(campaign);
+    if (!step) return;
+
+    botAutomationInProgress.current = true;
+    void (async () => {
+      const saved = await commitCampaign(step.state, campaignBotActionMessage(step.action, text));
+      if (saved && step.battleRequired) await onCampaignBattleStart(saved);
+    })().finally(() => {
+      botAutomationInProgress.current = false;
+      setBotAutomationTick((current) => current + 1);
+    });
+  }, [savedCampaign, botAutomationTick]);
+
   if (!savedCampaign) {
     return (
       <CampaignLauncher
@@ -219,6 +240,7 @@ export function CampaignScreen({
     ?? campaign.planets[0];
   const overview = getCampaignOverview(campaign);
   const activePlayer = campaign.players.find(({ id }) => id === campaign.activePlayerId);
+  const botWorkPending = Boolean(chooseCampaignBotAction(campaign));
   const activationDetails = getCampaignActivationDetails(campaign, selectedArmyId);
   const pendingPreview = pendingActivationAction
     ? safeActivationPreview(campaign, pendingActivationAction)
@@ -331,6 +353,7 @@ export function CampaignScreen({
           <CampaignActivationPanel
             campaign={campaign}
             activePlayerName={activePlayer?.name}
+            activePlayerIsBot={activePlayer?.control === "Bot"}
             details={activationDetails}
             pendingAction={pendingActivationAction}
             pendingPreview={pendingPreview}
@@ -378,8 +401,8 @@ export function CampaignScreen({
           <button className="primaryButton" onClick={() => void commitCampaign(
             beginCampaignActivationPhase(campaign),
             text("Rozpoczęto fazę aktywacji.", "Activation phase started."),
-          )}>
-            {text("Rozpocznij aktywacje", "Begin activations")}
+          )} disabled={botWorkPending}>
+            {botWorkPending ? text("AI wykonuje rozkazy…", "AI is issuing orders…") : text("Rozpocznij aktywacje", "Begin activations")}
           </button>
         ) : null}
         {campaign.phase === "Resolution" ? (
@@ -642,6 +665,19 @@ function CampaignEconomyPanel({
   if (!details.economyOpen || !details.player) return null;
 
   const player = details.player;
+  const isBotPlayer = player.control === "Bot";
+  if (isBotPlayer) {
+    return (
+      <aside className="campaignEconomyPanel campaignBotPanel">
+        <p className="eyebrow">{text("Gospodarka AI", "AI economy")}</p>
+        <h3>{player.name}</h3>
+        <p className="campaignEconomyHint">{text(
+          "Ten dowódca samodzielnie zarządza bazami, rekrutacją i rezerwami po rozliczeniu dochodu.",
+          "This commander manages bases, recruitment, and reserves automatically after income is collected.",
+        )}</p>
+      </aside>
+    );
+  }
   const recruitBase = details.bases.find(({ id }) => id === recruitBaseId);
   const recruitTemplate = details.recruitmentOptions.find(({ templateId }) => templateId === recruitTemplateId);
   const canRecruit = Boolean(recruitBase && recruitTemplate &&
@@ -800,6 +836,7 @@ function CampaignEconomyPanel({
 function CampaignActivationPanel({
   campaign,
   activePlayerName,
+  activePlayerIsBot,
   details,
   pendingAction,
   pendingPreview,
@@ -810,6 +847,7 @@ function CampaignActivationPanel({
 }: {
   campaign: CampaignState;
   activePlayerName?: string;
+  activePlayerIsBot: boolean;
   details: ReturnType<typeof getCampaignActivationDetails>;
   pendingAction?: CampaignActivationAction;
   pendingPreview?: CampaignActivationResult;
@@ -820,6 +858,18 @@ function CampaignActivationPanel({
 }) {
   const { text } = useI18n();
   if (campaign.phase !== "Activation" && campaign.phase !== "Resolution") return null;
+  if (campaign.phase === "Activation" && activePlayerIsBot) {
+    return (
+      <aside className="campaignActivationPanel campaignBotPanel">
+        <p className="eyebrow">{text("Dowódca AI", "AI commander")}</p>
+        <h3>{activePlayerName}</h3>
+        <p>{text(
+          "Strategiczne AI samodzielnie wybiera armię i wykonuje rozkaz. Kontrola wróci do Ciebie po decyzji bota albo rozpoczęciu bitwy.",
+          "Strategic AI is selecting an army and issuing an order. Control returns after its decision or when a battle begins.",
+        )}</p>
+      </aside>
+    );
+  }
   if (campaign.phase === "Resolution") {
     return (
       <aside className="campaignActivationPanel campaignResolutionPanel">
@@ -1113,6 +1163,20 @@ function activationResultMessage(
   if (outcome === "Finished") return text("Armia zakończyła aktywację.", "Army activation finished.");
   if (outcome === "CapturedWithoutBattle") return text("Sektor zdobyty bez bitwy.", "Sector captured without a battle.");
   return text("Powstał konflikt: bitwa taktyczna wymaga rozegrania.", "Conflict created: a tactical battle must be played.");
+}
+
+function campaignBotActionMessage(
+  action: CampaignBotAction,
+  text: (pl: string, en: string) => string,
+): string {
+  if (action.kind === "BuildBase") return text(`AI rozpoczyna budowę bazy na ${planetName(action.planetId)}.`, `AI begins base construction on ${planetName(action.planetId)}.`);
+  if (action.kind === "UpgradeBase") return text("AI ulepsza bazę.", "AI upgrades a base.");
+  if (action.kind === "Recruit") return text(`AI rekrutuje ${unitName(action.templateId)}.`, `AI recruits ${unitName(action.templateId)}.`);
+  if (action.kind === "DeployReserves") return text("AI przydziela rezerwy do armii.", "AI assigns reserves to an army.");
+  if (action.kind === "SectorAssault") return text("AI atakuje sektor.", "AI assaults a sector.");
+  if (action.kind === "Invasion") return text(`AI rozpoczyna inwazję na ${planetName(action.planetId)}.`, `AI invades ${planetName(action.planetId)}.`);
+  if (action.kind === "Move") return text(`AI przemieszcza armię do ${planetName(action.planetId)}.`, `AI moves an army to ${planetName(action.planetId)}.`);
+  return text("AI kończy aktywację armii.", "AI finishes an army activation.");
 }
 
 function localizeEncounter(

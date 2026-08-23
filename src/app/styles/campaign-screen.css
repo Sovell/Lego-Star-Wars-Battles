@@ -630,6 +630,20 @@
   padding: 16px;
 }
 
+.campaignBotPanel {
+  border-color: rgba(172, 117, 225, 0.42);
+}
+
+.campaignBotPanel h3 {
+  color: #dbb8ff;
+}
+
+.campaignBotPanel p:not(.eyebrow) {
+  color: #b8a9c9;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .campaignEconomyPanel {
   background: rgba(20, 24, 30, 0.95);
   border: 1px solid rgba(86, 190, 135, 0.32);
