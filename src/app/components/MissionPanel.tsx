@@ -117,8 +117,16 @@ export function MissionPanel({
   if (gamePhase === "Playing") {
     return (
       <section className={`missionPanel missionInPlay ${mission.status.toLowerCase()}`}>
-        <PanelTitle title={activeObjectiveName} detail={statusLabel} />
-        <p>{activeObjectiveDescription}</p>
+        <header className="missionInPlayHeader">
+          <div>
+            <span>{text("Misja", "Mission")}</span>
+            <strong>{activeObjectiveName}</strong>
+          </div>
+          <small>{statusLabel}</small>
+        </header>
+        <p className="missionObjectiveSummary" title={activeObjectiveDescription}>
+          {activeObjectiveDescription}
+        </p>
         <div className="missionProgressHeader">
           <span>{text("Rundy", "Rounds")}</span>
           <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
@@ -130,7 +138,6 @@ export function MissionPanel({
             <strong>{Math.min(currentRound, scenario.victoryCondition.roundLimit)}/{scenario.victoryCondition.roundLimit}</strong>
           </div>
         ) : null}
-        <MissionDirectorStatus mission={mission} scenario={scenario} />
         {scenario.victoryCondition.type === "DestroyObjects" ? (
           <div className="missionProgressHeader">
             <span>{text("Zniszczone cele", "Destroyed targets")}</span>
@@ -158,30 +165,36 @@ export function MissionPanel({
             ))}
           </div>
         ) : null}
-        <ScenarioEventsPanel
-          armies={armies}
-          currentRound={currentRound}
-          editable={false}
-          events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
-          resolvedEventIds={mission.resolvedEventIds}
-          zones={scenario.zones}
-        />
-        <div className="missionCombatants">
-          <span>{text("Obrońca", "Defender")}: <strong>{defender ? localizeFaction(language, defender.faction) : text("Brak", "None")}</strong></span>
-          <span>{text("Atakujący", "Attacker")}: <strong>{attacker ? localizeFaction(language, attacker.faction) : text("Brak", "None")}</strong></span>
-        </div>
-        <ArmySideConfiguration
-          activationCounts={activationCounts}
-          armies={armies}
-          defenderArmyId={mission.defenderArmyId}
-          deploymentZones={scenario.deploymentZones}
-          teamEditingDisabled
-          controlEditingDisabled={mission.status !== "Active"}
-          onArmyConfigChange={onArmyConfigChange}
-        />
-        <button className="secondaryButton" onClick={onRestart}>
-          {text("Zakończ i przejdź do kreatora", "End and return to builder")}
-        </button>
+        <details className="missionIntelDetails">
+          <summary>{text("Szczegóły misji i stron", "Mission and sides details")}</summary>
+          <div className="missionIntelDetailsBody">
+            <MissionDirectorStatus mission={mission} scenario={scenario} />
+            <div className="missionCombatants">
+              <span>{text("Obrońca", "Defender")}: <strong>{defender ? localizeFaction(language, defender.faction) : text("Brak", "None")}</strong></span>
+              <span>{text("Atakujący", "Attacker")}: <strong>{attacker ? localizeFaction(language, attacker.faction) : text("Brak", "None")}</strong></span>
+            </div>
+            <ScenarioEventsPanel
+              armies={armies}
+              currentRound={currentRound}
+              editable={false}
+              events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
+              resolvedEventIds={mission.resolvedEventIds}
+              zones={scenario.zones}
+            />
+            <ArmySideConfiguration
+              activationCounts={activationCounts}
+              armies={armies}
+              defenderArmyId={mission.defenderArmyId}
+              deploymentZones={scenario.deploymentZones}
+              teamEditingDisabled
+              controlEditingDisabled={mission.status !== "Active"}
+              onArmyConfigChange={onArmyConfigChange}
+            />
+            <button className="secondaryButton" onClick={onRestart}>
+              {text("Zakończ i przejdź do kreatora", "End and return to builder")}
+            </button>
+          </div>
+        </details>
       </section>
     );
   }

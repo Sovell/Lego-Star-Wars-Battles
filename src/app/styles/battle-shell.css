@@ -424,15 +424,32 @@
   min-height: 0;
 }
 
+.battleInspector[data-tone="republic"] {
+  border-left: 3px solid var(--ui-color-republic);
+}
+
+.battleInspector[data-tone="separatists"] {
+  border-left: 3px solid var(--ui-color-separatists);
+}
+
 .battleInspectorHeader {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--ui-shadow-inset);
   padding: 12px 14px;
+}
+
+.battleInspector[data-tone="republic"] .battleInspectorHeader strong {
+  color: var(--ui-color-republic);
+}
+
+.battleInspector[data-tone="separatists"] .battleInspectorHeader strong {
+  color: var(--ui-color-separatists);
 }
 
 .battleInspectorContent {
   align-content: start;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   overflow-y: auto;
   padding: 10px;
@@ -440,9 +457,13 @@
 
 .battleInspector .missionPanel,
 .battleInspector .savePanel,
-.battleInspector .playingSideSummary,
 .battleInspector .mapReadout {
   border-radius: 6px;
+}
+
+.battleInspector .missionInPlay,
+.battleInspector .unitInspectorModule {
+  border-radius: 0;
 }
 
 .battleActionBar {
@@ -489,16 +510,41 @@
 }
 
 .battleDrawerPanel {
-  background: rgba(15, 19, 25, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 7px;
-  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.58);
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-border-strong);
+  border-radius: var(--ui-radius-sm);
+  box-shadow: var(--ui-shadow-overlay), var(--ui-shadow-inset);
+  clip-path: var(--ui-clip-chamfer-sm);
   height: min(420px, 55dvh);
   overflow: hidden;
   bottom: calc(100% + 6px);
   left: 0;
   position: absolute;
   width: min(920px, calc(100vw - var(--battle-inspector-width) - 52px));
+}
+
+.battleDrawerTabs {
+  background: var(--ui-color-surface-2);
+  border-bottom-color: var(--ui-color-separator);
+}
+
+.battleDrawerTabs button {
+  border-radius: var(--ui-radius-sm);
+  color: var(--ui-color-text-muted);
+  flex: 0 0 auto;
+  min-width: 104px;
+}
+
+.battleDrawerTabs button.active {
+  background: var(--ui-color-surface-3);
+  box-shadow: inset 0 -2px 0 var(--ui-color-republic);
+  color: var(--ui-color-text);
+}
+
+.battleDrawerTabs button:focus-visible,
+.battleDrawerToggle:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
 }
 
 .battleShellPreparation .battleDrawerPanel {
@@ -593,6 +639,20 @@
 
 .battleDrawerContent .armiesGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.battleDrawerContent .savePanel {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-separator);
+  border-radius: 0;
+  box-shadow: var(--ui-shadow-inset);
+}
+
+.battleDrawerContent .logEntry {
+  background: var(--ui-color-surface-2);
+  border-left: 2px solid var(--ui-color-border-strong);
+  border-radius: 0;
+  padding: 8px;
 }
 
 @media (max-width: 1600px) {

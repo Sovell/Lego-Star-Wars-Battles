@@ -1,0 +1,309 @@
+.unitInspectorModule {
+  --unit-accent: var(--ui-color-republic);
+  --unit-accent-soft: rgb(85 185 233 / 13%);
+  --unit-accent-strong: #bcecff;
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-separator);
+  border-top: 3px solid var(--unit-accent);
+  box-shadow: var(--ui-shadow-inset);
+  display: grid;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-2);
+}
+
+.unitInspectorEmpty {
+  border-top-color: var(--ui-color-border-strong);
+  gap: var(--ui-space-1);
+  min-height: 112px;
+  place-content: center;
+  text-align: center;
+}
+
+.unitInspectorEmpty > span,
+.unitInspectorIdentity > div > span {
+  color: var(--ui-color-text-muted);
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.unitInspectorEmpty > strong {
+  color: var(--ui-color-text);
+  font-size: 0.9rem;
+}
+
+.unitInspectorEmpty p,
+.unitInspectorEmptyNote {
+  color: var(--ui-color-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.unitInspectorIdentity {
+  align-items: center;
+  display: grid;
+  gap: var(--ui-space-2);
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.unitInspectorIdentity > div:not(.unitInspectorPortrait) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.unitInspectorIdentity > div > strong {
+  color: var(--unit-accent-strong);
+  font-size: 0.84rem;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unitInspectorIdentity > div > small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.62rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.unitInspectorPortrait {
+  align-items: center;
+  background: var(--ui-color-surface-1);
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 34%, var(--ui-color-border));
+  display: flex;
+  height: 68px;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  width: 68px;
+}
+
+.unitInspectorPortrait img {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  padding: 3px;
+  position: absolute;
+  width: 100%;
+  z-index: 1;
+}
+
+.unitInspectorPortrait span {
+  color: var(--unit-accent-strong);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.unitInspectorStatus {
+  align-self: start;
+  background: var(--unit-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 34%, transparent);
+  color: var(--unit-accent-strong);
+  font-size: 0.56rem;
+  font-weight: 900;
+  padding: 4px 5px;
+  text-transform: uppercase;
+}
+
+.unitInspectorStatus[data-status="destroyed"] {
+  border-color: var(--ui-color-error);
+  color: var(--ui-color-error);
+}
+
+.unitInspectorStatus[data-status="pinned"] {
+  border-color: var(--ui-color-warning);
+  color: var(--ui-color-warning);
+}
+
+.unitInspectorStats {
+  display: grid;
+  gap: var(--ui-space-1);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.unitInspectorStats > span {
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-separator);
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 6px;
+}
+
+.unitInspectorStats small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.53rem;
+  font-weight: 900;
+}
+
+.unitInspectorStats strong {
+  color: var(--ui-color-text);
+  font-size: 0.8rem;
+}
+
+.unitInspectorPosition {
+  align-items: center;
+  color: var(--ui-color-text);
+  display: flex;
+  font-size: 0.66rem;
+  gap: var(--ui-space-2);
+  justify-content: space-between;
+}
+
+.unitInspectorPosition small {
+  color: var(--ui-color-text-muted);
+  text-align: right;
+}
+
+.unitInspectorSection {
+  border-top: 1px solid var(--ui-color-separator);
+  padding-top: var(--ui-space-2);
+}
+
+.unitInspectorSection > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--ui-space-2);
+  list-style: none;
+}
+
+.unitInspectorSection > summary::-webkit-details-marker {
+  display: none;
+}
+
+.unitInspectorSection > summary::before {
+  color: var(--unit-accent);
+  content: "▸";
+  font-size: 0.7rem;
+}
+
+.unitInspectorSection[open] > summary::before {
+  content: "▾";
+}
+
+.unitInspectorSection > summary strong {
+  color: var(--ui-color-text);
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.unitInspectorSection > summary small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.58rem;
+  margin-left: auto;
+}
+
+.unitInspectorWeaponList,
+.unitInspectorAbilityList {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding-top: var(--ui-space-2);
+}
+
+.unitInspectorWeaponList > div {
+  align-items: center;
+  background: var(--ui-color-surface-1);
+  display: grid;
+  gap: 5px;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  padding: 6px 7px;
+}
+
+.unitInspectorWeaponList strong {
+  color: var(--ui-color-text);
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unitInspectorWeaponList span {
+  color: var(--ui-color-text-muted);
+  font-size: 0.61rem;
+}
+
+.unitInspectorWeaponList b {
+  color: var(--unit-accent-strong);
+  margin-right: 2px;
+}
+
+.unitInspectorAbilityList > div {
+  background: var(--ui-color-surface-1);
+  display: grid;
+  gap: 3px;
+  padding: 6px 7px;
+}
+
+.unitInspectorAbilityList > div:focus-visible,
+.unitInspectorSection > summary:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
+}
+
+.unitInspectorAbilityList > div > span {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.unitInspectorAbilityList strong {
+  color: var(--ui-color-text);
+  font-size: 0.68rem;
+}
+
+.unitInspectorAbilityList small {
+  border: 1px solid var(--ui-color-border);
+  color: var(--ui-color-text-muted);
+  font-size: 0.53rem;
+  font-weight: 900;
+  padding: 2px 4px;
+  text-transform: uppercase;
+}
+
+.unitInspectorAbilityList small[data-tone="ready"] {
+  border-color: var(--ui-color-success);
+  color: var(--ui-color-success);
+}
+
+.unitInspectorAbilityList small[data-tone="warning"] {
+  border-color: var(--ui-color-warning);
+  color: var(--ui-color-warning);
+}
+
+.unitInspectorAbilityList p,
+.unitInspectorLore p {
+  color: var(--ui-color-text-muted);
+  font-size: 0.61rem;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.unitInspectorLore > strong {
+  color: var(--unit-accent-strong);
+  display: block;
+  font-size: 0.67rem;
+  padding-top: var(--ui-space-2);
+}
+
+@media (max-width: 1400px) {
+  .unitInspectorIdentity {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .unitInspectorPortrait {
+    height: 58px;
+    width: 58px;
+  }
+
+  .unitInspectorStatus {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

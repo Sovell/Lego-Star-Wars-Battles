@@ -322,17 +322,6 @@ h1 {
   min-width: 0;
 }
 
-.playingSideSummary {
-  background: #101319;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #cdd5df;
-  display: grid;
-  font-size: 0.82rem;
-  gap: 7px;
-  padding: 10px;
-}
-
 .compactDecision {
   grid-column: 1 / -1;
   grid-template-columns: 1fr auto;
@@ -479,11 +468,6 @@ h1 {
 .commandPanel .missionPanel > p {
   font-size: 0.76rem;
   line-height: 1.32;
-}
-
-.commandPanel .playingSideSummary {
-  gap: 5px;
-  padding: 8px 10px;
 }
 
 .commandPanel button {

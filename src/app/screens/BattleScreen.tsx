@@ -10,6 +10,7 @@ import {
   type BattleCommandProgress,
 } from "../battle/BattleCommandHeader";
 import { BattleInspector } from "../battle/BattleInspector";
+import { BattleUnitInspector } from "../battle/BattleUnitInspector";
 import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
 import {
   BattleNotifications,
@@ -105,7 +106,6 @@ type PendingAdvance = {
 type BattleDockMode = OrderType | "Ability";
 
 const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
-const unitPanelStorageKey = "lswb:battle-unit-panel-open";
 
 export function BattleScreen({
   activeArmyId,
@@ -222,13 +222,6 @@ export function BattleScreen({
   const [dockMode, setDockMode] = useState<BattleDockMode>(selectedOrder);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [unitPanelOpen, setUnitPanelOpen] = useState(() => {
-    try {
-      return window.localStorage.getItem(unitPanelStorageKey) !== "false";
-    } catch {
-      return true;
-    }
-  });
   const [notifications, setNotifications] = useState<BattleNotification[]>([]);
   const notificationId = useRef(0);
   const [battlefieldVisualEvent, setBattlefieldVisualEvent] = useState<BattlefieldVisualEvent>();
@@ -242,14 +235,6 @@ export function BattleScreen({
     BattlefieldObjectType | "Remove"
   >("DefensePoint");
   const completedCampaignBattleId = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(unitPanelStorageKey, String(unitPanelOpen));
-    } catch {
-      // The panel still works when persistent browser storage is unavailable.
-    }
-  }, [unitPanelOpen]);
 
   const allUnits = useMemo(() => battle.armies.flatMap((army) => army.units), [battle.armies]);
   const selectedUnit = allUnits.find((unit) => unit.id === selectedUnitId);
@@ -1029,18 +1014,24 @@ export function BattleScreen({
           )}
         </SetupToolRail>
       ) : undefined}
-      unitPanel={!preparationActive ? (
-        <UnitDetails
-          debugMode={false}
-          selectedArmy={selectedArmy}
-          selectedUnit={selectedUnit}
-          onUnitPatch={onUnitPatch}
-        />
-      ) : undefined}
-      unitPanelOpen={unitPanelOpen}
-      onUnitPanelOpenChange={setUnitPanelOpen}
       inspector={(
-        <BattleInspector phase={gamePhase}>
+        <BattleInspector
+          phase={gamePhase}
+          tone={selectedArmy?.faction === "Republic"
+            ? "republic"
+            : selectedArmy?.faction === "Separatists"
+              ? "separatists"
+              : "neutral"}
+        >
+          {!preparationActive ? (
+            <BattleUnitInspector
+              battle={battle}
+              debugMode={false}
+              selectedArmy={selectedArmy}
+              selectedUnit={selectedUnit}
+              onUnitPatch={onUnitPatch}
+            />
+          ) : null}
           <MissionPanel
             activationCounts={preparationActive ? undefined : activationCounts}
             armies={battle.armies}
@@ -1098,18 +1089,6 @@ export function BattleScreen({
               selectedUnit={selectedUnit}
               onUnitPatch={onUnitPatch}
             />
-          ) : null}
-
-          {!preparationActive ? (
-            <>
-              <BattleSavePanel
-                battle={battle}
-                initialBattle={initialBattle}
-                logs={logs}
-                mission={mission}
-                onBattleLoad={handleBattleLoad}
-              />
-            </>
           ) : null}
 
           {preparationActive ? (
@@ -1420,6 +1399,16 @@ export function BattleScreen({
               ))}
             </div>
           )}
+          save={!preparationActive ? (
+            <BattleSavePanel
+              battle={battle}
+              defaultOpen
+              initialBattle={initialBattle}
+              logs={logs}
+              mission={mission}
+              onBattleLoad={handleBattleLoad}
+            />
+          ) : undefined}
         />
       )}
     />

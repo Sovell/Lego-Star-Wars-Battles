@@ -447,7 +447,126 @@ button.missionArmyOption:hover {
 }
 
 .missionInPlay {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-separator);
+  border-left: 3px solid var(--ui-color-republic);
+  border-radius: 0;
+  box-shadow: var(--ui-shadow-inset);
+  gap: 7px;
+  padding: 9px;
+}
+
+.missionInPlay.victory {
+  border-left-color: var(--ui-color-success);
+}
+
+.missionInPlay.defeat {
+  border-left-color: var(--ui-color-error);
+}
+
+.missionInPlayHeader {
+  align-items: start;
+  display: flex;
   gap: 8px;
+  justify-content: space-between;
+}
+
+.missionInPlayHeader > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.missionInPlayHeader span {
+  color: var(--ui-color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.missionInPlayHeader strong {
+  color: var(--ui-color-text);
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+
+.missionInPlayHeader > small {
+  border: 1px solid var(--ui-color-republic);
+  color: var(--ui-color-republic);
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 3px 5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.missionInPlay.victory .missionInPlayHeader > small {
+  border-color: var(--ui-color-success);
+  color: var(--ui-color-success);
+}
+
+.missionInPlay.defeat .missionInPlayHeader > small {
+  border-color: var(--ui-color-error);
+  color: var(--ui-color-error);
+}
+
+.missionInPlay .missionObjectiveSummary {
+  color: var(--ui-color-text-muted);
+  display: -webkit-box;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.missionInPlay .missionProgressHeader {
+  font-size: 0.67rem;
+}
+
+.missionInPlay progress {
+  height: 5px;
+}
+
+.missionIntelDetails {
+  border-top: 1px solid var(--ui-color-separator);
+  padding-top: 7px;
+}
+
+.missionIntelDetails > summary {
+  color: var(--ui-color-text-muted);
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 900;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.missionIntelDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.missionIntelDetails > summary::before {
+  color: var(--ui-color-republic);
+  content: "▸";
+  margin-right: 6px;
+}
+
+.missionIntelDetails[open] > summary::before {
+  content: "▾";
+}
+
+.missionIntelDetails > summary:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
+}
+
+.missionIntelDetailsBody {
+  display: grid;
+  gap: 7px;
+  padding-top: 8px;
 }
 
 .missionCombatants {

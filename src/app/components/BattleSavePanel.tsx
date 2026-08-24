@@ -7,12 +7,14 @@ import { useI18n } from "../../i18n";
 
 export function BattleSavePanel({
   battle,
+  defaultOpen = false,
   initialBattle,
   logs,
   mission,
   onBattleLoad,
 }: {
   battle: Battle;
+  defaultOpen?: boolean;
   initialBattle?: Battle;
   logs: CombatLogEntry[];
   mission: MissionState;
@@ -114,7 +116,7 @@ export function BattleSavePanel({
   }
 
   return (
-    <details className="savePanel">
+    <details className="savePanel" open={defaultOpen || undefined}>
       <summary className="savePanelSummary">
         <strong>{text("Zapis bitwy", "Battle save")}</strong>
         <small>{savedBattles.length} {text("lokalnie", "local")}</small>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useI18n } from "../../i18n";
 
-export type BattleDrawerTab = "logs" | "armies";
+export type BattleDrawerTab = "logs" | "armies" | "save";
 
 export function BattleLogDrawer({
   activeTab,
@@ -10,6 +10,7 @@ export function BattleLogDrawer({
   onOpenChange,
   onTabChange,
   open,
+  save,
 }: {
   activeTab: BattleDrawerTab;
   armies: ReactNode;
@@ -17,6 +18,7 @@ export function BattleLogDrawer({
   onOpenChange: (open: boolean) => void;
   onTabChange: (tab: BattleDrawerTab) => void;
   open: boolean;
+  save?: ReactNode;
 }) {
   const { text } = useI18n();
   return (
@@ -26,7 +28,7 @@ export function BattleLogDrawer({
         className="battleDrawerToggle"
         onClick={() => onOpenChange(!open)}
       >
-        {open ? text("Zwiń dane bitwy", "Hide battle data") : text("Dziennik i jednostki", "Log and units")}
+        {open ? text("Zwiń narzędzia Intel", "Hide intel tools") : text("Narzędzia Intel", "Intel tools")}
       </button>
       {open ? (
         <div className="battleDrawerPanel">
@@ -41,11 +43,19 @@ export function BattleLogDrawer({
               className={activeTab === "armies" ? "active" : ""}
               onClick={() => onTabChange("armies")}
             >
-              {text("Jednostki", "Units")}
+              {text("Roster", "Roster")}
             </button>
+            {save ? (
+              <button
+                className={activeTab === "save" ? "active" : ""}
+                onClick={() => onTabChange("save")}
+              >
+                {text("Zapis", "Save")}
+              </button>
+            ) : null}
           </div>
           <div className="battleDrawerContent">
-            {activeTab === "armies" ? armies : logs}
+            {activeTab === "armies" ? armies : activeTab === "save" && save ? save : logs}
           </div>
         </div>
       ) : null}
