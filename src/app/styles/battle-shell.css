@@ -56,9 +56,10 @@
 }
 
 .battleShell {
-  background: #0b0e13;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 7px;
+  background: var(--ui-color-background);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-md);
+  box-shadow: var(--ui-shadow-inset);
   display: grid;
   gap: 1px;
   height: 100%;
@@ -96,8 +97,8 @@
 }
 
 .battleUnitPanel {
-  background: #11161d;
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--ui-color-surface-1);
+  border-right: 1px solid var(--ui-color-separator);
   display: grid;
   grid-area: unit-panel;
   grid-template-rows: auto minmax(0, 1fr);
@@ -194,8 +195,8 @@
 }
 
 .setupToolRail {
-  background: #11161d;
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--ui-color-surface-1);
+  border-right: 1px solid var(--ui-color-separator);
   display: grid;
   gap: 10px;
   grid-area: tools;
@@ -243,7 +244,7 @@
 }
 
 .battleStage {
-  background: #090c11;
+  background: var(--ui-color-background);
   grid-area: stage;
   min-height: 0;
   min-width: 0;
@@ -311,8 +312,8 @@
 }
 
 .battleInspector {
-  background: #11161d;
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--ui-color-surface-1);
+  border-left: 1px solid var(--ui-color-separator);
   display: grid;
   grid-area: inspector;
   grid-template-rows: auto minmax(0, 1fr);
@@ -341,8 +342,8 @@
 }
 
 .battleActionBar {
-  background: #11161d;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--ui-color-surface-1);
+  border-top: 1px solid var(--ui-color-separator);
   grid-area: actions;
   min-width: 0;
   overflow-x: auto;
@@ -361,8 +362,8 @@
 
 .battleUtilityRail {
   align-items: center;
-  background: #11161d;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--ui-color-surface-1);
+  border-top: 1px solid var(--ui-color-separator);
   display: flex;
   gap: 8px;
   grid-area: utility;

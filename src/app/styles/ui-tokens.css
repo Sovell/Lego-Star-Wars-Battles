@@ -1,0 +1,64 @@
+:root {
+  color-scheme: dark;
+
+  /* Command Deck palette */
+  --ui-color-background: #090c10;
+  --ui-color-surface-1: #10151b;
+  --ui-color-surface-2: #171e26;
+  --ui-color-surface-3: #202a34;
+  --ui-color-border: #34414e;
+  --ui-color-border-strong: #526170;
+  --ui-color-separator: rgb(156 175 194 / 18%);
+  --ui-color-text: #edf3f8;
+  --ui-color-text-muted: #9eabb8;
+  --ui-color-republic: #55b9e9;
+  --ui-color-separatists: #ef6848;
+  --ui-color-action: #f0cf45;
+  --ui-color-action-text: #17160f;
+  --ui-color-error: #f0646f;
+  --ui-color-warning: #e5a83f;
+  --ui-color-success: #4bc482;
+
+  /* Interaction states */
+  --ui-color-hover: rgb(255 255 255 / 7%);
+  --ui-color-active: rgb(0 0 0 / 22%);
+  --ui-color-disabled: #66717c;
+  --ui-disabled-opacity: 0.48;
+  --ui-focus-color: #8bd9ff;
+  --ui-focus-ring: 0 0 0 2px var(--ui-color-background), 0 0 0 4px var(--ui-focus-color);
+
+  /* Spacing */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-space-10: 40px;
+
+  /* Controls */
+  --ui-control-height-sm: 32px;
+  --ui-control-height: 40px;
+  --ui-control-height-lg: 48px;
+
+  /* Depth and material */
+  --ui-shadow-inset: inset 0 1px 0 rgb(255 255 255 / 5%), inset 0 -1px 0 rgb(0 0 0 / 42%);
+  --ui-shadow-raised: 0 2px 0 rgb(0 0 0 / 48%);
+  --ui-shadow-overlay: 0 14px 32px rgb(0 0 0 / 52%);
+
+  /* Compact geometry */
+  --ui-radius-xs: 2px;
+  --ui-radius-sm: 4px;
+  --ui-radius-md: 6px;
+  --ui-chamfer-sm: 4px;
+  --ui-chamfer-md: 8px;
+  --ui-clip-chamfer-sm: polygon(
+    var(--ui-chamfer-sm) 0,
+    100% 0,
+    100% calc(100% - var(--ui-chamfer-sm)),
+    calc(100% - var(--ui-chamfer-sm)) 100%,
+    0 100%,
+    0 var(--ui-chamfer-sm)
+  );
+}
