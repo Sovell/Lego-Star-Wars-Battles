@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { abilities, unitTemplates } from "../../data";
 import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
 import { PanelTitle } from "../components/PanelTitle";
 import { BattleActionBar } from "../battle/BattleActionBar";
+import {
+  BattleCommandHeader,
+  type BattleCommandProgress,
+} from "../battle/BattleCommandHeader";
 import { BattleInspector } from "../battle/BattleInspector";
 import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
 import {
@@ -104,6 +108,7 @@ export function BattleScreen({
   activeArmyId,
   armyJson,
   battle,
+  commandActions,
   initialBattle,
   gamePhase,
   debugMode,
@@ -151,6 +156,7 @@ export function BattleScreen({
   activeArmyId?: string;
   armyJson: string;
   battle: Battle;
+  commandActions?: ReactNode;
   initialBattle?: Battle;
   gamePhase: GamePhase;
   debugMode: boolean;
@@ -316,6 +322,50 @@ export function BattleScreen({
   const turnCanEnd = canEndTurn(battle);
   const missionActive = mission.status === "Active" && gamePhase === "Playing";
   const preparationActive = gamePhase === "Preparation";
+  const commandArmy = battle.armies.find(
+    (army) => army.id === (battle.activeActivation?.armyId ?? activeArmyId),
+  );
+  const commandArmyLivingUnits = commandArmy?.units.filter(
+    (unit) => unit.status !== "Destroyed",
+  ).length ?? 0;
+  const totalLivingUnits = allUnits.filter((unit) => unit.status !== "Destroyed").length;
+  const commandProgress = getBattleCommandProgress(
+    mission,
+    scenario,
+    text("Rundy", "Rounds"),
+    text("Cele", "Targets"),
+    text("Etapy", "Stages"),
+  );
+  const commandPhase = preparationActive
+    ? text("Przygotowanie", "Preparation")
+    : mission.status !== "Active"
+      ? mission.status === "Victory"
+        ? text("Zwycięstwo", "Victory")
+        : text("Porażka", "Defeat")
+      : battle.phase === "Activation"
+        ? text("Aktywacja", "Activation")
+        : battle.phase === "EndTurn"
+          ? text("Koniec tury", "End turn")
+          : battle.phase === "Finished"
+            ? text("Zakończona", "Finished")
+            : text("Przygotowanie", "Setup");
+  const commandForceName = preparationActive
+    ? `${battle.armies.length} ${text("armie", "armies")}`
+    : commandArmy
+      ? commandArmy.playerName
+      : remainingActivations > 0
+        ? text("Oczekiwanie na losowanie", "Waiting for draw")
+        : text("Wszystkie rozkazy wykorzystane", "All orders used");
+  const commandForceDetail = preparationActive
+    ? `${totalLivingUnits} ${text("jednostek", "units")} · ${battle.board.width} × ${battle.board.height}`
+    : commandArmy
+      ? `${localizeFaction(language, commandArmy.faction)} · ${commandArmyLivingUnits}/${commandArmy.units.length} ${text("jednostek", "units")}`
+      : `${remainingActivations}/${turnActivationCount} ${text("rozkazów", "orders")}`;
+  const commandForceTone = commandArmy?.faction === "Republic"
+    ? "republic"
+    : commandArmy?.faction === "Separatists"
+      ? "separatists"
+      : "neutral";
   const mapEditingLocked = Boolean(scenario.mapPreset) || readOnlyMap;
   const selectedDeploymentArmySlot = battle.armies.findIndex(
     (army) => army.id === selectedDeploymentArmyId,
@@ -786,6 +836,29 @@ export function BattleScreen({
   return (
     <BattleShell
       phase={gamePhase}
+      header={(
+        <BattleCommandHeader
+          actions={commandActions}
+          activeDetail={commandForceDetail}
+          activeLabel={preparationActive
+            ? text("Siły", "Forces")
+            : commandArmy
+              ? text("Aktywna armia", "Active army")
+              : text("Aktywacja", "Activation")}
+          activeName={commandForceName}
+          activeTone={commandForceTone}
+          objective={mission.activeObjectiveName ?? localizeScenarioName(language, scenario.id, scenario.name)}
+          objectiveLabel={text("Cel", "Objective")}
+          phase={commandPhase}
+          phaseLabel={text("Faza", "Phase")}
+          progress={commandProgress}
+          title={preparationActive
+            ? text("Kreator scenariusza", "Scenario Builder")
+            : text("Panel dowodzenia", "Command Panel")}
+          turn={battle.turn}
+          turnLabel={text("Tura", "Turn")}
+        />
+      )}
       setupTools={preparationActive ? (
         <SetupToolRail
           mapEditingLocked={mapEditingLocked}
@@ -967,20 +1040,6 @@ export function BattleScreen({
 
           {!preparationActive ? (
             <>
-              <div className="playingSideSummary">
-                <PanelTitle title={text("Rozgrywka", "Battle")} detail={`${text("Tura", "Turn")} ${battle.turn}`} />
-                <span>{localizeScenarioName(language, scenario.id, scenario.name)}</span>
-                <span>
-                  {text("Rozkazy", "Orders")}: {remainingActivations}/{turnActivationCount} · {text("maks. 8 na armię", "max. 8 per army")}
-                </span>
-                <span>
-                  {activeArmyId
-                    ? `${text("Aktywna", "Active")}: ${
-                        battle.armies.find((army) => army.id === activeArmyId)?.playerName
-                      }`
-                    : text("Oczekiwanie na losowanie", "Waiting for draw")}
-                </span>
-              </div>
               <BattleSavePanel
                 battle={battle}
                 initialBattle={initialBattle}
@@ -1296,6 +1355,47 @@ export function BattleScreen({
       )}
     />
   );
+}
+
+function getBattleCommandProgress(
+  mission: MissionState,
+  scenario: ScenarioDefinition,
+  roundsLabel: string,
+  targetsLabel: string,
+  stagesLabel: string,
+): BattleCommandProgress | undefined {
+  const condition = scenario.victoryCondition;
+
+  if (condition.type === "DestroyObjects") {
+    return {
+      current: mission.destroyedObjectiveIds?.length ?? 0,
+      label: targetsLabel,
+      total: condition.count,
+    };
+  }
+
+  if (condition.type === "ProgressiveControl") {
+    return {
+      current: mission.objectiveStage ?? 0,
+      label: stagesLabel,
+      total: condition.count,
+    };
+  }
+
+  if (condition.type === "RescueAndExtract") {
+    return {
+      current: mission.objectiveStage ?? 0,
+      label: stagesLabel,
+      total: condition.hostageCount + 1,
+    };
+  }
+
+  const total = mission.roundTarget ?? (
+    "rounds" in condition ? condition.rounds : condition.roundLimit
+  );
+  return total > 0
+    ? { current: mission.roundsCompleted, label: roundsLabel, total }
+    : undefined;
 }
 
 function MissionSummary({

@@ -860,57 +860,25 @@ export function App() {
         />
       ) : (
         <>
-      <section className="commandStrip">
+      {view !== "setup" && view !== "battle" ? <section className="commandStrip">
         <div>
           <p className="eyebrow">LEGO Star Wars Battles</p>
-          <h1>{view === "setup"
-            ? text("Kreator scenariusza", "Scenario Builder")
-            : view === "battle"
-              ? text("Panel dowodzenia", "Command Panel")
-              : view === "campaign"
-                ? text("Kampania galaktyczna", "Galactic Campaign")
-              : view === "composer"
-                ? text("Kreator armii", "Army Composer")
-                : text("Kompendium", "Compendium")}</h1>
+          <h1>{view === "campaign"
+            ? text("Kampania galaktyczna", "Galactic Campaign")
+            : view === "composer"
+              ? text("Kreator armii", "Army Composer")
+              : text("Kompendium", "Compendium")}</h1>
         </div>
         <nav className="viewTabs" aria-label={text("Widoki aplikacji", "Application views")}>
           <button onClick={() => setView("home")}>
             Menu
           </button>
-          {view === "setup" ? (
-            <button onClick={() => openComposer("setup")}>{text("Kreator armii", "Army Composer")}</button>
-          ) : null}
           {view === "composer" ? (
             <button onClick={() => setView("setup")}>{text("Kreator scenariusza", "Scenario Builder")}</button>
           ) : null}
         </nav>
         <LanguageSwitcher />
-        {view === "setup" ? <label className="debugToggle">
-          <input
-            checked={debugMode}
-            type="checkbox"
-            onChange={(event) => setDebugMode(event.target.checked)}
-          />
-          Debug
-        </label> : null}
-        {view === "setup" || view === "battle" ? <div className="turnCounter">
-          <span>{text("Tura", "Turn")}</span>
-          <strong>{visibleBattle.turn}</strong>
-        </div> : null}
-        {view === "setup" || view === "battle" ? <div className="phasePill">
-          {gamePhase === "Preparation"
-            ? text("Przygotowanie", "Preparation")
-            : mission.status === "Active"
-              ? battle.phase === "Activation"
-                ? text("Aktywacja", "Activation")
-                : battle.phase === "EndTurn"
-                  ? text("Koniec tury", "End Turn")
-                  : battle.phase === "Finished"
-                    ? text("Zakończona", "Finished")
-                    : text("Przygotowanie", "Setup")
-              : `${text("Misja", "Mission")} ${mission.status === "Victory" ? text("zwycięstwo", "victory") : text("porażka", "defeat")}`}
-        </div> : null}
-      </section>
+      </section> : null}
 
       {view === "setup" || view === "battle" ? (
         <Suspense fallback={<section className="battleLoadingState">{text("Ładowanie pola bitwy…", "Loading battlefield…")}</section>}>
@@ -918,6 +886,29 @@ export function App() {
           activeArmyId={activeArmyId}
           armyJson={armyJson}
           battle={visibleBattle}
+          commandActions={(
+            <>
+              <nav className="viewTabs" aria-label={text("Widoki aplikacji", "Application views")}>
+                <button onClick={() => setView("home")}>Menu</button>
+                {view === "setup" ? (
+                  <button onClick={() => openComposer("setup")}>
+                    {text("Kreator armii", "Army Composer")}
+                  </button>
+                ) : null}
+              </nav>
+              <LanguageSwitcher />
+              {view === "setup" ? (
+                <label className="debugToggle">
+                  <input
+                    checked={debugMode}
+                    type="checkbox"
+                    onChange={(event) => setDebugMode(event.target.checked)}
+                  />
+                  Debug
+                </label>
+              ) : null}
+            </>
+          )}
           initialBattle={battleStartSnapshot}
           gamePhase={gamePhase}
           debugMode={debugMode}

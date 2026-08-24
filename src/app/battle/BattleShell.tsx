@@ -7,6 +7,7 @@ export function BattleShell({
   actionBar,
   battlefield,
   drawer,
+  header,
   inspector,
   notifications,
   overlay,
@@ -19,6 +20,7 @@ export function BattleShell({
   actionBar?: ReactNode;
   battlefield: ReactNode;
   drawer: ReactNode;
+  header?: ReactNode;
   inspector: ReactNode;
   notifications?: ReactNode;
   overlay?: ReactNode;
@@ -32,53 +34,56 @@ export function BattleShell({
   const showUnitPanel = Boolean(unitPanel && unitPanelOpen);
 
   return (
-    <section
-      className={`battleShell ${
-        phase === "Preparation" ? "battleShellPreparation" : "battleShellPlaying"
-      } ${showUnitPanel ? "battleShellWithUnitPanel" : ""}`}
-    >
-      {setupTools}
-      {showUnitPanel ? (
-        <aside className="battleUnitPanel" aria-label={text("Karta wybranej jednostki", "Selected unit card")}>
-          <header className="battleUnitPanelHeader">
-            <div>
+    <section className="battleShell">
+      {header}
+      <div
+        className={`battleShellFrame ${
+          phase === "Preparation" ? "battleShellPreparation" : "battleShellPlaying"
+        } ${showUnitPanel ? "battleShellWithUnitPanel" : ""}`}
+      >
+        {setupTools}
+        {showUnitPanel ? (
+          <aside className="battleUnitPanel" aria-label={text("Karta wybranej jednostki", "Selected unit card")}>
+            <header className="battleUnitPanelHeader">
+              <div>
+                <span>{text("Jednostka", "Unit")}</span>
+                <strong>{text("Karta jednostki", "Unit card")}</strong>
+              </div>
+              <button
+                type="button"
+                aria-label={text("Schowaj kartę jednostki", "Hide unit card")}
+                title={text("Schowaj kartę jednostki", "Hide unit card")}
+                onClick={() => onUnitPanelOpenChange?.(false)}
+              >
+                &lsaquo;
+              </button>
+            </header>
+            <div className="battleUnitPanelContent">{unitPanel}</div>
+          </aside>
+        ) : null}
+        <section className="battleStage">
+          {battlefield}
+          {unitPanel && !unitPanelOpen ? (
+            <button
+              className="battleUnitPanelToggle"
+              type="button"
+              aria-label={text("Pokaż kartę jednostki", "Show unit card")}
+              onClick={() => onUnitPanelOpenChange?.(true)}
+            >
               <span>{text("Jednostka", "Unit")}</span>
               <strong>{text("Karta jednostki", "Unit card")}</strong>
-            </div>
-            <button
-              type="button"
-              aria-label={text("Schowaj kartę jednostki", "Hide unit card")}
-              title={text("Schowaj kartę jednostki", "Hide unit card")}
-              onClick={() => onUnitPanelOpenChange?.(false)}
-            >
-              &lsaquo;
+              <b aria-hidden="true">&rsaquo;</b>
             </button>
-          </header>
-          <div className="battleUnitPanelContent">{unitPanel}</div>
-        </aside>
-      ) : null}
-      <section className="battleStage">
-        {battlefield}
-        {unitPanel && !unitPanelOpen ? (
-          <button
-            className="battleUnitPanelToggle"
-            type="button"
-            aria-label={text("Pokaż kartę jednostki", "Show unit card")}
-            onClick={() => onUnitPanelOpenChange?.(true)}
-          >
-            <span>{text("Jednostka", "Unit")}</span>
-            <strong>{text("Karta jednostki", "Unit card")}</strong>
-            <b aria-hidden="true">&rsaquo;</b>
-          </button>
-        ) : null}
-        {overlay ? <div className="battleStageOverlay">{overlay}</div> : null}
-      </section>
-      {inspector}
-      {actionBar}
-      <section className="battleUtilityRail">
-        {drawer}
-        {notifications}
-      </section>
+          ) : null}
+          {overlay ? <div className="battleStageOverlay">{overlay}</div> : null}
+        </section>
+        {inspector}
+        {actionBar}
+        <section className="battleUtilityRail">
+          {drawer}
+          {notifications}
+        </section>
+      </div>
     </section>
   );
 }
