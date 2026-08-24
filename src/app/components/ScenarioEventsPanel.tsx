@@ -274,9 +274,9 @@ function UnitWaveEditor({ effect, armies, zones, onChange }: {
     <div className="scenarioEventUnitsHeader"><strong>{text("Jednostki", "Units")}</strong><button className="secondaryButton" disabled={!templates[0]} type="button" onClick={() => templates[0] && onChange({ ...effect, units: [...effect.units, { templateId: templates[0].id, count: 1 }] })}>+ {text("Jednostka", "Unit")}</button></div>
     <div className="scenarioEventUnits">
       {effect.units.map((unit, index) => <div className="scenarioEventUnitRow" key={`${index}-${unit.templateId}`}>
-        <select value={unit.templateId} onChange={(event) => onChange({ ...effect, units: effect.units.map((candidate, unitIndex) => unitIndex === index ? { ...candidate, templateId: event.target.value } : candidate) })}>{templates.map((template) => <option key={template.id} value={template.id}>{localizeUnitName(language, template.id, template.name)}</option>)}</select>
-        <input min={1} type="number" value={unit.count} onChange={(event) => onChange({ ...effect, units: effect.units.map((candidate, unitIndex) => unitIndex === index ? { ...candidate, count: positiveInteger(event.target.value) } : candidate) })} />
-        <button className="dangerButton" type="button" onClick={() => onChange({ ...effect, units: effect.units.filter((_, unitIndex) => unitIndex !== index) })}>×</button>
+        <select aria-label={`${text("Typ jednostki", "Unit type")} ${index + 1}`} value={unit.templateId} onChange={(event) => onChange({ ...effect, units: effect.units.map((candidate, unitIndex) => unitIndex === index ? { ...candidate, templateId: event.target.value } : candidate) })}>{templates.map((template) => <option key={template.id} value={template.id}>{localizeUnitName(language, template.id, template.name)}</option>)}</select>
+        <input aria-label={`${text("Liczba jednostek", "Unit count")} ${index + 1}`} min={1} type="number" value={unit.count} onChange={(event) => onChange({ ...effect, units: effect.units.map((candidate, unitIndex) => unitIndex === index ? { ...candidate, count: positiveInteger(event.target.value) } : candidate) })} />
+        <button aria-label={`${text("Usuń jednostkę", "Remove unit")} ${index + 1}`} className="dangerButton" type="button" onClick={() => onChange({ ...effect, units: effect.units.filter((_, unitIndex) => unitIndex !== index) })}>×</button>
       </div>)}
     </div>
   </>;

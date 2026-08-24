@@ -123,6 +123,7 @@ export function BattleSavePanel({
       </summary>
       <div className="savePanelBody">
         <input
+          aria-label={text("Nazwa zapisu", "Save name")}
           value={saveName}
           onChange={(event) => setSaveName(event.target.value)}
           placeholder={text("Nazwa zapisu", "Save name")}
@@ -131,6 +132,7 @@ export function BattleSavePanel({
           {text("Zapisz bitwę", "Save battle")}
         </button>
         <select
+          aria-label={text("Zapis do wczytania", "Save to load")}
           value={selectedSaveId}
           onChange={(event) => setSelectedSaveId(event.target.value)}
         >

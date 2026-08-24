@@ -10,6 +10,7 @@
   grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
   min-height: 0;
+  min-width: 1024px;
   overflow: hidden;
   padding: 8px;
 }

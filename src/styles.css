@@ -16,7 +16,7 @@
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
 }
 
@@ -38,7 +38,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  filter: saturate(0.55);
+  filter: none;
   opacity: var(--ui-disabled-opacity);
 }
 
@@ -544,6 +544,12 @@ select {
   font-weight: 900;
 }
 
+.primaryButton:disabled {
+  background: var(--ui-color-surface-3);
+  border: 1px solid var(--ui-color-border);
+  color: var(--ui-color-text-muted);
+}
+
 .secondaryButton {
   background: var(--ui-color-surface-3);
   color: var(--ui-color-text);
@@ -913,8 +919,19 @@ select {
 }
 
 .logEntry span {
-  color: #ece06c;
+  color: var(--ui-color-republic);
   font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .logEntry p {

@@ -22,7 +22,10 @@ export function BattleLogDrawer({
 }) {
   const { text } = useI18n();
   return (
-    <section className={`battleLogDrawer ${open ? "open" : ""}`}>
+    <section
+      aria-label={text("Narzędzia wywiadowcze", "Intel tools")}
+      className={`battleLogDrawer ${open ? "open" : ""}`}
+    >
       <button
         aria-expanded={open}
         className="battleDrawerToggle"
@@ -34,12 +37,14 @@ export function BattleLogDrawer({
         <div className="battleDrawerPanel">
           <div className="intelTabs battleDrawerTabs">
             <button
+              aria-pressed={activeTab === "logs"}
               className={activeTab === "logs" ? "active" : ""}
               onClick={() => onTabChange("logs")}
             >
               {text("Dziennik", "Log")}
             </button>
             <button
+              aria-pressed={activeTab === "armies"}
               className={activeTab === "armies" ? "active" : ""}
               onClick={() => onTabChange("armies")}
             >
@@ -47,6 +52,7 @@ export function BattleLogDrawer({
             </button>
             {save ? (
               <button
+                aria-pressed={activeTab === "save"}
                 className={activeTab === "save" ? "active" : ""}
                 onClick={() => onTabChange("save")}
               >

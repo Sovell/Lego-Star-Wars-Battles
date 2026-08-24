@@ -612,6 +612,12 @@
   line-height: 1.55;
 }
 
+.rulesDatapad .glossaryItem > strong {
+  background: color-mix(in srgb, var(--ui-color-republic) 14%, var(--ui-color-surface-2));
+  border-color: color-mix(in srgb, var(--ui-color-republic) 35%, var(--ui-color-border));
+  color: var(--ui-color-republic);
+}
+
 .rulesDatapad .ruleMetaGrid span,
 .rulesDatapad .abilityRule span,
 .rulesDatapad .unitAbilityChips span {

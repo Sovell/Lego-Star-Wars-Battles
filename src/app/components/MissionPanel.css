@@ -336,8 +336,7 @@ button.missionArmyOption:hover {
   font-size: 0.49rem;
   font-weight: 850;
   line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
   width: 100%;
 }
@@ -539,8 +538,8 @@ button.missionArmyOption:hover {
 }
 
 .missionDirectorStatus {
-  background: linear-gradient(135deg, rgba(236, 224, 108, 0.09), rgba(12, 17, 23, 0.5));
-  border: 1px solid rgba(236, 224, 108, 0.2);
+  background: linear-gradient(135deg, rgb(85 185 233 / 9%), rgb(12 17 23 / 50%));
+  border: 1px solid rgb(85 185 233 / 20%);
   border-radius: 8px;
   display: grid;
   gap: 5px;
@@ -554,7 +553,7 @@ button.missionArmyOption:hover {
 }
 
 .missionDirectorStatus > div span {
-  color: #ece06c;
+  color: var(--ui-color-republic);
   font-size: 0.66rem;
   font-weight: 900;
   text-transform: uppercase;

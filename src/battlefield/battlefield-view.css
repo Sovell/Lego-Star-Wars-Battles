@@ -7,7 +7,6 @@
 }
 
 .mapThemeBadge {
-  backdrop-filter: blur(8px);
   background: rgba(8, 12, 18, 0.84);
   border: 1px solid;
   border-radius: 6px;

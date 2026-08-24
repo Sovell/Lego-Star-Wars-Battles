@@ -121,7 +121,7 @@ export function MissionPanel({
     { label: text("Misja", "Mission"), ready: true },
     { label: text("Armie", "Armies"), ready: preparationReadiness?.armiesReady ?? canStart },
     { label: text("Mapa", "Map"), ready: preparationReadiness?.mapReady ?? true },
-    { label: text("Rozmieszczenie", "Deployment"), ready: preparationReadiness?.deploymentReady ?? canStart },
+    { label: text("Rozstaw", "Deploy"), ready: preparationReadiness?.deploymentReady ?? canStart },
     { label: text("Gotowość", "Ready"), ready: canStart },
   ];
   const currentBriefingStep = canStart

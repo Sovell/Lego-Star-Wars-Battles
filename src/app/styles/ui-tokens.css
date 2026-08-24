@@ -23,7 +23,7 @@
   --ui-color-hover: rgb(255 255 255 / 7%);
   --ui-color-active: rgb(0 0 0 / 22%);
   --ui-color-disabled: #66717c;
-  --ui-disabled-opacity: 0.48;
+  --ui-disabled-opacity: 0.62;
   --ui-focus-color: #8bd9ff;
   --ui-focus-ring: 0 0 0 2px var(--ui-color-background), 0 0 0 4px var(--ui-focus-color);
 

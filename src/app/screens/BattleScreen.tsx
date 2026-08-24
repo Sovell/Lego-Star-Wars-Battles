@@ -963,6 +963,7 @@ export function BattleScreen({
         >
           {mapMode === "units" ? (
             <select
+              aria-label={text("Oddział do rozmieszczenia", "Unit to deploy")}
               value={selectedUnitId}
               onChange={(event) => onSelectedUnitChange(event.target.value)}
             >
@@ -977,6 +978,7 @@ export function BattleScreen({
           ) : mapMode === "terrain" ? (
             <>
               <select
+                aria-label={text("Typ terenu", "Terrain type")}
                 value={selectedTerrain}
                 onChange={(event) => setSelectedTerrain(event.target.value)}
               >
@@ -1006,6 +1008,7 @@ export function BattleScreen({
           ) : mapMode === "objects" ? (
             <>
               <select
+                aria-label={text("Typ obiektu", "Object type")}
                 value={selectedObjectType}
                 onChange={(event) =>
                   setSelectedObjectType(
@@ -1029,6 +1032,7 @@ export function BattleScreen({
           ) : (
             <>
               <select
+                aria-label={text("Armia dla strefy wejścia", "Army for entry zone")}
                 value={selectedDeploymentArmyId}
                 onChange={(event) => setSelectedDeploymentArmyId(event.target.value)}
               >
