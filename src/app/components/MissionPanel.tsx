@@ -7,7 +7,6 @@ import { areArmiesAllied, getArmyControl } from "../../core/army-relations";
 import type { Army, ArmyControl, TeamId } from "../../types";
 import type { ScenarioMapGenerationState, ScenarioMapScale } from "../scenario-draft";
 import { MapGeneratorPanel } from "./MapGeneratorPanel";
-import { PanelTitle } from "./PanelTitle";
 import { ScenarioEventsPanel } from "./ScenarioEventsPanel";
 import {
   localizeControl,
@@ -25,7 +24,7 @@ export function MissionPanel({
   activationCounts,
   armies,
   canStart,
-  startError,
+  preparationReadiness,
   gamePhase,
   currentRound,
   mission,
@@ -51,7 +50,12 @@ export function MissionPanel({
   activationCounts?: Record<string, { remaining: number; total: number }>;
   armies: Army[];
   canStart: boolean;
-  startError?: string;
+  preparationReadiness?: {
+    armiesReady: boolean;
+    deploymentReady: boolean;
+    mapReady: boolean;
+    issues: string[];
+  };
   gamePhase: "Preparation" | "Playing";
   currentRound: number;
   mission: MissionState;
@@ -113,6 +117,16 @@ export function MissionPanel({
   const visibleScenarioOptions = scenarios.filter((option) =>
     (option.experience === "NarrativeMission") === narrativeMission
   );
+  const briefingSteps = [
+    { label: text("Misja", "Mission"), ready: true },
+    { label: text("Armie", "Armies"), ready: preparationReadiness?.armiesReady ?? canStart },
+    { label: text("Mapa", "Map"), ready: preparationReadiness?.mapReady ?? true },
+    { label: text("Rozmieszczenie", "Deployment"), ready: preparationReadiness?.deploymentReady ?? canStart },
+    { label: text("Gotowość", "Ready"), ready: canStart },
+  ];
+  const currentBriefingStep = canStart
+    ? briefingSteps.length - 1
+    : Math.max(0, briefingSteps.findIndex((step) => !step.ready));
 
   if (gamePhase === "Playing") {
     return (
@@ -200,230 +214,270 @@ export function MissionPanel({
   }
 
   return (
-    <section className={`missionPanel ${mission.status.toLowerCase()}`}>
-      <PanelTitle title={text("Misja", "Mission")} detail={statusLabel} />
-      <div className="scenarioExperiencePicker" role="group" aria-label={text("Tryb przygotowania", "Setup mode")}>
+    <section className={`missionPanel missionPreparationConsole ${mission.status.toLowerCase()}`}>
+      <header className="preparationConsoleHeader">
+        <div>
+          <span>{text("Konsola odprawy", "Briefing console")}</span>
+          <strong>{scenarioName}</strong>
+        </div>
+        <small>{statusLabel}</small>
+      </header>
+
+      <ol className="preparationCheckpoints" aria-label={text("Stan przygotowania", "Preparation status")}>
+        {briefingSteps.map((step, index) => (
+          <li
+            aria-current={index === currentBriefingStep ? "step" : undefined}
+            data-state={step.ready ? "complete" : index === currentBriefingStep ? "current" : "pending"}
+            key={step.label}
+          >
+            <span>{index + 1}</span>
+            <small>{step.label}</small>
+          </li>
+        ))}
+      </ol>
+
+      <section className="missionLaunchModule" data-ready={canStart}>
+        <div>
+          <span>{canStart ? text("Odprawa zakończona", "Briefing complete") : text("Wymaga uwagi", "Action required")}</span>
+          <strong>{canStart
+            ? text("Siły są gotowe do rozpoczęcia bitwy.", "Forces are ready to begin the battle.")
+            : text("Uzupełnij wskazane elementy przed startem.", "Complete the listed items before launch.")}</strong>
+        </div>
         <button
-          className={narrativeMission ? "active" : ""}
-          type="button"
-          onClick={() => {
-            const firstMission = scenarios.find((option) => option.experience === "NarrativeMission");
-            if (firstMission && !narrativeMission) onScenarioChange(firstMission.id);
-          }}
+          className="primaryButton missionStartButton"
+          disabled={!canStart}
+          onClick={onStart}
         >
-          <strong>{text("Rozegraj misję", "Play a mission")}</strong>
-          <span>{text("Gotowa mapa i wydarzenia", "Authored map and events")}</span>
+          {narrativeMission ? text("Rozpocznij misję", "Launch mission") : text("Rozpocznij bitwę", "Launch battle")}
         </button>
-        <button
-          className={!narrativeMission ? "active" : ""}
-          type="button"
-          onClick={() => {
-            const firstTemplate = scenarios.find((option) => option.experience !== "NarrativeMission");
-            if (firstTemplate && narrativeMission) onScenarioChange(firstTemplate.id);
-          }}
-        >
-          <strong>{text("Stwórz scenariusz", "Create a scenario")}</strong>
-          <span>{text("Generator i edycja mapy", "Map generator and editing")}</span>
-        </button>
-      </div>
-      <label className="missionSelector">
-        {narrativeMission ? text("Gotowa misja", "Authored mission") : text("Szablon zasad", "Rules template")}
-        <select
-          disabled={gamePhase !== "Preparation"}
-          value={scenario.id}
-          onChange={(event) => onScenarioChange(event.target.value)}
-        >
-          {visibleScenarioOptions.map((option) => (
-            <option key={option.id} value={option.id}>{localizeScenarioName(language, option.id, option.name)}</option>
-          ))}
-        </select>
-      </label>
-      {narrativeMission && scenario.mapPreset ? (
-        <section className="missionMapPreset">
-          <div>
-            <span>{text("Mapa misji", "Mission map")}</span>
-            <strong>{localizeThemeName(
-              language,
-              scenario.mapPreset.themeId,
-              getMapTheme(scenario.mapPreset.themeId).name,
-            )}</strong>
-          </div>
-          <span className="missionMapLock">{text("Zablokowana", "Locked")}</span>
-          <small>
-            {scenario.mapPreset.width}×{scenario.mapPreset.height} · seed {scenario.mapPreset.seed}. {text(
-              "Mapa, obiekty i strefy są częścią misji i nie mogą być generowane ani edytowane.",
-              "The map, objects, and zones are part of the mission and cannot be generated or edited.",
-            )}
-          </small>
-        </section>
-      ) : (
-        <MapGeneratorPanel
-          boardHeight={mapBoardHeight}
-          boardWidth={mapBoardWidth}
-          canGenerate={armies.length >= 2 && armies.length <= 4}
-          hasManualMap={mapHasManualChanges}
-          settings={mapGeneration}
-          onGenerate={onGenerateMap}
-          onSettingsChange={onMapGenerationSettingsChange}
-          onSizeChange={onMapSizeChange}
-        />
-      )}
-      {armyPreset ? (
-        <section className="missionArmySetup">
-          <div className="missionArmySetupHeader">
-            <div>
-              <span>{text("Skład armii", "Army composition")}</span>
-              <strong>{armyPreset.name[language]}</strong>
-            </div>
-            <span className="missionArmyCurrent">{text("Obecne aktywne", "Current active")}</span>
-          </div>
-          <p>{armyPreset.description[language]}</p>
-          <div className="missionArmyOptions">
-            <div className="missionArmyOption active">
-              <strong>{text("Użyj wczytanych armii", "Use loaded armies")}</strong>
-              <small>{text(
-                "Zachowuje Twój własny skład i poziom trudności.",
-                "Keeps your custom roster and difficulty.",
-              )}</small>
-            </div>
-            <button className="missionArmyOption" type="button" onClick={onLoadRecommendedArmies}>
-              <strong>{text("Wczytaj rekomendowane", "Load recommended")}</strong>
-              <small>{text(
-                "Zastępuje wszystkie armie gotowym składem misji.",
-                "Replaces all armies with the mission roster.",
-              )}</small>
+        {!canStart ? (
+          <ul className="missionStartIssues" aria-label={text("Powody blokady startu", "Launch blockers")}>
+            {(preparationReadiness?.issues.length
+              ? preparationReadiness.issues
+              : [text("Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.", "Prepare 2–4 armies, deployment zones, and complete mission events.")]
+            ).map((issue) => <li key={issue}>{issue}</li>)}
+          </ul>
+        ) : null}
+      </section>
+
+      <details className="preparationConsoleSection" open>
+        <summary>
+          <span>01</span>
+          <strong>{text("Misja", "Mission")}</strong>
+          <small>{narrativeMission ? text("gotowa", "authored") : text("własna", "custom")}</small>
+        </summary>
+        <div className="preparationConsoleSectionBody">
+          <div className="scenarioExperiencePicker" role="group" aria-label={text("Tryb przygotowania", "Setup mode")}>
+            <button
+              className={narrativeMission ? "active" : ""}
+              type="button"
+              onClick={() => {
+                const firstMission = scenarios.find((option) => option.experience === "NarrativeMission");
+                if (firstMission && !narrativeMission) onScenarioChange(firstMission.id);
+              }}
+            >
+              <strong>{text("Rozegraj misję", "Play a mission")}</strong>
+              <span>{text("Gotowa mapa i wydarzenia", "Authored map and events")}</span>
+            </button>
+            <button
+              className={!narrativeMission ? "active" : ""}
+              type="button"
+              onClick={() => {
+                const firstTemplate = scenarios.find((option) => option.experience !== "NarrativeMission");
+                if (firstTemplate && narrativeMission) onScenarioChange(firstTemplate.id);
+              }}
+            >
+              <strong>{text("Stwórz scenariusz", "Create a scenario")}</strong>
+              <span>{text("Generator i edycja mapy", "Map generator and editing")}</span>
             </button>
           </div>
-          <small className="missionArmyRule">{text(
-            "Bohater może wystąpić tylko raz w całej bitwie, także w armii sojusznika.",
-            "A hero may appear only once in the entire battle, including allied armies.",
-          )}</small>
-        </section>
-      ) : null}
-      <div className="missionRoles">
-        <label className="missionSelector">
-          {text("Frakcja broniąca", "Defending faction")}
-          <select
-            disabled={gamePhase !== "Preparation" || narrativeMission}
-            value={defender?.id ?? ""}
-            onChange={(event) => onDefenderArmyChange(event.target.value)}
-          >
-            {armies.map((army) => (
-              <option key={army.id} value={army.id}>
-                {localizeFaction(language, army.faction)} — {army.playerName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="missionRoleReadout">
-          <span>{text("Frakcja atakująca", "Attacking faction")}</span>
-          <strong>{attacker ? `${localizeFaction(language, attacker.faction)} — ${attacker.playerName}` : text("Brak", "None")}</strong>
+          <label className="missionSelector">
+            {narrativeMission ? text("Gotowa misja", "Authored mission") : text("Szablon zasad", "Rules template")}
+            <select value={scenario.id} onChange={(event) => onScenarioChange(event.target.value)}>
+              {visibleScenarioOptions.map((option) => (
+                <option key={option.id} value={option.id}>{localizeScenarioName(language, option.id, option.name)}</option>
+              ))}
+            </select>
+          </label>
+          <p className="preparationObjective">{scenarioDescription}</p>
         </div>
-      </div>
-      <ArmySideConfiguration
-        armies={armies}
-        defenderArmyId={mission.defenderArmyId}
-        deploymentZones={scenario.deploymentZones}
-        controlEditingDisabled={false}
-        teamEditingDisabled={narrativeMission}
-        onArmyConfigChange={onArmyConfigChange}
-      />
-      <ScenarioEventsPanel
-        armies={armies}
-        currentRound={currentRound}
-        editable={!narrativeMission}
-        events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
-        zones={scenario.zones}
-        onChange={onScheduledEventsChange}
-      />
-      <h3>{scenarioName}</h3>
-      <p>{scenarioDescription}</p>
-      <MissionDirectorStatus mission={mission} scenario={scenario} />
-      <label className="missionSelector">
-        {text("Wymagane rundy", "Required rounds")}
-        <input
-          type="number"
-          min="1"
-          disabled={gamePhase !== "Preparation" || narrativeMission}
-          value={requiredRounds}
-          onChange={(event) => onRoundTargetChange(Number(event.target.value))}
-        />
-        <small>{text("Wartość określa wymagany czas albo limit misji.", "This value sets the required duration or mission limit.")}</small>
-      </label>
-      {progressiveCondition ? (
-        <section className="stageRoundSettings">
-          <div>
-            <strong>{text("Limity etapów", "Stage limits")}</strong>
-            <small>{text("Ile pełnych rund można poświęcić na każdy kolejny sektor.", "How many full rounds may be spent on each consecutive sector.")}</small>
-          </div>
-          <div className="stageRoundGrid">
-            {Array.from({ length: progressiveStageCount }, (_, stage) => {
-              const defaults = progressiveCondition.stageRoundLimits ?? [];
-              const values = mission.stageRoundTargets ?? defaults;
-              return (
-                <label key={stage}>
-                  {text("Sektor", "Sector")} {stage + 1}
-                  <input
-                    disabled={gamePhase !== "Preparation" || narrativeMission}
-                    min={1}
-                    type="number"
-                    value={values[stage] ?? requiredRounds}
-                    onChange={(event) => {
-                      const next = Array.from(
-                        { length: progressiveStageCount },
-                        (_, index) => values[index] ?? requiredRounds,
-                      );
-                      next[stage] = Math.max(1, Math.floor(Number(event.target.value) || 1));
-                      onStageRoundTargetsChange(next);
-                    }}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-      <div className="missionProgressHeader">
-        <span>{text("Ukończone rundy", "Completed rounds")}</span>
-        <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
-      </div>
-      <progress max={requiredRounds} value={mission.roundsCompleted} />
-      {scenario.victoryCondition.type === "ControlTerritory" ? (
-        <div className="territoryScoreboard">
-          {armies.map((army) => (
-            <span key={army.id}>
-              {localizeFaction(language, army.faction)}
-              <strong>{mission.territoryScores?.[army.id] ?? 0} {text("pkt", "VP")}</strong>
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {mission.status === "Victory" ? (
-        <p className="missionOutcome">{text("Cel wykonany. Misja zakończona zwycięstwem.", "Objective complete. Mission victory.")}</p>
-      ) : null}
-      {mission.status === "Defeat" ? (
-        <p className="missionOutcome">{text("Warunek porażki został spełniony. Misja przegrana.", "A defeat condition has been met. Mission failed.")}</p>
-      ) : null}
-      {gamePhase === "Preparation" ? (
-        <>
-          <button
-            className="primaryButton missionStartButton"
-            disabled={!canStart}
-            onClick={onStart}
-          >
-            {narrativeMission ? text("Rozegraj misję", "Play mission") : text("Rozegraj scenariusz", "Play scenario")}
-          </button>
-          {!canStart ? (
-            <small className={`missionStartHint ${startError ? "error" : ""}`}>
-              {startError ?? text("Przygotuj 2–4 armie, strefy wejścia i kompletne zdarzenia misji.", "Prepare 2–4 armies, deployment zones, and complete mission events.")}
-            </small>
+      </details>
+
+      <details className="preparationConsoleSection">
+        <summary>
+          <span>02</span>
+          <strong>{text("Armie i sterowanie", "Armies and control")}</strong>
+          <small>{armies.length} {text("armie", "armies")}</small>
+        </summary>
+        <div className="preparationConsoleSectionBody">
+          {armyPreset ? (
+            <section className="missionArmySetup">
+              <div className="missionArmySetupHeader">
+                <div>
+                  <span>{text("Skład armii", "Army composition")}</span>
+                  <strong>{armyPreset.name[language]}</strong>
+                </div>
+                <span className="missionArmyCurrent">{text("Obecne aktywne", "Current active")}</span>
+              </div>
+              <p>{armyPreset.description[language]}</p>
+              <div className="missionArmyOptions">
+                <div className="missionArmyOption active">
+                  <strong>{text("Użyj wczytanych armii", "Use loaded armies")}</strong>
+                  <small>{text("Zachowuje Twój własny skład i poziom trudności.", "Keeps your custom roster and difficulty.")}</small>
+                </div>
+                <button className="missionArmyOption" type="button" onClick={onLoadRecommendedArmies}>
+                  <strong>{text("Wczytaj rekomendowane", "Load recommended")}</strong>
+                  <small>{text("Zastępuje wszystkie armie gotowym składem misji.", "Replaces all armies with the mission roster.")}</small>
+                </button>
+              </div>
+              <small className="missionArmyRule">{text(
+                "Bohater może wystąpić tylko raz w całej bitwie, także w armii sojusznika.",
+                "A hero may appear only once in the entire battle, including allied armies.",
+              )}</small>
+            </section>
           ) : null}
-        </>
-      ) : (
-        <button className="secondaryButton" onClick={onRestart}>
-          {text("Zakończ i przygotuj nową rozgrywkę", "End and prepare a new game")}
-        </button>
-      )}
+          <div className="missionRoles">
+            <label className="missionSelector">
+              {text("Frakcja broniąca", "Defending faction")}
+              <select
+                disabled={narrativeMission}
+                value={defender?.id ?? ""}
+                onChange={(event) => onDefenderArmyChange(event.target.value)}
+              >
+                {armies.map((army) => (
+                  <option key={army.id} value={army.id}>{localizeFaction(language, army.faction)} — {army.playerName}</option>
+                ))}
+              </select>
+            </label>
+            <div className="missionRoleReadout">
+              <span>{text("Frakcja atakująca", "Attacking faction")}</span>
+              <strong>{attacker ? `${localizeFaction(language, attacker.faction)} — ${attacker.playerName}` : text("Brak", "None")}</strong>
+            </div>
+          </div>
+          <ArmySideConfiguration
+            armies={armies}
+            defenderArmyId={mission.defenderArmyId}
+            deploymentZones={scenario.deploymentZones}
+            controlEditingDisabled={false}
+            teamEditingDisabled={narrativeMission}
+            onArmyConfigChange={onArmyConfigChange}
+          />
+        </div>
+      </details>
+
+      <details className="preparationConsoleSection">
+        <summary>
+          <span>03</span>
+          <strong>{text("Mapa i teren", "Map and terrain")}</strong>
+          <small>{mapBoardWidth} × {mapBoardHeight}</small>
+        </summary>
+        <div className="preparationConsoleSectionBody">
+          {narrativeMission && scenario.mapPreset ? (
+            <section className="missionMapPreset">
+              <div>
+                <span>{text("Mapa misji", "Mission map")}</span>
+                <strong>{localizeThemeName(language, scenario.mapPreset.themeId, getMapTheme(scenario.mapPreset.themeId).name)}</strong>
+              </div>
+              <span className="missionMapLock">{text("Zablokowana", "Locked")}</span>
+              <small>
+                {scenario.mapPreset.width}×{scenario.mapPreset.height} · seed {scenario.mapPreset.seed}. {text(
+                  "Mapa, obiekty i strefy są częścią misji i nie mogą być generowane ani edytowane.",
+                  "The map, objects, and zones are part of the mission and cannot be generated or edited.",
+                )}
+              </small>
+            </section>
+          ) : (
+            <MapGeneratorPanel
+              boardHeight={mapBoardHeight}
+              boardWidth={mapBoardWidth}
+              canGenerate={armies.length >= 2 && armies.length <= 4}
+              hasManualMap={mapHasManualChanges}
+              settings={mapGeneration}
+              onGenerate={onGenerateMap}
+              onSettingsChange={onMapGenerationSettingsChange}
+              onSizeChange={onMapSizeChange}
+            />
+          )}
+        </div>
+      </details>
+
+      <details className="preparationConsoleSection">
+        <summary>
+          <span>04</span>
+          <strong>{text("Parametry misji", "Mission parameters")}</strong>
+          <small>{requiredRounds} {text("rund", "rounds")}</small>
+        </summary>
+        <div className="preparationConsoleSectionBody">
+          <ScenarioEventsPanel
+            armies={armies}
+            currentRound={currentRound}
+            editable={!narrativeMission}
+            events={mission.scheduledEvents ?? scenario.scheduledEvents ?? []}
+            zones={scenario.zones}
+            onChange={onScheduledEventsChange}
+          />
+          <MissionDirectorStatus mission={mission} scenario={scenario} />
+          <label className="missionSelector">
+            {text("Wymagane rundy", "Required rounds")}
+            <input
+              type="number"
+              min="1"
+              disabled={narrativeMission}
+              value={requiredRounds}
+              onChange={(event) => onRoundTargetChange(Number(event.target.value))}
+            />
+            <small>{text("Wartość określa wymagany czas albo limit misji.", "This value sets the required duration or mission limit.")}</small>
+          </label>
+          {progressiveCondition ? (
+            <section className="stageRoundSettings">
+              <div>
+                <strong>{text("Limity etapów", "Stage limits")}</strong>
+                <small>{text("Ile pełnych rund można poświęcić na każdy kolejny sektor.", "How many full rounds may be spent on each consecutive sector.")}</small>
+              </div>
+              <div className="stageRoundGrid">
+                {Array.from({ length: progressiveStageCount }, (_, stage) => {
+                  const defaults = progressiveCondition.stageRoundLimits ?? [];
+                  const values = mission.stageRoundTargets ?? defaults;
+                  return (
+                    <label key={stage}>
+                      {text("Sektor", "Sector")} {stage + 1}
+                      <input
+                        disabled={narrativeMission}
+                        min={1}
+                        type="number"
+                        value={values[stage] ?? requiredRounds}
+                        onChange={(event) => {
+                          const next = Array.from(
+                            { length: progressiveStageCount },
+                            (_, index) => values[index] ?? requiredRounds,
+                          );
+                          next[stage] = Math.max(1, Math.floor(Number(event.target.value) || 1));
+                          onStageRoundTargetsChange(next);
+                        }}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+          <div className="missionProgressHeader">
+            <span>{text("Ukończone rundy", "Completed rounds")}</span>
+            <strong>{mission.roundsCompleted}/{requiredRounds}</strong>
+          </div>
+          <progress max={requiredRounds} value={mission.roundsCompleted} />
+          {scenario.victoryCondition.type === "ControlTerritory" ? (
+            <div className="territoryScoreboard">
+              {armies.map((army) => (
+                <span key={army.id}>
+                  {localizeFaction(language, army.faction)}
+                  <strong>{mission.territoryScores?.[army.id] ?? 0} {text("pkt", "VP")}</strong>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </details>
     </section>
   );
 }

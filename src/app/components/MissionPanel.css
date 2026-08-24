@@ -250,6 +250,280 @@ button.missionArmyOption:hover {
   border-color: rgba(155, 130, 224, 0.58);
 }
 
+.missionPreparationConsole {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  gap: var(--ui-space-2);
+  padding: 0;
+}
+
+.preparationConsoleHeader {
+  align-items: start;
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-separator);
+  border-left: 3px solid var(--ui-color-republic);
+  box-shadow: var(--ui-shadow-inset);
+  display: flex;
+  gap: var(--ui-space-2);
+  justify-content: space-between;
+  padding: 9px;
+}
+
+.preparationConsoleHeader > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.preparationConsoleHeader span,
+.preparationConsoleHeader small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.57rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.preparationConsoleHeader strong {
+  color: var(--ui-color-text);
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+
+.preparationConsoleHeader small {
+  border: 1px solid var(--ui-color-republic);
+  color: var(--ui-color-republic);
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+
+.preparationCheckpoints {
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.preparationCheckpoints li {
+  align-items: center;
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-separator);
+  color: var(--ui-color-text-muted);
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  min-width: 0;
+  padding: 5px 2px;
+  text-align: center;
+}
+
+.preparationCheckpoints li > span {
+  align-items: center;
+  border: 1px solid currentColor;
+  display: flex;
+  font-size: 0.52rem;
+  font-weight: 900;
+  height: 17px;
+  justify-content: center;
+  width: 17px;
+}
+
+.preparationCheckpoints li > small {
+  font-size: 0.49rem;
+  font-weight: 850;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.preparationCheckpoints li[data-state="complete"] {
+  color: var(--ui-color-success);
+}
+
+.preparationCheckpoints li[data-state="current"] {
+  border-color: var(--ui-color-warning);
+  box-shadow: inset 0 -2px 0 var(--ui-color-warning);
+  color: var(--ui-color-warning);
+}
+
+.preparationCheckpoints li[aria-current="step"] > span {
+  background: currentColor;
+  color: var(--ui-color-background);
+}
+
+.missionLaunchModule {
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-warning);
+  box-shadow: var(--ui-shadow-inset);
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+}
+
+.missionLaunchModule[data-ready="true"] {
+  border-color: var(--ui-color-success);
+}
+
+.missionLaunchModule > div {
+  display: grid;
+  gap: 2px;
+}
+
+.missionLaunchModule > div > span {
+  color: var(--ui-color-warning);
+  font-size: 0.57rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.missionLaunchModule[data-ready="true"] > div > span {
+  color: var(--ui-color-success);
+}
+
+.missionLaunchModule > div > strong {
+  color: var(--ui-color-text);
+  font-size: 0.69rem;
+  line-height: 1.3;
+}
+
+.missionLaunchModule .missionStartButton {
+  border-radius: var(--ui-radius-sm);
+  min-height: var(--ui-control-height-lg);
+  text-transform: uppercase;
+}
+
+.missionStartIssues {
+  color: var(--ui-color-warning);
+  display: grid;
+  font-size: 0.62rem;
+  gap: 3px;
+  line-height: 1.3;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.preparationConsoleSection {
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-separator);
+}
+
+.preparationConsoleSection > summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  list-style: none;
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.preparationConsoleSection > summary::-webkit-details-marker {
+  display: none;
+}
+
+.preparationConsoleSection > summary > span {
+  color: var(--ui-color-republic);
+  font-size: 0.55rem;
+  font-weight: 900;
+}
+
+.preparationConsoleSection > summary > strong {
+  color: var(--ui-color-text);
+  font-size: 0.67rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.preparationConsoleSection > summary > small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+}
+
+.preparationConsoleSection > summary::after {
+  color: var(--ui-color-republic);
+  content: "▸";
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.preparationConsoleSection[open] > summary::after {
+  content: "▾";
+}
+
+.preparationConsoleSection > summary:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
+}
+
+.preparationConsoleSectionBody {
+  border-top: 1px solid var(--ui-color-separator);
+  display: grid;
+  gap: var(--ui-space-2);
+  padding: 8px;
+}
+
+.preparationObjective {
+  color: var(--ui-color-text-muted);
+  font-size: 0.67rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.missionPreparationConsole .scenarioExperiencePicker button,
+.missionPreparationConsole .missionMapPreset,
+.missionPreparationConsole .missionArmySetup,
+.missionPreparationConsole .missionArmyOption,
+.missionPreparationConsole .missionRoleReadout,
+.missionPreparationConsole .missionSideRow,
+.missionPreparationConsole .missionDirectorStatus,
+.missionPreparationConsole .stageRoundSettings {
+  border-radius: 0;
+}
+
+.missionPreparationConsole .scenarioExperiencePicker button,
+.missionPreparationConsole .missionArmyOption,
+.missionPreparationConsole .missionRoleReadout,
+.missionPreparationConsole .missionSideRow {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-separator);
+}
+
+.missionPreparationConsole .scenarioExperiencePicker button.active {
+  background: var(--ui-color-surface-3);
+  border-color: var(--ui-color-republic);
+  box-shadow: inset 0 -2px 0 var(--ui-color-republic);
+}
+
+.missionPreparationConsole .mapGeneratorActions .primaryButton {
+  background: var(--ui-color-surface-3);
+  border: 1px solid var(--ui-color-republic);
+  color: var(--ui-color-republic);
+}
+
+.missionPreparationConsole .missionMapPreset,
+.missionPreparationConsole .missionArmySetup,
+.missionPreparationConsole .missionDirectorStatus,
+.missionPreparationConsole .stageRoundSettings {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-separator);
+}
+
+.missionPreparationConsole button:focus-visible,
+.missionPreparationConsole select:focus-visible,
+.missionPreparationConsole input:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
+}
+
 .missionArmyOption strong {
   font-size: 0.67rem;
 }

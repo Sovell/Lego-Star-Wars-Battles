@@ -371,6 +371,22 @@ export function BattleScreen({
     (zone) => zone.armySlot === selectedDeploymentArmySlot,
   );
   const duplicateHeroIds = getDuplicateHeroTemplateIds(battle.armies);
+  const armyCountReady = battle.armies.length >= 2 && battle.armies.length <= 4;
+  const armyRostersReady = battle.armies.every((army) => army.units.length > 0);
+  const deploymentZonesReady = battle.armies.every((_, armySlot) =>
+    Boolean(scenario.deploymentZones.find(
+      (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
+    ))
+  );
+  const deploymentReady = armyCountReady && deploymentZonesReady;
+  const scheduledEventsReady = validateScheduledScenarioEvents(
+    scenario.scheduledEvents ?? [],
+    battle.armies,
+  );
+  const missionDirectorReady = validateMissionDirector(
+    scenario.missionDirector,
+    battle.armies,
+  );
   const rosterStartError = duplicateHeroIds.length > 0
     ? text(
         `Ten sam bohater nie może wystąpić więcej niż raz: ${duplicateHeroIds.map((templateId) => {
@@ -383,20 +399,53 @@ export function BattleScreen({
         }).join(", ")}.`,
       )
     : undefined;
+  const preparationStartIssues = [
+    !armyCountReady
+      ? text("Przygotuj od 2 do 4 armii.", "Prepare between 2 and 4 armies.")
+      : undefined,
+    !armyRostersReady
+      ? text(
+          `Każda armia musi mieć co najmniej jedną jednostkę: ${battle.armies
+            .filter((army) => army.units.length === 0)
+            .map((army) => army.playerName)
+            .join(", ")}.`,
+          `Every army needs at least one unit: ${battle.armies
+            .filter((army) => army.units.length === 0)
+            .map((army) => army.playerName)
+            .join(", ")}.`,
+        )
+      : undefined,
+    armyCountReady && !deploymentReady
+      ? text(
+          `Uzupełnij strefy wejścia: ${battle.armies
+            .filter((_, armySlot) => !scenario.deploymentZones.some(
+              (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
+            ))
+            .map((army) => army.playerName)
+            .join(", ")}.`,
+          `Complete entry zones: ${battle.armies
+            .filter((_, armySlot) => !scenario.deploymentZones.some(
+              (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
+            ))
+            .map((army) => army.playerName)
+            .join(", ")}.`,
+        )
+      : undefined,
+    rosterStartError,
+    !scheduledEventsReady
+      ? text("Uzupełnij wszystkie zdarzenia misji.", "Complete all mission events.")
+      : undefined,
+    !missionDirectorReady
+      ? text("Konfiguracja Mission Directora jest niekompletna.", "The Mission Director configuration is incomplete.")
+      : undefined,
+  ].filter((issue): issue is string => Boolean(issue));
   const canStartScenario =
-    battle.armies.length >= 2 &&
-    battle.armies.length <= 4 &&
-    battle.armies.every((_, armySlot) =>
-      Boolean(scenario.deploymentZones.find(
-        (zone) => zone.armySlot === armySlot && zone.cells.length > 0,
-      ))
-    ) &&
-    battle.armies.every((army) => army.units.length > 0) &&
+    armyCountReady &&
+    deploymentReady &&
+    armyRostersReady &&
     duplicateHeroIds.length === 0 &&
-    validateScheduledScenarioEvents(
-      scenario.scheduledEvents ?? [],
-      battle.armies,
-    ) && validateMissionDirector(scenario.missionDirector, battle.armies);
+    scheduledEventsReady &&
+    missionDirectorReady;
 
   useEffect(() => {
     if (!battle.armies.some((army) => army.id === selectedDeploymentArmyId)) {
@@ -900,7 +949,7 @@ export function BattleScreen({
           phaseLabel={text("Faza", "Phase")}
           progress={commandProgress}
           title={preparationActive
-            ? text("Kreator scenariusza", "Scenario Builder")
+            ? text("Odprawa przed bitwą", "Battle Briefing")
             : text("Panel dowodzenia", "Command Panel")}
           turn={battle.turn}
           turnLabel={text("Tura", "Turn")}
@@ -1036,7 +1085,12 @@ export function BattleScreen({
             activationCounts={preparationActive ? undefined : activationCounts}
             armies={battle.armies}
             canStart={canStartScenario}
-            startError={rosterStartError}
+            preparationReadiness={{
+              armiesReady: armyCountReady && armyRostersReady && duplicateHeroIds.length === 0,
+              deploymentReady,
+              mapReady: battle.board.width > 0 && battle.board.height > 0,
+              issues: preparationStartIssues,
+            }}
             currentRound={battle.turn}
             gamePhase={gamePhase}
             mapBoardHeight={battle.board.height}
@@ -1083,28 +1137,45 @@ export function BattleScreen({
           />
 
           {preparationActive && mapMode === "units" ? (
-            <UnitDetails
-              debugMode={false}
-              selectedArmy={selectedArmy}
-              selectedUnit={selectedUnit}
-              onUnitPatch={onUnitPatch}
-            />
+            <details className="preparationUnitDetails">
+              <summary>
+                <span>{text("Wybrana jednostka", "Selected unit")}</span>
+                <strong>{selectedUnitName}</strong>
+                <small>{selectedUnitDetail}</small>
+              </summary>
+              <UnitDetails
+                debugMode={false}
+                selectedArmy={selectedArmy}
+                selectedUnit={selectedUnit}
+                onUnitPatch={onUnitPatch}
+              />
+            </details>
           ) : null}
 
           {preparationActive ? (
-            <details className="jsonDetails">
-              <summary>{text("Import armii JSON", "Import army JSON")}</summary>
-              <textarea
-                className="armyInput jsonInput"
-                value={armyJson}
-                spellCheck={false}
-                wrap="off"
-                onChange={(event) => onArmyJsonChange(event.target.value)}
-              />
-              {importError ? <p className="errorText">{importError}</p> : null}
-              <button className="secondaryButton" onClick={handleLoadArmies}>
-                {text("Wczytaj armie", "Load armies")}
-              </button>
+            <details className="preparationAdvancedDetails">
+              <summary>
+                <span>{text("Zaawansowane", "Advanced")}</span>
+                <strong>{text("Import danych armii", "Army data import")}</strong>
+              </summary>
+              <div className="preparationAdvancedContent">
+                <p>{text(
+                  "Import zastępuje bieżące armie danymi JSON. Używaj go wyłącznie do przenoszenia istniejących składów.",
+                  "Import replaces the current armies with JSON data. Use it only to transfer existing rosters.",
+                )}</p>
+                <textarea
+                  aria-label={text("Dane armii JSON", "Army JSON data")}
+                  className="armyInput jsonInput"
+                  value={armyJson}
+                  spellCheck={false}
+                  wrap="off"
+                  onChange={(event) => onArmyJsonChange(event.target.value)}
+                />
+                {importError ? <p className="errorText" role="alert">{importError}</p> : null}
+                <button className="secondaryButton" onClick={handleLoadArmies}>
+                  {text("Wczytaj armie", "Load armies")}
+                </button>
+              </div>
             </details>
           ) : null}
         </BattleInspector>

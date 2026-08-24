@@ -19,8 +19,8 @@ export function BattleInspector({
       aria-label={text("Inspektor bitwy", "Battle inspector")}
     >
       <header className="battleInspectorHeader">
-        <span>{phase === "Preparation" ? text("Konfiguracja", "Setup") : text("Moduł Intel", "Intel module")}</span>
-        <strong>{phase === "Preparation" ? text("Scenariusz i wybór", "Scenario and selection") : text("Jednostka i misja", "Unit and mission")}</strong>
+        <span>{phase === "Preparation" ? text("Odprawa", "Briefing") : text("Moduł Intel", "Intel module")}</span>
+        <strong>{phase === "Preparation" ? text("Gotowość do bitwy", "Battle readiness") : text("Jednostka i misja", "Unit and mission")}</strong>
       </header>
       <div className="battleInspectorContent">{children}</div>
     </aside>
