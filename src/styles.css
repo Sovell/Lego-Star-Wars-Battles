@@ -333,78 +333,6 @@ h1 {
   padding: 10px;
 }
 
-.battleHud {
-  align-items: end;
-  background: rgba(20, 24, 30, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  display: grid;
-  gap: 8px;
-  grid-template-columns:
-    minmax(120px, 0.8fr)
-    minmax(150px, 1.1fr)
-    minmax(110px, 0.7fr)
-    auto
-    minmax(145px, 1fr)
-    minmax(145px, 1fr)
-    auto;
-  padding: 10px;
-  grid-column: 1 / -1;
-}
-
-.battleHud label {
-  color: #99a5b4;
-  display: grid;
-  font-size: 0.64rem;
-  font-weight: 900;
-  gap: 4px;
-  text-transform: uppercase;
-}
-
-.battleHud select,
-.battleHud button {
-  min-height: 38px;
-}
-
-.hudActivation {
-  display: grid;
-  gap: 4px;
-}
-
-.hudActivation span {
-  color: #aeb8c5;
-  font-size: 0.68rem;
-  font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hudAbility {
-  grid-column: 1 / -1;
-}
-
-.hudAbility summary {
-  color: #dce4ee;
-  cursor: pointer;
-  font-size: 0.74rem;
-  font-weight: 900;
-  padding: 4px;
-}
-
-.hudAbilityControls {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: 1.2fr 1.2fr auto auto;
-  padding-top: 7px;
-}
-
-.hudAbility p {
-  color: #9faab8;
-  font-size: 0.76rem;
-  padding: 6px;
-}
-
 .compactDecision {
   grid-column: 1 / -1;
   grid-template-columns: 1fr auto;
@@ -2444,15 +2372,10 @@ select {
     position: static;
   }
 
-  .battleHud {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .commandMain {
     grid-template-columns: 1fr;
   }
 
-  .battleHud,
   .compactDecision,
   .commandMain > .battleSummary {
     grid-column: 1;
@@ -2466,9 +2389,6 @@ select {
     max-height: 260px;
   }
 
-  .hudAbility {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 620px) {
@@ -2491,16 +2411,6 @@ select {
 
   .mainMenuGrid {
     grid-template-columns: 1fr;
-  }
-
-  .battleHud,
-  .hudAbilityControls {
-    grid-template-columns: 1fr;
-  }
-
-  .battleHud > *,
-  .hudAbility {
-    grid-column: 1;
   }
 
   .commandMapBoard {

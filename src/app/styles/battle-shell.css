@@ -458,12 +458,6 @@
   padding: 8px;
 }
 
-.battleActionBar .battleHud {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-}
-
 .battleUtilityRail {
   align-items: center;
   background: var(--ui-color-surface-1);

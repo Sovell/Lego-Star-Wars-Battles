@@ -4,6 +4,7 @@ import { BattleSavePanel } from "../components/BattleSavePanel";
 import { MissionPanel } from "../components/MissionPanel";
 import { PanelTitle } from "../components/PanelTitle";
 import { BattleActionBar } from "../battle/BattleActionBar";
+import { BattleCommandDock } from "../battle/BattleCommandDock";
 import {
   BattleCommandHeader,
   type BattleCommandProgress,
@@ -100,6 +101,8 @@ type PendingAdvance = {
     y: number;
   };
 };
+
+type BattleDockMode = OrderType | "Ability";
 
 const orders: OrderType[] = ["Move", "Advance", "Attack", "Rally", "Overwatch"];
 const unitPanelStorageKey = "lswb:battle-unit-panel-open";
@@ -216,6 +219,7 @@ export function BattleScreen({
   const [abilityTargetPosition, setAbilityTargetPosition] = useState<{ x: number; y: number }>();
   const [selectingAbilityPosition, setSelectingAbilityPosition] = useState(false);
   const [selectingMovePosition, setSelectingMovePosition] = useState(false);
+  const [dockMode, setDockMode] = useState<BattleDockMode>(selectedOrder);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unitPanelOpen, setUnitPanelOpen] = useState(() => {
@@ -366,6 +370,14 @@ export function BattleScreen({
     : commandArmy?.faction === "Separatists"
       ? "separatists"
       : "neutral";
+  const selectedUnitName = selectedUnit
+    ? localizeUnitName(language, getTemplate(selectedUnit).id, getTemplate(selectedUnit).name)
+    : text("Brak wybranej jednostki", "No unit selected");
+  const selectedUnitDetail = selectedUnit
+    ? `${getUnitArmyLabel(selectedUnit, battle.armies, language)} · ${localizeUnitStatus(language, selectedUnit.status)}${
+        selectedUnit.position ? "" : ` · ${text("rezerwa", "reserve")}`
+      }`
+    : text("Wybierz jednostkę z listy lub na mapie", "Choose a unit from the list or map");
   const mapEditingLocked = Boolean(scenario.mapPreset) || readOnlyMap;
   const selectedDeploymentArmySlot = battle.armies.findIndex(
     (army) => army.id === selectedDeploymentArmyId,
@@ -833,6 +845,56 @@ export function BattleScreen({
     onGamePhaseChange("Playing");
   }
 
+  function handleDockOrderSelect(order: OrderType) {
+    onOrderChange(order);
+    setDockMode(order);
+    setSelectingMovePosition(false);
+    setSelectingAbilityPosition(false);
+  }
+
+  function handleDockAbilitySelect() {
+    setDockMode("Ability");
+    setSelectingMovePosition(false);
+  }
+
+  const dockControlsDisabled = !selectedUnitId || !activeArmyId;
+  const dockContextLabel = dockMode === "Ability"
+    ? text("Zdolność aktywna", "Active ability")
+    : localizeOrder(language, dockMode);
+  const dockContextStatus = !battle.activeActivation
+    ? remainingActivations > 0
+      ? text("Oczekiwanie na losowanie aktywacji", "Waiting for activation draw")
+      : text("Brak aktywacji — zakończ turę", "No activations — end the turn")
+    : !selectedUnit
+      ? text("Wybierz aktywną jednostkę", "Select the active unit")
+      : dockMode === "Ability"
+        ? activeAbilities.length === 0
+          ? text("Brak aktywnych zdolności", "No active abilities")
+          : legalAbilityActions.length === 0
+            ? text("Zdolność jest teraz niedostępna", "Ability is currently unavailable")
+            : selectingAbilityPosition
+              ? text("Oczekiwanie na kliknięcie mapy", "Waiting for map click")
+              : selectedLegalAbilityAction
+                ? text("Cel legalny — gotowe do użycia", "Legal target — ready to use")
+                : text("Wybierz wymagany cel", "Choose the required target")
+        : dockMode === "Attack"
+          ? availableWeapons.length === 0
+            ? text("Jednostka nie ma dostępnej broni", "Unit has no available weapon")
+            : legalAttackActions.length === 0
+              ? text("Brak legalnych celów dla tej broni", "No legal targets for this weapon")
+              : targetIsLegal
+                ? text("Cel legalny — atak gotowy", "Legal target — attack ready")
+                : text("Wybierz legalny cel", "Choose a legal target")
+          : selectingMovePosition && (dockMode === "Move" || dockMode === "Advance")
+            ? text("Oczekiwanie na kliknięcie mapy", "Waiting for map click")
+            : orderRequiresImmediateAction && !selectedLegalOrderAction
+              ? text("Rozkaz jest teraz niedostępny", "Order is currently unavailable")
+              : dockMode === "Move" || dockMode === "Advance"
+                ? selectedUnit.position
+                  ? text("Wskaż pole ruchu na mapie", "Choose a movement tile on the map")
+                  : text("Jednostka w rezerwie — wskaż pole wejścia", "Unit in reserve — choose an entry tile")
+                : text("Rozkaz gotowy do wykonania", "Order ready to execute");
+
   return (
     <BattleShell
       phase={gamePhase}
@@ -1070,193 +1132,200 @@ export function BattleScreen({
       )}
       actionBar={missionActive ? (
         <BattleActionBar>
-          <section className="battleHud">
-            <div className="hudActivation">
-              <button
-                className="primaryButton"
-                disabled={Boolean(battle.activeActivation) || remainingActivations === 0}
-                onClick={handleDrawActivation}
-              >
-                {text("Losuj rozkaz", "Draw order")}
-              </button>
-              <span>
-                {activeArmyId
-                  ? battle.armies.find((army) => army.id === activeArmyId)?.playerName
-                  : `${remainingActivations} ${text("pozostało", "remaining")}`}
-              </span>
-            </div>
-
-            <label>
-              {text("Jednostka", "Unit")}
+          <BattleCommandDock
+            activation={{
+              label: text("Losuj rozkaz", "Draw order"),
+              detail: `${remainingActivations} ${text("pozostało", "remaining")}`,
+              disabled: Boolean(battle.activeActivation) || remainingActivations === 0,
+              tone: "primary",
+              onClick: handleDrawActivation,
+            }}
+            activeArmy={commandArmy?.playerName ?? text("Oczekiwanie na aktywację", "Waiting for activation")}
+            activeArmyTone={commandForceTone}
+            activeUnit={selectedUnitName}
+            activeUnitDetail={selectedUnitDetail}
+            unitControl={(
               <select
+                aria-label={text("Aktywna jednostka", "Active unit")}
                 value={selectedUnitId}
                 onChange={(event) => onSelectedUnitChange(event.target.value)}
               >
-                <option value="">{text("Kliknij jednostkę lub wybierz", "Click a unit or select one")}</option>
+                <option value="">{text("Wybierz jednostkę", "Select unit")}</option>
                 {allUnits.map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)} | {getUnitArmyLabel(unit, battle.armies, language)} |{" "}
-                    {localizeUnitStatus(language, unit.status)}
+                    {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)} | {getUnitArmyLabel(unit, battle.armies, language)} | {localizeUnitStatus(language, unit.status)}
                   </option>
                 ))}
               </select>
-            </label>
-
-            <label>
-              {text("Rozkaz", "Order")}
-              <select
-                value={selectedOrder}
-                onChange={(event) => onOrderChange(event.target.value as OrderType)}
-              >
-                {orders.map((order) => (
-                  <option key={order} value={order}>{localizeOrder(language, order)}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="secondaryButton"
-              disabled={
-                !selectedUnitId ||
-                !activeArmyId ||
-                (orderRequiresImmediateAction && !selectedLegalOrderAction)
-              }
-              onClick={handleOrder}
-            >
-              {!selectedUnit?.position &&
-              (selectedOrder === "Move" || selectedOrder === "Advance")
-                ? selectingMovePosition
-                  ? text("Kliknij pole wejścia…", "Click an entry tile…")
-                  : text("Wskaż wejście", "Select entry")
-                : selectingMovePosition &&
-              (selectedOrder === "Move" || selectedOrder === "Advance")
-                ? text("Kliknij pole…", "Click a tile…")
-                : selectedOrder === "Move"
-                  ? text("Wskaż pole", "Select tile")
-                : selectedOrder === "Advance" &&
-                    selectedUnit?.activeEffects?.includes("advance_pending")
-                  ? text("Zakończ Natarcie", "Finish Advance")
-                  : selectedOrder === "Advance"
-                    ? text("Wskaż pole", "Select tile")
-                    : selectedOrder === "Attack"
-                      ? text("Wybierz cel", "Select target")
-                      : text("Wykonaj", "Execute")}
-            </button>
-
-            <label>
-              {text("Broń", "Weapon")}
-              <select
-                value={activeWeaponId}
-                disabled={!selectedUnitId}
-                onChange={(event) => onSelectedWeaponChange(event.target.value)}
-              >
-                <option value="">{text("Wybierz broń", "Select weapon")}</option>
-                {availableWeapons.map((weapon) => (
-                  <option key={weapon.id} value={weapon.id}>
-                    {localizeWeaponName(language, weapon.id, weapon.name)} | R{weapon.range} A{weapon.attacks}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {text("Cel", "Target")}
-              <select
-                value={targetUnitId}
-                onChange={(event) => onTargetUnitChange(event.target.value)}
-              >
-                <option value="">{text("Wybierz cel", "Select target")}</option>
-                {availableTargets.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
-                  </option>
-                ))}
-                {availableObjectTargets.map((object) => (
-                  <option key={object.id} value={`object:${object.id}`}>
-                    {localizeObjectName(language, object.type, object.name)} | {object.currentHp} HP
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="dangerButton"
-              disabled={!selectedUnitId || !activeArmyId || !activeWeaponId || !targetIsLegal}
-              onClick={handleAttack}
-            >
-              {text("Atakuj", "Attack")}
-            </button>
-
-            <details className="hudAbility">
-              <summary>{text("Zdolność", "Ability")}{selectedAbility ? `: ${localizeAbilityName(language, selectedAbility)}` : ""}</summary>
-              {activeAbilities.length > 0 ? (
-                <div className="hudAbilityControls">
+            )}
+            commands={[
+              ...orders.map((order) => ({
+                id: order,
+                label: localizeOrder(language, order),
+                selected: dockMode === order,
+                disabled: dockControlsDisabled,
+                tone: order === "Attack" ? "danger" as const : "default" as const,
+                onSelect: () => handleDockOrderSelect(order),
+              })),
+              {
+                id: "Ability",
+                label: text("Zdolność", "Ability"),
+                selected: dockMode === "Ability",
+                disabled: dockControlsDisabled,
+                onSelect: handleDockAbilitySelect,
+              },
+            ]}
+            contextLabel={dockContextLabel}
+            contextStatus={dockContextStatus}
+            context={dockMode === "Attack" ? (
+              <>
+                <label className="battleDockField">
+                  {text("Broń", "Weapon")}
                   <select
-                    value={selectedAbility?.id ?? ""}
-                    onChange={(event) => {
-                      setSelectedAbilityId(event.target.value);
-                      setAbilityTargetUnitId("");
-                      setAbilityTargetPosition(undefined);
-                      setSelectingAbilityPosition(false);
-                    }}
+                    value={activeWeaponId}
+                    disabled={!selectedUnitId || availableWeapons.length === 0}
+                    onChange={(event) => onSelectedWeaponChange(event.target.value)}
                   >
-                    {activeAbilities.map((ability) => (
-                      <option key={ability.id} value={ability.id}>
-                        {ability.discipline === "command" ? `[${text("DOWÓDCZA", "COMMAND")}] ` : ""}
-                        {localizeAbilityName(language, ability)} | {ability.usesPerBattle
-                          ? (selectedUnit?.usedAbilities?.includes(ability.id)
-                              ? text("WYKORZYSTANA", "SPENT")
-                              : text("raz na bitwę", "once per battle"))
-                          : `CD ${selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}`}
+                    <option value="">{text("Brak dostępnej broni", "No available weapon")}</option>
+                    {availableWeapons.map((weapon) => (
+                      <option key={weapon.id} value={weapon.id}>
+                        {localizeWeaponName(language, weapon.id, weapon.name)} | R{weapon.range} A{weapon.attacks}
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="battleDockField">
+                  {text("Cel", "Target")}
                   <select
-                    value={abilityTargetUnitId}
-                    onChange={(event) => setAbilityTargetUnitId(event.target.value)}
+                    value={targetUnitId}
+                    disabled={!activeWeaponId || legalAttackActions.length === 0}
+                    onChange={(event) => onTargetUnitChange(event.target.value)}
                   >
-                    <option value="">{text("Brak celu jednostkowego", "No unit target")}</option>
-                    {availableAbilityTargets.map((unit) => (
-                        <option key={unit.id} value={unit.id}>
-                          {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
+                    <option value="">{text("Wybierz legalny cel", "Choose a legal target")}</option>
+                    {availableTargets.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
+                      </option>
+                    ))}
+                    {availableObjectTargets.map((object) => (
+                      <option key={object.id} value={`object:${object.id}`}>
+                        {localizeObjectName(language, object.type, object.name)} | {object.currentHp} HP
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="battleDockAction"
+                  data-tone="danger"
+                  disabled={!selectedUnitId || !activeArmyId || !activeWeaponId || !targetIsLegal}
+                  onClick={handleAttack}
+                >
+                  {text("Atakuj", "Attack")}
+                </button>
+              </>
+            ) : dockMode === "Ability" ? (
+              activeAbilities.length > 0 ? (
+                <>
+                  <label className="battleDockField">
+                    {text("Zdolność", "Ability")}
+                    <select
+                      value={selectedAbility?.id ?? ""}
+                      onChange={(event) => {
+                        setSelectedAbilityId(event.target.value);
+                        setAbilityTargetUnitId("");
+                        setAbilityTargetPosition(undefined);
+                        setSelectingAbilityPosition(false);
+                      }}
+                    >
+                      {activeAbilities.map((ability) => (
+                        <option key={ability.id} value={ability.id}>
+                          {ability.discipline === "command" ? `[${text("DOWÓDCZA", "COMMAND")}] ` : ""}
+                          {localizeAbilityName(language, ability)} | {ability.usesPerBattle
+                            ? (selectedUnit?.usedAbilities?.includes(ability.id)
+                                ? text("WYKORZYSTANA", "SPENT")
+                                : text("raz na bitwę", "once per battle"))
+                            : `CD ${selectedUnit?.abilityCooldowns?.[ability.id] ?? 0}`}
                         </option>
                       ))}
-                  </select>
+                    </select>
+                  </label>
+                  {availableAbilityTargets.length > 0 ? (
+                    <label className="battleDockField">
+                      {text("Cel jednostkowy", "Unit target")}
+                      <select
+                        value={abilityTargetUnitId}
+                        onChange={(event) => setAbilityTargetUnitId(event.target.value)}
+                      >
+                        <option value="">{text("Wybierz cel", "Select target")}</option>
+                        {availableAbilityTargets.map((unit) => (
+                          <option key={unit.id} value={unit.id}>
+                            {localizeUnitName(language, getTemplate(unit).id, getTemplate(unit).name)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {abilityNeedsPosition ? (
+                    <button
+                      type="button"
+                      className="battleDockAction"
+                      data-tone="secondary"
+                      onClick={() => setSelectingAbilityPosition((current) => !current)}
+                    >
+                      {selectingAbilityPosition
+                        ? text("Anuluj wskazywanie", "Cancel targeting")
+                        : abilityTargetPosition
+                          ? `${text("Pole", "Tile")} ${abilityTargetPosition.x}, ${abilityTargetPosition.y}`
+                          : text("Wskaż pole", "Select tile")}
+                    </button>
+                  ) : null}
                   <button
-                    className="secondaryButton"
-                    disabled={!abilityNeedsPosition}
-                    onClick={() => setSelectingAbilityPosition((current) => !current)}
-                  >
-                    {selectingAbilityPosition
-                      ? text("Kliknij pole", "Click tile")
-                      : abilityTargetPosition
-                        ? `${abilityTargetPosition.x}, ${abilityTargetPosition.y}`
-                        : text("Cel pola", "Tile target")}
-                  </button>
-                  <button
-                    className="primaryButton"
-                    disabled={
-                      !activeArmyId ||
-                      !selectedAbility ||
-                      !selectedLegalAbilityAction
-                    }
+                    type="button"
+                    className="battleDockAction"
+                    data-tone="primary"
+                    disabled={!activeArmyId || !selectedAbility || !selectedLegalAbilityAction}
                     onClick={handleUseAbility}
                   >
                     {text("Użyj", "Use")}
                   </button>
-                </div>
+                </>
               ) : (
-                <p>{text("Brak aktywnych zdolności.", "No active abilities.")}</p>
-              )}
-            </details>
-
-            <button
-              className="secondaryButton"
-              disabled={!turnCanEnd}
-              onClick={handleEndTurn}
-            >
-              {remainingActivations > 0
+                <p className="battleDockHint">{text("Wybrana jednostka nie ma aktywnych zdolności.", "The selected unit has no active abilities.")}</p>
+              )
+            ) : (
+              <button
+                type="button"
+                className="battleDockAction"
+                data-tone={selectingMovePosition ? "secondary" : "primary"}
+                disabled={
+                  dockControlsDisabled ||
+                  (orderRequiresImmediateAction && !selectedLegalOrderAction)
+                }
+                onClick={selectingMovePosition
+                  ? () => setSelectingMovePosition(false)
+                  : handleOrder}
+              >
+                {selectingMovePosition && (dockMode === "Move" || dockMode === "Advance")
+                  ? text("Anuluj wskazywanie", "Cancel targeting")
+                  : selectedUnit && !selectedUnit.position && (dockMode === "Move" || dockMode === "Advance")
+                    ? text("Wskaż wejście", "Select entry")
+                    : dockMode === "Advance" && selectedUnit?.activeEffects?.includes("advance_pending")
+                      ? text("Zakończ Natarcie", "Finish Advance")
+                      : dockMode === "Move" || dockMode === "Advance"
+                        ? text("Wskaż pole", "Select tile")
+                        : text("Wykonaj rozkaz", "Execute order")}
+              </button>
+            )}
+            endTurn={{
+              label: remainingActivations > 0
                 ? `${remainingActivations} ${text("rozkazów", "orders")}`
-                : text("Koniec tury", "End turn")}
-            </button>
-          </section>
+                : text("Koniec tury", "End turn"),
+              disabled: !turnCanEnd,
+              tone: turnCanEnd ? "primary" : "secondary",
+              onClick: handleEndTurn,
+            }}
+          />
         </BattleActionBar>
       ) : undefined}
       battlefield={(
