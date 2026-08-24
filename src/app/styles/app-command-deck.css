@@ -1,0 +1,716 @@
+/* Application-level Command Deck modules. Battle-specific framing remains in battle-shell.css. */
+
+.commandDeckHome {
+  align-content: center;
+  gap: clamp(var(--ui-space-5), 3.5vh, var(--ui-space-8));
+  max-width: 1480px;
+  padding: clamp(36px, 6vh, 68px) 0 clamp(24px, 4vh, 48px);
+}
+
+.commandDeckHome::before {
+  background: var(--ui-color-border);
+  content: "";
+  height: 1px;
+  left: 0;
+  opacity: 0.7;
+  position: absolute;
+  right: 0;
+  top: 22px;
+}
+
+.commandDeckHome > .languageSwitcher {
+  border-radius: var(--ui-radius-xs);
+  clip-path: var(--ui-clip-chamfer-sm);
+  right: 0;
+  top: 32px;
+  z-index: 1;
+}
+
+.mainMenuSignal {
+  display: flex;
+  gap: 5px;
+  margin-bottom: var(--ui-space-2);
+}
+
+.mainMenuSignal span {
+  background: var(--ui-color-republic);
+  box-shadow: 0 0 10px rgb(85 185 233 / 42%);
+  height: 4px;
+  width: 24px;
+}
+
+.mainMenuSignal span:nth-child(2) {
+  background: var(--ui-color-text-muted);
+  box-shadow: none;
+  width: 8px;
+}
+
+.mainMenuSignal span:nth-child(3) {
+  background: var(--ui-color-separatists);
+  box-shadow: 0 0 10px rgb(239 104 72 / 34%);
+  width: 16px;
+}
+
+.commandDeckHome .mainMenuHero {
+  gap: var(--ui-space-3);
+  max-width: 1020px;
+}
+
+.commandDeckHome .mainMenuHero h1 {
+  font-size: clamp(2.65rem, 5.1vw, 5.2rem);
+  letter-spacing: -0.045em;
+  line-height: 0.94;
+  max-width: 920px;
+}
+
+.commandDeckHome .mainMenuHero > p:last-child {
+  color: var(--ui-color-text-muted);
+  max-width: 760px;
+}
+
+.mainMenuOperations {
+  display: grid;
+  gap: var(--ui-space-4);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px);
+}
+
+.mainMenuLaunchBay,
+.mainMenuUtilityRail {
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-border);
+  box-shadow: var(--ui-shadow-inset), var(--ui-shadow-raised);
+  clip-path: var(--ui-clip-chamfer-sm);
+  display: grid;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-4);
+}
+
+.mainMenuLaunchBay {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+}
+
+.menuSectionLabel {
+  align-items: center;
+  border-bottom: 1px solid var(--ui-color-separator);
+  display: flex;
+  gap: var(--ui-space-3);
+  grid-column: 1 / -1;
+  min-height: 48px;
+  padding: 0 var(--ui-space-1) var(--ui-space-3);
+}
+
+.menuSectionLabel > span {
+  color: var(--ui-color-border-strong);
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.menuSectionLabel .eyebrow {
+  color: var(--ui-color-republic);
+  margin-bottom: 2px;
+}
+
+.menuSectionLabel strong {
+  color: var(--ui-color-text);
+  font-size: 0.82rem;
+}
+
+.mainMenuPrimaryActions {
+  display: grid;
+  gap: var(--ui-space-3);
+  grid-auto-rows: minmax(142px, 1fr);
+}
+
+.commandDeckHome .menuCard,
+.commandDeckHome .menuLoadCard {
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  box-shadow: var(--ui-shadow-inset);
+  clip-path: var(--ui-clip-chamfer-sm);
+  min-height: 0;
+}
+
+.commandDeckHome .menuCard {
+  gap: var(--ui-space-2);
+  overflow: hidden;
+  padding: var(--ui-space-5);
+  position: relative;
+  transform: none;
+}
+
+.commandDeckHome .menuCard::before {
+  background: var(--menu-accent, var(--ui-color-border-strong));
+  bottom: 0;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 4px;
+}
+
+.commandDeckHome .menuCard:hover {
+  background: color-mix(in srgb, var(--ui-color-surface-2) 90%, var(--menu-accent, white));
+  border-color: var(--menu-accent, var(--ui-color-border-strong));
+  transform: none;
+}
+
+.commandDeckHome .menuCard > span,
+.commandDeckHome .menuLoadCard span {
+  color: var(--menu-accent, var(--ui-color-text-muted));
+  letter-spacing: 0.07em;
+}
+
+.commandDeckHome .menuCard strong,
+.commandDeckHome .menuLoadCard strong {
+  overflow-wrap: anywhere;
+}
+
+.commandDeckHome .menuCard b {
+  bottom: var(--ui-space-4);
+  color: var(--menu-accent);
+  font-size: 1.4rem;
+  position: absolute;
+  right: var(--ui-space-4);
+}
+
+.commandDeckHome .menuCardPrimary {
+  --menu-accent: var(--ui-color-action);
+  background: color-mix(in srgb, var(--ui-color-surface-2) 88%, var(--ui-color-action));
+  border-color: color-mix(in srgb, var(--ui-color-action) 55%, var(--ui-color-border));
+}
+
+.commandDeckHome .menuCardResume {
+  --menu-accent: var(--ui-color-success);
+  border-color: color-mix(in srgb, var(--ui-color-success) 46%, var(--ui-color-border));
+}
+
+.commandDeckHome .menuLoadCard {
+  align-content: start;
+  display: grid;
+  gap: var(--ui-space-3);
+  grid-template-columns: 1fr;
+  padding: var(--ui-space-4);
+}
+
+.commandDeckHome .menuLoadCard > * {
+  grid-column: 1;
+}
+
+.menuLoadHeader {
+  align-items: start;
+  border-bottom: 1px solid var(--ui-color-separator);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--ui-space-3);
+}
+
+.menuLoadHeader > div {
+  display: grid;
+  gap: 4px;
+}
+
+.menuLoadHeader > small {
+  color: var(--ui-color-action);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.commandDeckHome .menuLoadCard label {
+  color: var(--ui-color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.commandDeckHome .menuLoadCard select {
+  border-radius: var(--ui-radius-sm);
+  min-width: 0;
+}
+
+.commandDeckHome .menuLoadCard .primaryButton {
+  min-height: var(--ui-control-height-lg);
+}
+
+.mainMenuUtilityRail {
+  align-content: start;
+}
+
+.commandDeckHome .menuUtilityCard {
+  --menu-accent: var(--ui-color-republic);
+  min-height: 108px;
+  padding: var(--ui-space-4) var(--ui-space-5);
+}
+
+.commandDeckHome .menuUtilityCard strong {
+  font-size: 1.05rem;
+}
+
+.commandDeckHome .menuUtilityCard small {
+  line-height: 1.35;
+}
+
+.commandDeckHome .menuCardCampaign {
+  --menu-accent: var(--ui-color-separatists);
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-border);
+}
+
+/* Shared header for composer, compendium and existing secondary screens. */
+.appCommandHeader {
+  background: var(--ui-color-surface-1);
+  border-color: var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  box-shadow: var(--ui-shadow-inset), var(--ui-shadow-raised);
+  clip-path: var(--ui-clip-chamfer-sm);
+  max-width: 1640px;
+  min-height: 84px;
+  padding: var(--ui-space-3) var(--ui-space-5);
+}
+
+.commandStripIdentity {
+  border-left: 3px solid var(--ui-color-republic);
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-left: var(--ui-space-3);
+}
+
+.commandStripIdentity h1 {
+  font-size: clamp(1.55rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.commandStripIdentity > p:last-child {
+  color: var(--ui-color-text-muted);
+  font-size: 0.75rem;
+}
+
+.appCommandHeader .viewTabs,
+.appCommandHeader .languageSwitcher {
+  border-radius: var(--ui-radius-sm);
+}
+
+.appCommandHeader .viewTabs button:hover,
+.appCommandHeader .languageSwitcher button:hover {
+  background: var(--ui-color-hover);
+  color: var(--ui-color-text);
+}
+
+/* Army Composer: opposing transport crates around the unchanged roster model. */
+.commandDeckWorkspace {
+  max-width: 1640px;
+}
+
+.commandDeckWorkspace .composerArmyToolbar,
+.commandDeckWorkspace .composerColumn,
+.commandDeckWorkspace .composerSummary {
+  background: var(--ui-color-surface-1);
+  border-color: var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  box-shadow: var(--ui-shadow-inset), var(--ui-shadow-raised);
+  clip-path: var(--ui-clip-chamfer-sm);
+}
+
+.commandDeckWorkspace .composerArmyToolbar {
+  min-height: 64px;
+}
+
+.commandDeckWorkspace .composerArmyToolbar > div {
+  display: grid;
+  gap: 2px;
+}
+
+.commandDeckWorkspace .composerArmyToolbar small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.72rem;
+}
+
+.composerTransportCrate {
+  --crate-accent: var(--ui-color-text-muted);
+  position: relative;
+}
+
+.composerTransportCrate::before {
+  background: var(--crate-accent);
+  content: "";
+  height: 4px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.composerTransportCrate.isRepublic {
+  --crate-accent: var(--ui-color-republic);
+}
+
+.composerTransportCrate.isSeparatist {
+  --crate-accent: var(--ui-color-separatists);
+}
+
+.composerTransportCrate .armyHeader {
+  background: var(--ui-color-surface-2);
+  border-bottom: 1px solid var(--ui-color-separator);
+  padding-top: var(--ui-space-5);
+}
+
+.composerTransportCrate .armyHeader > div:first-child {
+  min-width: 0;
+}
+
+.composerTransportCrate .armyHeader h2,
+.armyPreviewHeader h3,
+.templateRow h3 {
+  overflow-wrap: anywhere;
+}
+
+.composerTransportCrate .armyHeader span {
+  color: var(--crate-accent);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 900;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.composerTransportCrate .armyHeader strong,
+.commandDeckWorkspace .armyPreviewHeader strong,
+.commandDeckWorkspace .heroRuleHeader strong {
+  border-radius: var(--ui-radius-sm);
+}
+
+.commandDeckWorkspace .composerControls {
+  background: var(--ui-color-surface-2);
+  border-bottom: 1px solid var(--ui-color-separator);
+  padding-top: var(--ui-space-4);
+}
+
+.commandDeckWorkspace .composerControls input,
+.commandDeckWorkspace .composerControls select {
+  background: var(--ui-color-background);
+  border-color: var(--ui-color-border);
+  border-radius: var(--ui-radius-sm);
+}
+
+.commandDeckWorkspace .templateList {
+  gap: var(--ui-space-2);
+  padding-top: var(--ui-space-4);
+}
+
+.commandDeckWorkspace .templateRow {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-separator);
+  border-radius: var(--ui-radius-xs);
+  clip-path: var(--ui-clip-chamfer-sm);
+  min-height: 82px;
+}
+
+.commandDeckWorkspace .templateRow.taskForceRow {
+  background: color-mix(in srgb, var(--ui-color-surface-2) 91%, var(--crate-accent));
+  border-color: color-mix(in srgb, var(--crate-accent) 40%, var(--ui-color-border));
+}
+
+.commandDeckWorkspace .stepper {
+  background: var(--ui-color-background);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-sm);
+  gap: 3px;
+  grid-template-columns: 36px 48px 36px;
+  padding: 3px;
+}
+
+.commandDeckWorkspace .stepper button,
+.commandDeckWorkspace .stepper input {
+  border: 0;
+  border-radius: var(--ui-radius-xs);
+  min-height: 38px;
+}
+
+.commandDeckWorkspace .stepper button {
+  background: var(--ui-color-surface-3);
+  color: var(--ui-color-text);
+  font-size: 1.1rem;
+}
+
+.commandDeckWorkspace .stepper button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ui-color-surface-3) 78%, var(--crate-accent));
+}
+
+.commandDeckWorkspace .stepper input {
+  background: var(--ui-color-surface-1);
+  color: var(--ui-color-text);
+}
+
+.commandDeckWorkspace .composerSummary {
+  align-self: start;
+  max-height: calc(100vh - 132px);
+  overflow: auto;
+  position: sticky;
+  top: 102px;
+}
+
+.commandDeckWorkspace .composerSummary > .panelTitle {
+  border-bottom: 1px solid var(--ui-color-separator);
+  margin-top: 0;
+  padding-bottom: var(--ui-space-3);
+}
+
+.commandDeckWorkspace .armyPreview {
+  background: var(--ui-color-surface-2);
+  border-color: var(--ui-color-border);
+  border-left: 3px solid var(--preview-accent, var(--ui-color-text-muted));
+  border-radius: var(--ui-radius-xs);
+}
+
+.commandDeckWorkspace .armyPreview.isRepublic {
+  --preview-accent: var(--ui-color-republic);
+}
+
+.commandDeckWorkspace .armyPreview.isSeparatist {
+  --preview-accent: var(--ui-color-separatists);
+}
+
+.commandDeckWorkspace .armyPreviewUnit {
+  background: var(--ui-color-surface-1);
+  border-left: 1px solid var(--ui-color-separator);
+  border-radius: 0;
+}
+
+.commandDeckWorkspace .jsonDetails {
+  border-radius: var(--ui-radius-sm);
+}
+
+/* Compendium datapad: fixed index plus a high-legibility reading surface. */
+.rulesDatapad {
+  display: grid;
+  gap: var(--ui-space-4);
+  grid-template-columns: 220px minmax(0, 1fr);
+  margin: 0 auto;
+  max-width: 1640px;
+}
+
+.rulesIndex {
+  align-self: start;
+  background: var(--ui-color-surface-1);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  box-shadow: var(--ui-shadow-inset), var(--ui-shadow-raised);
+  clip-path: var(--ui-clip-chamfer-sm);
+  display: grid;
+  gap: var(--ui-space-4);
+  padding: var(--ui-space-4);
+  position: sticky;
+  top: var(--ui-space-4);
+}
+
+.rulesIndexHeader {
+  align-items: center;
+  border-bottom: 1px solid var(--ui-color-separator);
+  display: flex;
+  gap: var(--ui-space-3);
+  padding-bottom: var(--ui-space-3);
+}
+
+.rulesIndexHeader > span {
+  color: var(--ui-color-republic);
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.rulesIndexHeader strong {
+  font-size: 0.82rem;
+}
+
+.rulesIndex nav {
+  display: grid;
+  gap: 3px;
+}
+
+.rulesIndex a {
+  border-left: 2px solid var(--ui-color-border);
+  color: var(--ui-color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.3;
+  padding: var(--ui-space-2);
+  text-decoration: none;
+}
+
+.rulesIndex a:hover {
+  background: var(--ui-color-hover);
+  border-color: var(--ui-color-republic);
+  color: var(--ui-color-text);
+}
+
+.rulesIndex a:focus-visible {
+  box-shadow: var(--ui-focus-ring);
+  outline: none;
+}
+
+.rulesIndex > p {
+  color: var(--ui-color-text-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.rulesDatapad .rulesLayout {
+  max-width: none;
+  min-width: 0;
+}
+
+.rulesDatapad .rulesGrid {
+  align-items: start;
+}
+
+.rulesDatapad .rulesPanel {
+  align-content: start;
+  background: var(--ui-color-surface-1);
+  border-color: var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  box-shadow: var(--ui-shadow-inset), var(--ui-shadow-raised);
+  clip-path: var(--ui-clip-chamfer-sm);
+  scroll-margin-top: var(--ui-space-4);
+}
+
+.rulesDatapad .rulesPanel > .panelTitle {
+  border-bottom: 1px solid var(--ui-color-separator);
+  margin-top: 0;
+  padding-bottom: var(--ui-space-3);
+}
+
+.rulesDatapad .unitRulesGrid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.rulesDatapad .glossaryItem,
+.rulesDatapad .terrainRule,
+.rulesDatapad .heroRuleCard,
+.rulesDatapad .abilityRule,
+.rulesDatapad .unitRuleCard,
+.rulesDatapad .weaponRule {
+  border-radius: var(--ui-radius-xs);
+}
+
+.rulesDatapad .glossaryItem,
+.rulesDatapad .terrainRule,
+.rulesDatapad .heroRuleCard,
+.rulesDatapad .abilityRule,
+.rulesDatapad .unitRuleCard {
+  border-color: var(--ui-color-separator);
+}
+
+.rulesDatapad .glossaryItem p,
+.rulesDatapad .terrainRule p,
+.rulesDatapad .abilityRule p,
+.rulesDatapad .unitLore p {
+  color: color-mix(in srgb, var(--ui-color-text-muted) 88%, var(--ui-color-text));
+  line-height: 1.55;
+}
+
+.rulesDatapad .ruleMetaGrid span,
+.rulesDatapad .abilityRule span,
+.rulesDatapad .unitAbilityChips span {
+  border-radius: var(--ui-radius-sm);
+}
+
+@media (max-width: 1180px) {
+  .mainMenuOperations {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+
+  .mainMenuLaunchBay {
+    grid-template-columns: 1fr;
+  }
+
+  .mainMenuPrimaryActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mainMenuLaunchBay .menuLoadCard {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 1050px) {
+  .mainMenuOperations,
+  .rulesDatapad {
+    grid-template-columns: 1fr;
+  }
+
+  .mainMenuUtilityRail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mainMenuUtilityRail .menuSectionLabel {
+    grid-column: 1 / -1;
+  }
+
+  .rulesIndex {
+    position: static;
+  }
+
+  .rulesIndex nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .commandDeckWorkspace .composerSummary {
+    max-height: none;
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .commandDeckHome {
+    align-content: start;
+  }
+
+  .commandDeckHome::before {
+    top: 10px;
+  }
+
+  .commandDeckHome > .languageSwitcher {
+    position: static;
+  }
+
+  .commandDeckHome .mainMenuHero h1 {
+    font-size: clamp(2.25rem, 12vw, 3.6rem);
+  }
+
+  .mainMenuPrimaryActions,
+  .mainMenuUtilityRail,
+  .rulesIndex nav {
+    grid-template-columns: 1fr;
+  }
+
+  .mainMenuLaunchBay,
+  .mainMenuUtilityRail {
+    padding: var(--ui-space-3);
+  }
+
+  .commandDeckHome .menuCard {
+    min-height: 120px;
+  }
+
+  .appCommandHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .commandDeckWorkspace .composerArmyToolbar {
+    align-items: stretch;
+    display: grid;
+  }
+
+  .commandDeckWorkspace .templateRow {
+    align-items: stretch;
+  }
+
+  .commandDeckWorkspace .stepper {
+    grid-template-columns: 42px minmax(52px, 1fr) 42px;
+    justify-content: stretch;
+  }
+}

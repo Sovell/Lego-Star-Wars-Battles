@@ -860,14 +860,19 @@ export function App() {
         />
       ) : (
         <>
-      {view !== "setup" && view !== "battle" ? <section className="commandStrip">
-        <div>
-          <p className="eyebrow">LEGO Star Wars Battles</p>
+      {view !== "setup" && view !== "battle" ? <section className="commandStrip appCommandHeader">
+        <div className="commandStripIdentity">
+          <p className="eyebrow">LEGO Star Wars Battles · Command Deck</p>
           <h1>{view === "campaign"
             ? text("Kampania galaktyczna", "Galactic Campaign")
             : view === "composer"
               ? text("Kreator armii", "Army Composer")
               : text("Kompendium", "Compendium")}</h1>
+          <p>{view === "campaign"
+            ? text("Dowodzenie teatrem działań", "Theater command")
+            : view === "composer"
+              ? text("Manifest sił operacyjnych", "Operational force manifest")
+              : text("Datapad zasad i wyposażenia", "Rules and equipment datapad")}</p>
         </div>
         <nav className="viewTabs" aria-label={text("Widoki aplikacji", "Application views")}>
           <button onClick={() => setView("home")}>
@@ -1035,12 +1040,13 @@ function ArmyComposerView({
   }
 
   return (
-    <section className="composerLayout">
+    <section className="composerLayout commandDeckWorkspace">
       <div className="composerArmyArea">
         <div className="composerArmyToolbar">
           <div>
             <p className="eyebrow">{text("Uczestnicy", "Participants")}</p>
             <strong>{armies.length}/{maximumArmyCount} {text("armii", "armies")}</strong>
+            <small>{text("Składy są przekazywane bezpośrednio do przygotowania scenariusza.", "Rosters are handed directly to scenario preparation.")}</small>
           </div>
           <button
             className="secondaryButton"
@@ -1133,11 +1139,12 @@ function ComposerColumn({
   }
 
   return (
-    <section className="composerColumn">
+    <section className={`composerColumn composerTransportCrate ${faction === "Republic" ? "isRepublic" : "isSeparatist"}`}>
       <div className="armyHeader">
         <div>
           <p className="eyebrow">{sideLabel}</p>
           <h2>{playerName}</h2>
+          <span>{localizeFaction(language, faction)}</span>
         </div>
         <div className="composerArmyHeaderActions">
           <strong>{cost} {text("pkt", "pts")}</strong>
@@ -1184,14 +1191,22 @@ function ComposerColumn({
                 {bonus ? <p className="templateMeta">{text("Premia", "Bonus")}: {localizeAbilityName(language, bonus)}</p> : null}
               </div>
               <div className="stepper">
-                <button onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) - 1)}>-</button>
+                <button
+                  aria-label={`${text("Zmniejsz liczbę", "Decrease count for")} ${localizeTaskForceName(language, taskForce.id, taskForce.name)}`}
+                  disabled={(counts[taskForce.id] ?? 0) === 0}
+                  onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) - 1)}
+                >−</button>
                 <input
+                  aria-label={`${text("Liczba", "Count for")} ${localizeTaskForceName(language, taskForce.id, taskForce.name)}`}
                   min="0"
                   type="number"
                   value={counts[taskForce.id] ?? 0}
                   onChange={(event) => setCount(taskForce.id, Number(event.target.value))}
                 />
-                <button onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) + 1)}>+</button>
+                <button
+                  aria-label={`${text("Zwiększ liczbę", "Increase count for")} ${localizeTaskForceName(language, taskForce.id, taskForce.name)}`}
+                  onClick={() => setCount(taskForce.id, (counts[taskForce.id] ?? 0) + 1)}
+                >+</button>
               </div>
             </article>
           );
@@ -1206,14 +1221,22 @@ function ComposerColumn({
               </p>
             </div>
             <div className="stepper">
-              <button onClick={() => setCount(template.id, (counts[template.id] ?? 0) - 1)}>-</button>
+              <button
+                aria-label={`${text("Zmniejsz liczbę", "Decrease count for")} ${localizeUnitName(language, template.id, template.name)}`}
+                disabled={(counts[template.id] ?? 0) === 0}
+                onClick={() => setCount(template.id, (counts[template.id] ?? 0) - 1)}
+              >−</button>
               <input
+                aria-label={`${text("Liczba", "Count for")} ${localizeUnitName(language, template.id, template.name)}`}
                 min="0"
                 type="number"
                 value={counts[template.id] ?? 0}
                 onChange={(event) => setCount(template.id, Number(event.target.value))}
               />
-              <button onClick={() => setCount(template.id, (counts[template.id] ?? 0) + 1)}>+</button>
+              <button
+                aria-label={`${text("Zwiększ liczbę", "Increase count for")} ${localizeUnitName(language, template.id, template.name)}`}
+                onClick={() => setCount(template.id, (counts[template.id] ?? 0) + 1)}
+              >+</button>
             </div>
           </article>
         ))}
@@ -1227,7 +1250,7 @@ function ArmyPreview({ armies }: { armies: Army[] }) {
   return (
     <div className="armyPreviewList">
       {armies.map((army) => (
-        <section className="armyPreview" key={army.id}>
+        <section className={`armyPreview ${army.faction === "Republic" ? "isRepublic" : "isSeparatist"}`} key={army.id}>
           <div className="armyPreviewHeader">
             <div>
               <p className="eyebrow">{localizeFaction(language, army.faction)}</p>

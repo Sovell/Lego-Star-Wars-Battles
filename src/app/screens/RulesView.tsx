@@ -42,8 +42,29 @@ export function RulesView() {
     .filter((entry) => entry.bonus);
 
   return (
-    <section className="rulesLayout">
-      <div className="rulesGrid">
+    <section className="rulesDatapad">
+      <aside className="rulesIndex" aria-label={text("Indeks kompendium", "Compendium index")}>
+        <div className="rulesIndexHeader">
+          <span aria-hidden="true">DB-01</span>
+          <div>
+            <p className="eyebrow">{text("Indeks danych", "Data index")}</p>
+            <strong>{text("Biblioteka polowa", "Field library")}</strong>
+          </div>
+        </div>
+        <nav>
+          <a href="#rules-reference">01 · {text("Statystyki i teren", "Stats and terrain")}</a>
+          <a href="#rules-heroes">02 · {text("Bohaterowie", "Heroes")}</a>
+          <a href="#rules-units">03 · {text("Karty jednostek", "Unit cards")}</a>
+          <a href="#rules-task-forces">04 · {text("Zespoły uderzeniowe", "Task forces")}</a>
+        </nav>
+        <p>{text(
+          "Treść datapadu pochodzi bezpośrednio z danych używanych przez grę.",
+          "Datapad content comes directly from the data used by the game.",
+        )}</p>
+      </aside>
+
+      <div className="rulesLayout">
+        <section className="rulesGrid" id="rules-reference">
         <section className="rulesPanel">
           <PanelTitle title={text("Skróty", "Abbreviations")} detail={text("statystyki", "stats")} />
           <div className="glossaryList">
@@ -79,9 +100,9 @@ export function RulesView() {
             ))}
           </div>
         </section>
-      </div>
+        </section>
 
-      <section className="rulesPanel">
+      <section className="rulesPanel" id="rules-heroes">
         <PanelTitle title={text("Bohaterowie", "Heroes")} detail={`${heroTemplates.length} ${text("kart", "cards")}`} />
         <div className="heroRulesGrid">
           {heroTemplates.map((template) => {
@@ -119,7 +140,7 @@ export function RulesView() {
         </div>
       </section>
 
-      <section className="rulesPanel">
+      <section className="rulesPanel" id="rules-units">
         <PanelTitle title={text("Karty jednostek", "Unit cards")} detail={`${unitTemplates.length} ${text("kart", "cards")}`} />
         <div className="unitRulesByFaction">
           {unitFactions.map((faction) => (
@@ -140,7 +161,7 @@ export function RulesView() {
         </div>
       </section>
 
-      <section className="rulesPanel">
+      <section className="rulesPanel" id="rules-task-forces">
         <PanelTitle title={text("Zespoły uderzeniowe", "Task Forces")} detail={`${taskForceBonuses.length} ${text("premii", "bonuses")}`} />
         <div className="taskForceRulesGrid">
           {taskForceBonuses.map(({ taskForce, bonus }) => (
@@ -154,6 +175,7 @@ export function RulesView() {
           ))}
         </div>
       </section>
+      </div>
     </section>
   );
 }

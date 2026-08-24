@@ -63,10 +63,15 @@ export function MainMenu({
   }
 
   return (
-    <section className="mainMenu">
+    <section className="mainMenu commandDeckHome">
       <LanguageSwitcher />
       <section className="mainMenuHero">
-        <p className="eyebrow">LEGO Star Wars Battles</p>
+        <div className="mainMenuSignal" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <p className="eyebrow">LEGO Star Wars Battles · Command Deck</p>
         <h1>{text("Dowodzenie zaczyna się tutaj", "Command begins here")}</h1>
         <p>
           {text(
@@ -76,69 +81,99 @@ export function MainMenu({
         </p>
       </section>
 
-      <section className="mainMenuGrid">
-        {onResumeBattle ? (
-          <button className="menuCard menuCardResume" onClick={onResumeBattle}>
-            <span>{text("W toku", "In progress")}</span>
-            <strong>{text("Wróć do bieżącej bitwy", "Return to current battle")}</strong>
-            <small>{text("Rozgrywka pozostaje otwarta w pamięci aplikacji.", "The battle remains open in application memory.")}</small>
-          </button>
-        ) : null}
-        <button className="menuCard menuCardPrimary" onClick={onNewScenario}>
-          <span>{text("Nowa rozgrywka", "New game")}</span>
-          <strong>{text("Rozegraj nowy scenariusz", "Play a new scenario")}</strong>
-          <small>{text("Mapa → scenariusz → armie → rozmieszczenie → start", "Map → scenario → armies → deployment → start")}</small>
-        </button>
-
-        <button className="menuCard menuCardCampaign" onClick={onOpenCampaign}>
-          <span>{text("Galactic Conquest", "Galactic Conquest")}</span>
-          <strong>{text("Kampania galaktyczna", "Galactic campaign")}</strong>
-          <small>{text(
-            "Poprowadź armie przez hiperlinie, przejmuj sektory i rozwijaj bazy.",
-            "Lead armies through hyperlanes, capture sectors, and develop bases.",
-          )}</small>
-        </button>
-
-        <button className="menuCard" onClick={onOpenComposer}>
-          <span>{text("Armie", "Armies")}</span>
-          <strong>{text("Kreator armii", "Army Composer")}</strong>
-          <small>{text("Zbuduj składy, które później wybierzesz w kreatorze scenariusza.", "Build rosters to use later in the scenario builder.")}</small>
-        </button>
-
-        <button className="menuCard" onClick={onOpenRules}>
-          <span>{text("Kompendium", "Compendium")}</span>
-          <strong>{text("Zasady i jednostki", "Rules and units")}</strong>
-          <small>{text("Statystyki, zdolności, teren i zespoły uderzeniowe.", "Stats, abilities, terrain, and task forces.")}</small>
-        </button>
-
-        <section className="menuLoadCard">
-          <div>
-            <span>{text("Kontynuuj", "Continue")}</span>
-            <strong>{text("Wczytaj grę", "Load game")}</strong>
+      <section className="mainMenuOperations" aria-label={text("Rozpoczęcie operacji", "Start operation")}>
+        <div className="mainMenuLaunchBay">
+          <div className="menuSectionLabel">
+            <span>01</span>
+            <div>
+              <p className="eyebrow">{text("Operacje", "Operations")}</p>
+              <strong>{text("Wybierz punkt wejścia", "Choose an entry point")}</strong>
+            </div>
           </div>
-          <select
-            value={selectedSaveId}
-            onChange={(event) => setSelectedSaveId(event.target.value)}
-          >
-            <option value="">{text("Wybierz zapis", "Select save")}</option>
-            {savedBattles.map((savedBattle) => (
-              <option key={savedBattle.id} value={savedBattle.id}>
-                {savedBattle.name} | T{savedBattle.turn}
-              </option>
-            ))}
-          </select>
-          <button
-            className="primaryButton"
-            disabled={!selectedSaveId}
-            onClick={handleLoad}
-          >
-            {text("Kontynuuj bitwę", "Continue battle")}
+
+          <div className="mainMenuPrimaryActions">
+            <button className="menuCard menuCardPrimary" onClick={onNewScenario}>
+              <span>{text("Nowa rozgrywka", "New game")}</span>
+              <strong>{text("Rozegraj nowy scenariusz", "Play a new scenario")}</strong>
+              <small>{text("Mapa → scenariusz → armie → rozmieszczenie → start", "Map → scenario → armies → deployment → start")}</small>
+              <b aria-hidden="true">→</b>
+            </button>
+
+            {onResumeBattle ? (
+              <button className="menuCard menuCardResume" onClick={onResumeBattle}>
+                <span>{text("Operacja w toku", "Operation in progress")}</span>
+                <strong>{text("Wróć do bieżącej bitwy", "Return to current battle")}</strong>
+                <small>{text("Rozgrywka pozostaje otwarta w pamięci aplikacji.", "The battle remains open in application memory.")}</small>
+                <b aria-hidden="true">→</b>
+              </button>
+            ) : null}
+          </div>
+
+          <section className="menuLoadCard">
+            <div className="menuLoadHeader">
+              <div>
+                <span>{text("Kontynuuj", "Continue")}</span>
+                <strong>{text("Wczytaj zapis operacji", "Load operation save")}</strong>
+              </div>
+              <small>{savedBattles.length.toString().padStart(2, "0")}</small>
+            </div>
+            <label htmlFor="battle-save-select">{text("Lokalne zapisy", "Local saves")}</label>
+            <select
+              id="battle-save-select"
+              value={selectedSaveId}
+              onChange={(event) => setSelectedSaveId(event.target.value)}
+            >
+              <option value="">{text("Wybierz zapis", "Select save")}</option>
+              {savedBattles.map((savedBattle) => (
+                <option key={savedBattle.id} value={savedBattle.id}>
+                  {savedBattle.name} | T{savedBattle.turn}
+                </option>
+              ))}
+            </select>
+            <button
+              className="primaryButton"
+              disabled={!selectedSaveId}
+              onClick={handleLoad}
+            >
+              {text("Kontynuuj bitwę", "Continue battle")}
+            </button>
+            {savedBattles.length === 0 ? (
+              <small>{text("Brak lokalnych zapisów.", "No local saves.")}</small>
+            ) : null}
+            {status || externalStatus ? <p className="errorText" role="status">{status || externalStatus}</p> : null}
+          </section>
+        </div>
+
+        <aside className="mainMenuUtilityRail">
+          <div className="menuSectionLabel">
+            <span>02</span>
+            <div>
+              <p className="eyebrow">{text("Moduły", "Modules")}</p>
+              <strong>{text("Zaplecze dowodzenia", "Command support")}</strong>
+            </div>
+          </div>
+
+          <button className="menuCard menuUtilityCard" onClick={onOpenComposer}>
+            <span>{text("Armie", "Armies")}</span>
+            <strong>{text("Kreator armii", "Army Composer")}</strong>
+            <small>{text("Buduj i przekazuj składy do scenariusza.", "Build and hand rosters to the scenario builder.")}</small>
           </button>
-          {savedBattles.length === 0 ? (
-            <small>{text("Brak lokalnych zapisów.", "No local saves.")}</small>
-          ) : null}
-          {status || externalStatus ? <p className="errorText">{status || externalStatus}</p> : null}
-        </section>
+
+          <button className="menuCard menuUtilityCard" onClick={onOpenRules}>
+            <span>{text("Kompendium", "Compendium")}</span>
+            <strong>{text("Zasady i jednostki", "Rules and units")}</strong>
+            <small>{text("Statystyki, zdolności, teren i zespoły uderzeniowe.", "Stats, abilities, terrain, and task forces.")}</small>
+          </button>
+
+          <button className="menuCard menuUtilityCard menuCardCampaign" onClick={onOpenCampaign}>
+            <span>{text("Galactic Conquest", "Galactic Conquest")}</span>
+            <strong>{text("Kampania galaktyczna", "Galactic campaign")}</strong>
+            <small>{text(
+              "Poprowadź armie przez hiperlinie i przejmuj sektory.",
+              "Lead armies through hyperlanes and capture sectors.",
+            )}</small>
+          </button>
+        </aside>
       </section>
     </section>
   );
