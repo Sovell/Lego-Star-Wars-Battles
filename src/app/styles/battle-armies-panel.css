@@ -1,0 +1,242 @@
+.battleArmiesPanel {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+
+.battleArmyModule {
+  --army-accent: var(--ui-color-border-strong);
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-separator);
+  border-top: 3px solid var(--army-accent);
+  box-shadow: var(--ui-shadow-inset);
+  min-width: 0;
+}
+
+.battleArmyModule[data-faction="republic"] {
+  --army-accent: var(--ui-color-republic);
+}
+
+.battleArmyModule[data-faction="separatists"] {
+  --army-accent: var(--ui-color-separatists);
+}
+
+.battleArmyModuleHeader {
+  align-items: center;
+  display: flex;
+  gap: var(--ui-space-2);
+  justify-content: space-between;
+  padding: var(--ui-space-2);
+}
+
+.battleArmyModuleHeader > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.battleArmyModuleHeader span {
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-caption);
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.battleArmyModuleHeader strong {
+  color: var(--ui-color-text);
+  font-size: var(--ui-font-size-title);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battleArmyModuleHeader > small {
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-caption);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.battleArmySummary {
+  border-block: 1px solid var(--ui-color-separator);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.battleArmySummary > span {
+  color: var(--ui-color-text-muted);
+  display: grid;
+  font-size: 0.64rem;
+  gap: 1px;
+  padding: 6px 4px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.battleArmySummary > span + span {
+  border-left: 1px solid var(--ui-color-separator);
+}
+
+.battleArmySummary b {
+  color: var(--ui-color-text);
+  font-size: var(--ui-font-size-label);
+}
+
+.battleArmySummary [data-status="ready"] b {
+  color: var(--ui-color-success);
+}
+
+.battleArmySummary [data-status="destroyed"] b {
+  color: var(--ui-color-error);
+}
+
+.battleArmyUnitList {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding: var(--ui-space-2);
+}
+
+.battleArmyUnit {
+  align-items: center;
+  background: var(--ui-color-surface-1);
+  border: 1px solid transparent;
+  border-left: 3px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-xs);
+  color: var(--ui-color-text);
+  display: grid;
+  gap: 3px var(--ui-space-2);
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 5px 6px;
+  text-align: left;
+  width: 100%;
+}
+
+.battleArmyUnit:hover {
+  background: color-mix(in srgb, var(--ui-color-surface-1), white 5%);
+  border-color: var(--ui-color-separator);
+}
+
+.battleArmyUnit[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--army-accent), var(--ui-color-surface-1) 88%);
+  border-color: color-mix(in srgb, var(--army-accent), transparent 35%);
+  border-left-color: var(--army-accent);
+}
+
+.battleArmyUnit[data-status="activated"] {
+  border-left-color: var(--ui-color-disabled);
+}
+
+.battleArmyUnit[data-status="destroyed"] {
+  border-left-color: var(--ui-color-error);
+  opacity: 0.7;
+}
+
+.battleArmyUnit[data-status="pinned"] {
+  border-left-color: var(--ui-color-warning);
+}
+
+.battleArmyUnitPortrait {
+  align-items: center;
+  background: var(--ui-color-surface-2);
+  border: 1px solid var(--ui-color-separator);
+  display: flex;
+  grid-row: 1 / span 2;
+  height: 44px;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  width: 44px;
+}
+
+.battleArmyUnitPortrait img {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  padding: 2px;
+  position: absolute;
+  width: 100%;
+  z-index: 1;
+}
+
+.battleArmyUnitPortrait b {
+  color: var(--ui-color-text-muted);
+  font-size: 0.68rem;
+}
+
+.battleArmyUnitIdentity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.battleArmyUnitIdentity strong {
+  font-size: var(--ui-font-size-label);
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battleArmyUnitIdentity small,
+.battleArmyUnitTracks small {
+  color: var(--ui-color-text-muted);
+  font-size: 0.64rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battleArmyUnitStatus {
+  border: 1px solid var(--ui-color-border);
+  color: var(--ui-color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  padding: 2px 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.battleArmyUnit[data-status="ready"] .battleArmyUnitStatus {
+  border-color: var(--ui-color-success);
+  color: var(--ui-color-success);
+}
+
+.battleArmyUnit[data-status="destroyed"] .battleArmyUnitStatus {
+  border-color: var(--ui-color-error);
+  color: var(--ui-color-error);
+}
+
+.battleArmyUnit[data-status="pinned"] .battleArmyUnitStatus {
+  border-color: var(--ui-color-warning);
+  color: var(--ui-color-warning);
+}
+
+.battleArmyUnitTracks {
+  display: flex;
+  gap: var(--ui-space-2);
+  grid-column: 2 / -1;
+}
+
+.battleArmyUnitTracks b {
+  color: var(--ui-color-text);
+}
+
+@media (max-width: 1400px) {
+  .battleArmyUnit {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .battleArmyUnitPortrait {
+    height: 38px;
+    width: 38px;
+  }
+
+  .battleArmyUnitStatus {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .battleArmyUnitTracks {
+    grid-column: 2;
+  }
+}

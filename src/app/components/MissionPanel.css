@@ -752,7 +752,7 @@ button.missionArmyOption:hover {
 
 .missionInPlayHeader span {
   color: var(--ui-color-text-muted);
-  font-size: 0.58rem;
+  font-size: var(--ui-font-size-caption);
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -760,14 +760,14 @@ button.missionArmyOption:hover {
 
 .missionInPlayHeader strong {
   color: var(--ui-color-text);
-  font-size: 0.8rem;
+  font-size: var(--ui-font-size-title);
   line-height: 1.15;
 }
 
 .missionInPlayHeader > small {
   border: 1px solid var(--ui-color-republic);
   color: var(--ui-color-republic);
-  font-size: 0.55rem;
+  font-size: 0.64rem;
   font-weight: 900;
   padding: 3px 5px;
   text-transform: uppercase;
@@ -787,8 +787,8 @@ button.missionArmyOption:hover {
 .missionInPlay .missionObjectiveSummary {
   color: var(--ui-color-text-muted);
   display: -webkit-box;
-  font-size: 0.68rem;
-  line-height: 1.35;
+  font-size: var(--ui-font-size-body);
+  line-height: 1.45;
   margin: 0;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -796,7 +796,7 @@ button.missionArmyOption:hover {
 }
 
 .missionInPlay .missionProgressHeader {
-  font-size: 0.67rem;
+  font-size: var(--ui-font-size-label);
 }
 
 .missionInPlay progress {
@@ -813,7 +813,7 @@ button.missionArmyOption:hover {
   border: 0;
   color: var(--ui-color-text-muted);
   cursor: pointer;
-  font-size: 0.62rem;
+  font-size: var(--ui-font-size-caption);
   font-weight: 900;
   min-height: var(--ui-control-height-sm);
   padding: 0;
@@ -851,7 +851,7 @@ button.missionArmyOption:hover {
 
 .missionCombatants span {
   color: #9eabba;
-  font-size: 0.72rem;
+  font-size: var(--ui-font-size-body);
 }
 
 .missionCombatants strong {
@@ -869,12 +869,12 @@ button.missionArmyOption:hover {
   border-radius: 6px;
   color: #9eabba;
   display: grid;
-  font-size: 0.68rem;
+  font-size: var(--ui-font-size-label);
   gap: 3px;
   padding: 7px;
 }
 
 .territoryScoreboard strong {
   color: #f0f3f7;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
 }

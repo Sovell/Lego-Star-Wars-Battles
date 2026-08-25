@@ -10,6 +10,7 @@ import {
   type BattleCommandProgress,
 } from "../battle/BattleCommandHeader";
 import { BattleInspector } from "../battle/BattleInspector";
+import { BattleArmiesPanel } from "../battle/BattleArmiesPanel";
 import { BattleUnitInspector } from "../battle/BattleUnitInspector";
 import { BattleLogDrawer, type BattleDrawerTab } from "../battle/BattleLogDrawer";
 import {
@@ -31,7 +32,7 @@ import type { GamePhase } from "../types/game-phase";
 import { runBotTurn } from "../../core/ai/bot-turn-runner";
 import { getDuplicateHeroTemplateIds } from "../../core/army-roster";
 import { getArmyControl } from "../../core/army-relations";
-import { getArmyCost, getTemplate, getVictoryState } from "../../core/battle-state";
+import { getTemplate, getVictoryState } from "../../core/battle-state";
 import type { BattleAction } from "../../core/battle-actions";
 import { getLegalAbilityActions } from "../../core/legal-actions/get-legal-ability-actions";
 import { getLegalAttackActions } from "../../core/legal-actions/get-legal-attack-actions";
@@ -80,7 +81,6 @@ import { getUnitPresentationProfile } from "../../presentation/unit-profile";
 import {
   localizeAbilityName,
   localizeAbilityDescription,
-  localizeCategory,
   localizeFaction,
   localizeObjectName,
   localizeOrder,
@@ -1105,6 +1105,13 @@ export function BattleScreen({
       onUnitPanelOpenChange={setUnitPanelOpen}
       inspector={(
         <BattleInspector
+          armiesPanel={!preparationActive ? (
+            <BattleArmiesPanel
+              armies={battle.armies}
+              selectedUnitId={selectedUnitId}
+              onUnitSelect={onSelectedUnitChange}
+            />
+          ) : undefined}
           phase={gamePhase}
           tone={selectedArmy?.faction === "Republic"
             ? "republic"
@@ -1487,20 +1494,6 @@ export function BattleScreen({
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           onTabChange={setIntelTab}
-          armies={(
-            <div className="armiesGrid intelContent">
-              {battle.armies.map((army) => (
-                <ArmyColumn
-                  key={army.id}
-                  army={army}
-                  debugMode={debugMode && preparationActive}
-                  selectedUnitId={selectedUnitId}
-                  onSelect={onSelectedUnitChange}
-                  onPatch={onUnitPatch}
-                />
-              ))}
-            </div>
-          )}
           logs={(
             <div className="logs intelContent">
               {logs.map((entry) => (
@@ -1785,141 +1778,6 @@ function UnitDetails({
           </button>
         </>
       ) : null}
-    </div>
-  );
-}
-
-function ArmyColumn({
-  army,
-  debugMode,
-  selectedUnitId,
-  onSelect,
-  onPatch,
-}: {
-  army: Army;
-  debugMode: boolean;
-  selectedUnitId: string;
-  onSelect: (unitId: string) => void;
-  onPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
-}) {
-  const { language, text } = useI18n();
-  return (
-    <section className={`armyColumn ${army.faction.toLowerCase().replaceAll(" ", "-")}`}>
-      <div className="armyHeader">
-        <div>
-          <p className="eyebrow">{localizeFaction(language, army.faction)}</p>
-          <h2>{army.playerName}</h2>
-        </div>
-        <strong>{getArmyCost(army)} {text("pkt", "pts")}</strong>
-      </div>
-
-      <div className="unitList">
-        {army.units.map((unit) => (
-          <UnitCard
-            key={unit.id}
-            debugMode={debugMode}
-            unit={unit}
-            selected={unit.id === selectedUnitId}
-            onSelect={() => onSelect(unit.id)}
-            onPatch={onPatch}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function UnitCard({
-  debugMode,
-  unit,
-  selected,
-  onSelect,
-  onPatch,
-}: {
-  debugMode: boolean;
-  unit: UnitInstance;
-  selected: boolean;
-  onSelect: () => void;
-  onPatch: (unitId: string, patch: Partial<UnitInstance>) => void;
-}) {
-  const { language, text } = useI18n();
-  const template = getTemplate(unit);
-  const unitAbilities = abilities.filter((ability) => template.abilities.includes(ability.id));
-
-  return (
-    <article className={`unitCard ${selected ? "selected" : ""}`} onClick={onSelect}>
-      <div className="unitTopline">
-        <div>
-          <p className="category">{localizeCategory(language, template.category)} | {localizeRole(language, template.role)}</p>
-          <h3>{localizeUnitName(language, template.id, template.name)}</h3>
-        </div>
-        <span className={`status ${unit.status.toLowerCase()}`}>{localizeUnitStatus(language, unit.status)}</span>
-      </div>
-
-      <div className="statGrid">
-        <Stat label="MOV" value={template.movement} />
-        <Stat label="HP" value={template.maxHp} />
-        <Stat label="MOR" value={template.morale} />
-        <Stat label="CMD" value={template.command} />
-        <Stat label="WPN" value={template.weapons.length} />
-      </div>
-
-      {debugMode ? (
-        <div className="trackRow">
-          <label>
-            HP
-            <input
-              type="number"
-              min="0"
-              max={template.maxHp}
-              value={unit.currentHp}
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => onPatch(unit.id, { currentHp: Number(event.target.value) })}
-            />
-          </label>
-          <label>
-            {text("Przygwożdżenie", "Suppression")}
-            <input
-              type="number"
-              min="0"
-              value={unit.suppression}
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => onPatch(unit.id, { suppression: Number(event.target.value) })}
-            />
-          </label>
-        </div>
-      ) : (
-        <div className="readOnlyTracks">
-          <span>HP {unit.currentHp}/{template.maxHp}</span>
-          <span>{text("Przygwożdżenie", "Suppression")} {unit.suppression}</span>
-        </div>
-      )}
-
-      <div className="abilityList">
-        {template.weapons.map((weapon) => (
-          <span
-            title={`${text("Zasięg", "Range")} ${weapon.range}, ${text("ataki", "attacks")} ${weapon.attacks}, ${text("obrażenia", "damage")} ${weapon.damage}`}
-            key={weapon.id}
-          >
-            {localizeWeaponName(language, weapon.id, weapon.name)}
-          </span>
-        ))}
-        {unitAbilities.map((ability) => (
-          <span title={localizeAbilityDescription(language, ability)} key={ability.id}>
-            {localizeAbilityName(language, ability)}
-            {ability.type === "active" && ability.cooldown ? ` CD${ability.cooldown}` : ""}
-          </span>
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

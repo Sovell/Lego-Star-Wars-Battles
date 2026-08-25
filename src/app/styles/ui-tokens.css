@@ -19,6 +19,12 @@
   --ui-color-warning: #e5a83f;
   --ui-color-success: #4bc482;
 
+  /* Readable tactical type scale */
+  --ui-font-size-caption: 0.7rem;
+  --ui-font-size-label: 0.75rem;
+  --ui-font-size-body: 0.82rem;
+  --ui-font-size-title: 0.94rem;
+
   /* Interaction states */
   --ui-color-hover: rgb(255 255 255 / 7%);
   --ui-color-active: rgb(0 0 0 / 22%);

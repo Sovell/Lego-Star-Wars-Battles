@@ -20,9 +20,9 @@
 }
 
 .unitInspectorEmpty > span,
-.unitInspectorIdentity > div > span {
+.unitInspectorIdentity > div:not(.unitInspectorPortrait) > span {
   color: var(--ui-color-text-muted);
-  font-size: 0.61rem;
+  font-size: var(--ui-font-size-caption);
   font-weight: 850;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -30,22 +30,22 @@
 
 .unitInspectorEmpty > strong {
   color: var(--ui-color-text);
-  font-size: 0.9rem;
+  font-size: var(--ui-font-size-title);
 }
 
 .unitInspectorEmpty p,
 .unitInspectorEmptyNote {
   color: var(--ui-color-text-muted);
-  font-size: 0.7rem;
-  line-height: 1.35;
+  font-size: var(--ui-font-size-body);
+  line-height: 1.45;
   margin: 0;
 }
 
 .unitInspectorIdentity {
-  align-items: center;
+  align-items: start;
   display: grid;
   gap: var(--ui-space-2);
-  grid-template-columns: 68px minmax(0, 1fr) auto;
+  grid-template-columns: 96px minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -57,15 +57,15 @@
 
 .unitInspectorIdentity > div > strong {
   color: var(--unit-accent-strong);
-  font-size: 0.84rem;
-  line-height: 1.15;
+  font-size: 1rem;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .unitInspectorIdentity > div > small {
   color: var(--ui-color-text-muted);
-  font-size: 0.62rem;
+  font-size: var(--ui-font-size-caption);
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -75,11 +75,12 @@
   background: var(--ui-color-surface-1);
   border: 1px solid color-mix(in srgb, var(--unit-accent) 34%, var(--ui-color-border));
   display: flex;
-  height: 68px;
+  grid-row: 1 / span 2;
+  height: 96px;
   justify-content: center;
   overflow: hidden;
   position: relative;
-  width: 68px;
+  width: 96px;
 }
 
 .unitInspectorPortrait img {
@@ -94,7 +95,7 @@
 
 .unitInspectorPortrait span {
   color: var(--unit-accent-strong);
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 900;
 }
 
@@ -103,7 +104,8 @@
   background: var(--unit-accent-soft);
   border: 1px solid color-mix(in srgb, var(--unit-accent) 34%, transparent);
   color: var(--unit-accent-strong);
-  font-size: 0.56rem;
+  font-size: 0.65rem;
+  grid-column: 2;
   font-weight: 900;
   padding: 4px 5px;
   text-transform: uppercase;
@@ -136,20 +138,20 @@
 
 .unitInspectorStats small {
   color: var(--ui-color-text-muted);
-  font-size: 0.53rem;
+  font-size: 0.64rem;
   font-weight: 900;
 }
 
 .unitInspectorStats strong {
   color: var(--ui-color-text);
-  font-size: 0.8rem;
+  font-size: 0.92rem;
 }
 
 .unitInspectorPosition {
   align-items: center;
   color: var(--ui-color-text);
   display: flex;
-  font-size: 0.66rem;
+  font-size: var(--ui-font-size-label);
   gap: var(--ui-space-2);
   justify-content: space-between;
 }
@@ -179,7 +181,7 @@
 .unitInspectorSection > summary::before {
   color: var(--unit-accent);
   content: "▸";
-  font-size: 0.7rem;
+  font-size: var(--ui-font-size-label);
 }
 
 .unitInspectorSection[open] > summary::before {
@@ -188,14 +190,14 @@
 
 .unitInspectorSection > summary strong {
   color: var(--ui-color-text);
-  font-size: 0.67rem;
+  font-size: var(--ui-font-size-label);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .unitInspectorSection > summary small {
   color: var(--ui-color-text-muted);
-  font-size: 0.58rem;
+  font-size: var(--ui-font-size-caption);
   margin-left: auto;
 }
 
@@ -217,7 +219,7 @@
 
 .unitInspectorWeaponList strong {
   color: var(--ui-color-text);
-  font-size: 0.68rem;
+  font-size: var(--ui-font-size-label);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -225,7 +227,7 @@
 
 .unitInspectorWeaponList span {
   color: var(--ui-color-text-muted);
-  font-size: 0.61rem;
+  font-size: var(--ui-font-size-caption);
 }
 
 .unitInspectorWeaponList b {
@@ -255,13 +257,13 @@
 
 .unitInspectorAbilityList strong {
   color: var(--ui-color-text);
-  font-size: 0.68rem;
+  font-size: var(--ui-font-size-label);
 }
 
 .unitInspectorAbilityList small {
   border: 1px solid var(--ui-color-border);
   color: var(--ui-color-text-muted);
-  font-size: 0.53rem;
+  font-size: 0.62rem;
   font-weight: 900;
   padding: 2px 4px;
   text-transform: uppercase;
@@ -280,30 +282,30 @@
 .unitInspectorAbilityList p,
 .unitInspectorLore p {
   color: var(--ui-color-text-muted);
-  font-size: 0.61rem;
-  line-height: 1.3;
+  font-size: var(--ui-font-size-body);
+  line-height: 1.45;
   margin: 0;
 }
 
 .unitInspectorLore > strong {
   color: var(--unit-accent-strong);
   display: block;
-  font-size: 0.67rem;
+  font-size: var(--ui-font-size-label);
   padding-top: var(--ui-space-2);
 }
 
 @media (max-width: 1400px) {
   .unitInspectorIdentity {
-    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-columns: 78px minmax(0, 1fr);
   }
 
   .unitInspectorPortrait {
-    height: 58px;
-    width: 58px;
+    height: 78px;
+    width: 78px;
   }
 
   .unitInspectorStatus {
-    grid-column: 1 / -1;
+    grid-column: 2;
     justify-self: start;
   }
 }

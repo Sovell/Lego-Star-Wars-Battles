@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import { useI18n } from "../../i18n";
 
-export type BattleDrawerTab = "logs" | "armies" | "save";
+export type BattleDrawerTab = "logs" | "save";
 
 export function BattleLogDrawer({
   activeTab,
-  armies,
   logs,
   onOpenChange,
   onTabChange,
@@ -13,7 +12,6 @@ export function BattleLogDrawer({
   save,
 }: {
   activeTab: BattleDrawerTab;
-  armies: ReactNode;
   logs: ReactNode;
   onOpenChange: (open: boolean) => void;
   onTabChange: (tab: BattleDrawerTab) => void;
@@ -43,13 +41,6 @@ export function BattleLogDrawer({
             >
               {text("Dziennik", "Log")}
             </button>
-            <button
-              aria-pressed={activeTab === "armies"}
-              className={activeTab === "armies" ? "active" : ""}
-              onClick={() => onTabChange("armies")}
-            >
-              {text("Roster", "Roster")}
-            </button>
             {save ? (
               <button
                 aria-pressed={activeTab === "save"}
@@ -61,7 +52,7 @@ export function BattleLogDrawer({
             ) : null}
           </div>
           <div className="battleDrawerContent">
-            {activeTab === "armies" ? armies : activeTab === "save" && save ? save : logs}
+            {activeTab === "save" && save ? save : logs}
           </div>
         </div>
       ) : null}
