@@ -6,6 +6,7 @@ import {
   christophsisBreakLineScenario,
   controlTerritoryScenario,
   feluciaAmbushScenario,
+  protectGeneratorScenario,
   survivalTestScenario,
 } from "../scenario/scenarios";
 import { createTerrainTile } from "../terrain-definitions";
@@ -103,6 +104,43 @@ describe("bot strategy context", () => {
     );
 
     expect(context?.movementTarget).toEqual({ x: 1, y: 4 });
+  });
+
+  it("gives a defender an enemy fallback when the scenario has no fixed objective", () => {
+    let battle = readyRepublicContextBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 2 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 6, y: 2 } });
+
+    const context = createBotStrategyContext(
+      battle,
+      survivalTestScenario,
+      "army_republic",
+      defensiveBotDoctrine,
+    );
+
+    expect(context?.movementTarget).toEqual({ x: 6, y: 2 });
+  });
+
+  it("intercepts an enemy with line of fire on a protected objective", () => {
+    let battle = readyRepublicContextBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 2 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 4, y: 2 } });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const context = createBotStrategyContext(
+      battle,
+      protectGeneratorScenario,
+      "army_republic",
+      defensiveBotDoctrine,
+    );
+
+    expect(context?.movementTarget).toEqual({ x: 4, y: 2 });
   });
 
   it("targets the current progressive-control stage", () => {

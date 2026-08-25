@@ -633,8 +633,12 @@ function applyTerritoryRound(
   const leadingArmy = (battle?.armies ?? []).find(
     (army) => getArmyTeamId(army) === leader[0],
   );
-  const status = leadingArmy && defenderArmyId &&
-      areArmiesAllied(battle!, leadingArmy.id, defenderArmyId)
+  const victoryArmyId = scenario.victoryCondition.type === "ControlTerritory" &&
+      scenario.victoryCondition.winnerArmySlot !== undefined
+    ? battle?.armies[scenario.victoryCondition.winnerArmySlot]?.id
+    : defenderArmyId;
+  const status = leadingArmy && victoryArmyId &&
+      areArmiesAllied(battle!, leadingArmy.id, victoryArmyId)
     ? "Victory"
     : "Defeat";
   return {

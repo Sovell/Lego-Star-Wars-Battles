@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCampaignState, createStandardCampaignPlayers } from "../../core/campaign";
 import { galacticPlanets, lockedGalacticLocations } from "../../core/galactic-conquest/galaxy";
-import { buildCampaignMapNodes, getCampaignOverview, getSectorName } from "./campaign-screen-model";
+import { buildCampaignMapNodes, getCampaignOverview, getCampaignPlayerOverview, getSectorName } from "./campaign-screen-model";
 
 describe("campaign screen model", () => {
   const campaign = createCampaignState({
@@ -38,5 +38,16 @@ describe("campaign screen model", () => {
       activeArmies: 2,
     });
     expect(getSectorName("felucia", feluciaSector.sectorId)).not.toBe(feluciaSector.sectorId);
+  });
+
+  it("shows a commander only their own armies, sectors, and income", () => {
+    const overview = getCampaignPlayerOverview(campaign, "player-1");
+
+    expect(overview).toEqual({
+      controlledPlanets: 0,
+      controlledSectors: 4,
+      armyCount: 1,
+      income: 10,
+    });
   });
 });

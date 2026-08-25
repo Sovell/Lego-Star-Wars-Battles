@@ -65,6 +65,15 @@ describe("galactic conquest galaxy", () => {
       .toBe("Separatists");
   });
 
+  it("uses a galactic layout with the Core central and remote systems on the rim", () => {
+    expect(lockedGalacticLocations.find(({ id }) => id === "coruscant")?.position)
+      .toEqual({ x: 50, y: 48 });
+    expect(lockedGalacticLocations.find(({ id }) => id === "kamino")?.position)
+      .toEqual({ x: 7, y: 83 });
+    expect(getGalacticPlanet("tatooine").position).toEqual({ x: 86, y: 80 });
+    expect(getGalacticPlanet("hoth").position).toEqual({ x: 13, y: 45 });
+  });
+
   it("uses Endor and Geonosis as the playable campaign headquarters", () => {
     expect(getGalacticPlanet("endor")).toMatchObject({
       playable: true,

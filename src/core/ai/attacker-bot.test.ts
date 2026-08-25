@@ -147,6 +147,28 @@ describe("attacker bot", () => {
     });
   });
 
+  it("executes a position-targeted ability instead of treating it as no action", () => {
+    let battle = readyAttackerBattle();
+    battle = patchUnit(battle, "sep_unit_1", {
+      templateId: "general_grievous",
+      position: { x: 5, y: 5 },
+    });
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 1, y: 1 } });
+
+    const decision = chooseAttackerBotAction(
+      battle,
+      survivalTestScenario,
+      attackerArmyId,
+    );
+
+    expect(decision?.action).toMatchObject({
+      type: "UseAbility",
+      unitId: "sep_unit_1",
+      abilityId: "droid_foundry",
+    });
+    expect(decision?.reason).toContain("na polu");
+  });
+
   it("moves closer to the scenario objective when it cannot attack", () => {
     let battle = readyAttackerBattle();
     battle = patchUnit(battle, "sep_unit_1", {

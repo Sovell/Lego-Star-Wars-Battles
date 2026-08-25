@@ -333,7 +333,7 @@ export const christophsisZeroJunctionScenario: ScenarioDefinition = {
     effect: { type: "DeployReinforcements", armyId: "army_separatists", units: [{ templateId: "super_battle_droid_squad", count: 1 }] },
     visibility: "Announced",
   }],
-  victoryCondition: { type: "ControlTerritory", rounds: 10 },
+  victoryCondition: { type: "ControlTerritory", rounds: 10, winnerArmySlot: 0 },
 };
 
 export const mandalorePalaceUnderSiegeScenario: ScenarioDefinition = {

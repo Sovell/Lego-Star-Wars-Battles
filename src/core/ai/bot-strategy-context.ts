@@ -1,7 +1,7 @@
 import type { Battle, BattlefieldObject, UnitInstance } from "../../types";
 import { areArmiesAllied, areArmiesEnemies } from "../army-relations";
 import { isPositionFree } from "../rules/occupancy";
-import type { GridPosition } from "../rules/geometry";
+import { distance, lineOfSight, type GridPosition } from "../rules/geometry";
 import { getPathCost } from "../rules/pathfinding";
 import { getUnitMovementBonus } from "../rules/movement";
 import { getTemplate } from "../rules/state";
@@ -20,6 +20,7 @@ export type BotStrategyContext = {
   objective?: BattlefieldObject;
   objectiveName?: string;
   movementTarget?: GridPosition;
+  territoryTargets?: GridPosition[];
   objectiveObjectId?: string;
   protectedObjectivePosition?: GridPosition;
   decisionSeed: string;
@@ -52,13 +53,20 @@ export function createBotStrategyContext(
     units,
   });
   const objective = scenarioObjective?.object;
-  const territoryTarget = scenario.victoryCondition.type === "ControlTerritory"
-    ? findTerritoryTarget(battle, mission, units, armyId, doctrine.objectivePolicy)
+  const territoryTargets = scenario.victoryCondition.type === "ControlTerritory"
+    ? listTerritoryTargets(battle, mission, armyId)
     : undefined;
-  const enemyTarget = doctrine.objectivePolicy === "Assault"
-    ? findNearestEnemyPosition(battle, units, armyId)
+  const territoryTarget = territoryTargets
+    ? findTerritoryTarget(battle, units, territoryTargets, doctrine.objectivePolicy)
     : undefined;
-  const movementTarget = scenarioObjective?.position ?? territoryTarget ?? enemyTarget;
+  const enemyTarget = findNearestEnemyPosition(battle, units, armyId);
+  const interceptionTarget = doctrine.objectivePolicy === "Hold" && scenarioObjective
+    ? findThreateningEnemyPosition(battle, units, armyId, scenarioObjective.position)
+    : undefined;
+  // A defender first screens an enemy that can fire on its objective. Without
+  // an objective it must still close with the nearest enemy instead of using
+  // Overwatch forever on an otherwise empty board.
+  const movementTarget = interceptionTarget ?? scenarioObjective?.position ?? territoryTarget ?? enemyTarget;
 
   return {
     battle,
@@ -71,6 +79,7 @@ export function createBotStrategyContext(
     objectiveName: scenarioObjective?.name ??
       (scenario.victoryCondition.type === "ControlTerritory" ? "terytorium" : undefined),
     movementTarget,
+    territoryTargets,
     objectiveObjectId:
       doctrine.objectivePolicy === "Assault" &&
         scenarioObjective?.canAttackObject && objective?.destructible
@@ -86,13 +95,11 @@ export function createBotStrategyContext(
   };
 }
 
-function findTerritoryTarget(
+function listTerritoryTargets(
   battle: Battle,
   mission: MissionState | undefined,
-  units: UnitInstance[],
   armyId: string,
-  policy: BotDoctrine["objectivePolicy"],
-): GridPosition | undefined {
+): GridPosition[] {
   const candidates: GridPosition[] = [];
   for (let y = 0; y < battle.board.height; y += 1) {
     for (let x = 0; x < battle.board.width; x += 1) {
@@ -105,7 +112,15 @@ function findTerritoryTarget(
       }
     }
   }
+  return candidates;
+}
 
+function findTerritoryTarget(
+  battle: Battle,
+  units: UnitInstance[],
+  candidates: GridPosition[],
+  policy: BotDoctrine["objectivePolicy"],
+): GridPosition | undefined {
   const reachableCandidates = candidates.filter((candidate) =>
     nearestPathDistance(battle, units, candidate) < Number.MAX_SAFE_INTEGER
   );
@@ -183,6 +198,40 @@ function nearestPathDistance(
     return cost === undefined ? [] : [cost];
   });
   return costs.length > 0 ? Math.min(...costs) : Number.MAX_SAFE_INTEGER;
+}
+
+function findThreateningEnemyPosition(
+  battle: Battle,
+  units: UnitInstance[],
+  armyId: string,
+  protectedPosition: GridPosition,
+): GridPosition | undefined {
+  return battle.armies
+    .filter((army) => areArmiesEnemies(battle, army.id, armyId))
+    .flatMap((army) => army.units)
+    .filter((unit) => unit.status !== "Destroyed" && unit.position)
+    .map((unit) => {
+      const position = unit.position!;
+      const canFireOnObjective = getTemplate(unit).weapons.some((weapon) =>
+        weapon.range >= distance(position, protectedPosition) &&
+        lineOfSight(battle, position, protectedPosition)
+      );
+      return {
+        position,
+        canFireOnObjective,
+        distanceToObjective: distance(position, protectedPosition),
+        pathCost: nearestPathDistance(battle, units, position, true),
+      };
+    })
+    .filter(({ pathCost }) => pathCost < Number.MAX_SAFE_INTEGER)
+    .sort((left, right) =>
+      Number(right.canFireOnObjective) - Number(left.canFireOnObjective) ||
+      left.distanceToObjective - right.distanceToObjective ||
+      left.pathCost - right.pathCost ||
+      left.position.y - right.position.y ||
+      left.position.x - right.position.x
+    )
+    .find(({ canFireOnObjective }) => canFireOnObjective)?.position;
 }
 
 function getUnitMovementBudget(battle: Battle, unit: UnitInstance): number {

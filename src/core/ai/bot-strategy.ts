@@ -41,7 +41,7 @@ export function chooseDoctrineBotAction(
   const actions = context.units.flatMap((unit) =>
     getLegalUnitActions(battle, scenario, unit.id)
   );
-  const best = chooseBestBotAction(actions, context);
+  const best = chooseBestBotAction(actions, context) ?? chooseFallbackBotAction(actions, context);
   return best ? describeDecision(best.action, context) : undefined;
 }
 
@@ -62,6 +62,49 @@ export function chooseBotAction(
     mission,
     decisionContext,
   );
+}
+
+/**
+ * The scoring model is intentionally strict: an action without a useful
+ * tactical score is rejected. A live battle must nevertheless never lose a
+ * bot activation just because an unusual map or restored state gives every
+ * candidate that strict score. Prefer a legal move, then a legal attack or
+ * order, using the current strategic target as a deterministic tiebreaker.
+ */
+function chooseFallbackBotAction(
+  actions: LegalUnitAction[],
+  context: BotStrategyContext,
+) {
+  const movement = actions.filter(
+    (action): action is Extract<LegalUnitAction, { type: "MoveUnit" | "AdvanceUnit" }> =>
+      action.type === "MoveUnit" || action.type === "AdvanceUnit",
+  );
+  const target = context.movementTarget ?? {
+    x: Math.floor((context.battle.board.width - 1) / 2),
+    y: Math.floor((context.battle.board.height - 1) / 2),
+  };
+  const fallbackMovement = [...movement].sort((left, right) => {
+    const leftDistance = distanceToTarget(left.targetPosition, target);
+    const rightDistance = distanceToTarget(right.targetPosition, target);
+    return leftDistance - rightDistance ||
+      Number(left.type === "AdvanceUnit") - Number(right.type === "AdvanceUnit") ||
+      left.targetPosition.y - right.targetPosition.y ||
+      left.targetPosition.x - right.targetPosition.x ||
+      left.unitId.localeCompare(right.unitId);
+  })[0];
+  if (fallbackMovement) return { action: fallbackMovement, score: Number.NEGATIVE_INFINITY };
+
+  const executable = actions.find((action) =>
+    action.type === "Attack" || action.type === "AttackObject" || action.type === "ApplyOrder"
+  );
+  return executable ? { action: executable, score: Number.NEGATIVE_INFINITY } : undefined;
+}
+
+function distanceToTarget(
+  position: { x: number; y: number },
+  target: { x: number; y: number },
+): number {
+  return Math.max(Math.abs(position.x - target.x), Math.abs(position.y - target.y));
 }
 
 function describeDecision(
@@ -106,12 +149,23 @@ function describeDecision(
       const ability = unit
         ? getUnitActiveAbilities(battle, unit).find((candidate) => candidate.id === action.abilityId)
         : undefined;
-      return unit && target && ability
-        ? {
-            action,
-            reason: `${getTemplate(unit).name} wykorzystuje zdolność ${ability.name} przeciw ${getTemplate(target).name}.`,
-          }
-        : undefined;
+      if (!unit || !ability) return undefined;
+      if (target) {
+        return {
+          action,
+          reason: `${getTemplate(unit).name} wykorzystuje zdolność ${ability.name} przeciw ${getTemplate(target).name}.`,
+        };
+      }
+      if (action.targetPosition) {
+        return {
+          action,
+          reason: `${getTemplate(unit).name} wykorzystuje zdolność ${ability.name} na polu ${action.targetPosition.x}, ${action.targetPosition.y}.`,
+        };
+      }
+      return {
+        action,
+        reason: `${getTemplate(unit).name} wykorzystuje zdolność ${ability.name}.`,
+      };
     }
     case "DeployUnit": {
       const unit = findUnit(battle, action.unitId);

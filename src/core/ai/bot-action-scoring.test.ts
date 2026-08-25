@@ -127,6 +127,35 @@ describe("bot action scoring", () => {
     expect(best?.action).toMatchObject({ targetPosition: { x: 1, y: 3 } });
   });
 
+  it("claims a fresh territory tile when the preferred route is blocked", () => {
+    let battle = createBattle();
+    battle = {
+      ...battle,
+      board: {
+        width: 5,
+        height: 3,
+        objects: [],
+        tiles: Array.from(
+          { length: 3 },
+          (_, y) => createTerrainTile("Impassable", 2, y),
+        ),
+      },
+    };
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 1 } });
+
+    const best = chooseBestBotAction([
+      { type: "MoveUnit", unitId: "rep_unit_1", targetPosition: { x: 1, y: 1 } },
+      { type: "ApplyOrder", unitId: "rep_unit_1", order: "Overwatch" },
+    ], {
+      battle,
+      doctrine: aggressiveBotDoctrine,
+      movementTarget: { x: 4, y: 1 },
+      territoryTargets: [{ x: 1, y: 1 }],
+    });
+
+    expect(best?.action).toMatchObject({ type: "MoveUnit", targetPosition: { x: 1, y: 1 } });
+  });
+
   it("lets a bot place Grievous's foundry toward its strategic target", () => {
     const battle = patchUnit(createBattle(), "sep_unit_1", {
       templateId: "general_grievous",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { unitTemplates } from "../../data";
 import {
   beginCampaignActivationPhase,
@@ -32,9 +32,10 @@ import {
 } from "../../core/persistence/save-types";
 import { useI18n } from "../../i18n";
 import { CampaignLauncher } from "../campaign/CampaignLauncher";
+import { CampaignArmyPanel } from "../campaign/CampaignArmyPanel";
 import {
   buildCampaignMapNodes,
-  getCampaignOverview,
+  getCampaignPlayerOverview,
   getSectorName,
 } from "../campaign/campaign-screen-model";
 import {
@@ -58,6 +59,10 @@ type CampaignScreenProps = {
   campaignBattleReport?: string;
 };
 
+const CampaignGalaxy = lazy(async () => ({
+  default: (await import("../campaign/CampaignGalaxy")).CampaignGalaxy,
+}));
+
 export function CampaignScreen({
   savedCampaign,
   onCampaignChange,
@@ -75,7 +80,7 @@ export function CampaignScreen({
   const [seed, setSeed] = useState(() => Math.floor(Date.now() / 1000) % 1_000_000);
   const [selectedPlanetId, setSelectedPlanetId] = useState<string>();
   const [selectedArmyId, setSelectedArmyId] = useState<string>();
-  const [selectedEconomyPlayerId, setSelectedEconomyPlayerId] = useState<string>();
+  const [overviewPlayerId, setOverviewPlayerId] = useState<string>();
   const [pendingActivationAction, setPendingActivationAction] = useState<CampaignActivationAction>();
   const [status, setStatus] = useState("");
   const [botAutomationTick, setBotAutomationTick] = useState(0);
@@ -96,10 +101,11 @@ export function CampaignScreen({
 
   useEffect(() => {
     const players = savedCampaign?.campaign.players ?? [];
-    setSelectedEconomyPlayerId((current) =>
-      players.some(({ id }) => id === current) ? current : players[0]?.id
-    );
-  }, [savedCampaign?.campaign.id, savedCampaign?.campaign.players]);
+    const humanPlayers = players.filter(({ control }) => control === "Human");
+    const activeHuman = humanPlayers.find(({ id }) => id === savedCampaign?.campaign.activePlayerId);
+    setOverviewPlayerId((current) => activeHuman?.id
+      ?? (humanPlayers.some(({ id }) => id === current) ? current : humanPlayers[0]?.id));
+  }, [savedCampaign?.campaign.activePlayerId, savedCampaign?.campaign.id, savedCampaign?.campaign.players]);
 
   useEffect(() => {
     const campaign = savedCampaign?.campaign;
@@ -241,7 +247,12 @@ export function CampaignScreen({
   const campaign = savedCampaign.campaign;
   const selectedPlanet = campaign.planets.find(({ planetId }) => planetId === selectedPlanetId)
     ?? campaign.planets[0];
-  const overview = getCampaignOverview(campaign);
+  const overviewPlayer = campaign.players.find(({ id, control }) =>
+    id === overviewPlayerId && control === "Human"
+  )
+    ?? campaign.players.find(({ control }) => control === "Human")
+    ?? campaign.players[0];
+  const overview = getCampaignPlayerOverview(campaign, overviewPlayer.id);
   const activePlayer = campaign.players.find(({ id }) => id === campaign.activePlayerId);
   const botWorkPending = Boolean(chooseCampaignBotAction(campaign));
   const activationDetails = getCampaignActivationDetails(campaign, selectedArmyId);
@@ -330,30 +341,41 @@ export function CampaignScreen({
       </section>
 
       <section className="campaignOverviewGrid">
-        <CampaignStat label={text("Planety", "Planets")} value={overview.playablePlanets} />
-        <CampaignStat label={text("Kontrolowane sektory", "Controlled sectors")} value={`${overview.controlledSectors}/${overview.totalSectors}`} />
-        <CampaignStat label={text("Armie", "Armies")} value={overview.activeArmies} />
-        <CampaignStat label={text("Dochód galaktyki", "Galaxy income")} value={overview.totalIncome} />
+        <CampaignStat label={`${overviewPlayer.name} · ${text("planety", "planets")}`} value={overview.controlledPlanets} />
+        <CampaignStat label={`${overviewPlayer.name} · ${text("sektory", "sectors")}`} value={overview.controlledSectors} />
+        <CampaignStat label={`${overviewPlayer.name} · ${text("armie", "armies")}`} value={overview.armyCount} />
+        <CampaignStat label={`${overviewPlayer.name} · ${text("dochód", "income")}`} value={`${overview.income} CR`} />
       </section>
 
       <section className="campaignWorkspace">
-        <CampaignGalaxy
-          campaign={campaign}
-          selectedPlanetId={selectedPlanet?.planetId}
-          selectedArmyId={activationDetails.selectedArmy?.id}
-          legalRoutes={activationDetails.legalRoutes}
-          pendingAction={pendingActivationAction}
-          onPlanetSelect={setSelectedPlanetId}
-          onRouteSelect={selectDestination}
-        />
-        <div className="campaignSidebar">
-          <CampaignEconomyPanel
+        <Suspense fallback={<section className="campaignGalaxyLoading">{text("Ładowanie mapy galaktycznej…", "Loading galactic map…")}</section>}>
+          <CampaignGalaxy
             campaign={campaign}
-            selectedPlayerId={selectedEconomyPlayerId}
-            onPlayerSelect={setSelectedEconomyPlayerId}
+            selectedPlanetId={selectedPlanet?.planetId}
+            selectedArmyId={activationDetails.selectedArmy?.id}
+            legalRoutes={activationDetails.legalRoutes}
+            pendingAction={pendingActivationAction}
+            onPlanetSelect={setSelectedPlanetId}
+            onRouteSelect={selectDestination}
+          />
+        </Suspense>
+        <div className="campaignSidebar">
+          <CampaignArmyPanel
+            campaign={campaign}
+            playerId={overviewPlayer.id}
+            selectedArmyId={selectedArmyId}
+            onArmySelect={(armyId) => {
+              setSelectedArmyId(armyId);
+              setPendingActivationAction(undefined);
+            }}
             onAction={applyEconomyAction}
           />
-          {selectedPlanet ? <PlanetInspector campaign={campaign} planetId={selectedPlanet.planetId} /> : null}
+          {selectedPlanet ? <PlanetInspector
+            campaign={campaign}
+            planetId={selectedPlanet.planetId}
+            playerId={overviewPlayer.id}
+            onAction={applyEconomyAction}
+          /> : null}
           <CampaignActivationPanel
             campaign={campaign}
             activePlayerName={activePlayer?.name}
@@ -538,7 +560,7 @@ function CampaignLauncherLegacy({
   );
 }
 
-function CampaignGalaxy({
+function CampaignGalaxyLegacy({
   campaign,
   selectedPlanetId,
   selectedArmyId,
@@ -790,7 +812,7 @@ function CampaignEconomyPanel({
         >{text("Dodaj do kolejki", "Add to queue")}</button>
       </section>
 
-      <section className="campaignEconomySection">
+      <section className="campaignEconomySection" hidden>
         <h4>{text("Rezerwy i armie", "Reserves and armies")}</h4>
         <label className="campaignEconomySelect">
           {text("Planeta z bazą", "Planet with base")}
@@ -1049,13 +1071,39 @@ function ActivationConfirmation({
   );
 }
 
-function PlanetInspector({ campaign, planetId }: { campaign: CampaignState; planetId: string }) {
+function PlanetInspector({
+  campaign,
+  planetId,
+  playerId,
+  onAction,
+}: {
+  campaign: CampaignState;
+  planetId: string;
+  playerId: string;
+  onAction: (action: (state: CampaignState) => CampaignState, message: string) => void;
+}) {
   const { text } = useI18n();
   const planet = campaign.planets.find((candidate) => candidate.planetId === planetId)!;
   const definition = galacticPlanets.find(({ id }) => id === planetId)!;
   const controller = getCampaignPlanetController(campaign, planetId);
   const armies = campaign.armies.filter((army) => army.planetId === planetId);
   const base = campaign.bases.find((candidate) => candidate.planetId === planetId);
+  const economy = getCampaignEconomyDetails(campaign, playerId);
+  const player = economy.player;
+  const canManagePlanet = economy.controlledPlanets.some((candidate) => candidate.planetId === planetId);
+  const construction = economy.constructionQueue.find((order) => order.planetId === planetId);
+  const recruitmentQueue = economy.recruitmentQueue.filter((order) => order.planetId === planetId);
+  const [recruitTemplateId, setRecruitTemplateId] = useState<string>();
+  const recruitTemplate = economy.recruitmentOptions.find(({ templateId }) => templateId === recruitTemplateId)
+    ?? economy.recruitmentOptions[0];
+  const upgradeCost = base && base.level < 3
+    ? BASE_CONSTRUCTION_COST[(base.level + 1) as 1 | 2 | 3]
+    : undefined;
+  const canRecruit = Boolean(
+    player && base && recruitTemplate && base.level >= recruitTemplate.requiredBaseLevel &&
+    recruitTemplate.heroAvailable && player.credits >= recruitTemplate.cost,
+  );
+  const operationsOpen = Boolean(player && player.control === "Human" && economy.economyOpen && canManagePlanet);
   return (
     <aside className="campaignPlanetInspector">
       <div className="planetInspectorHero">
@@ -1103,6 +1151,87 @@ function PlanetInspector({ campaign, planetId }: { campaign: CampaignState; plan
           </article>
         ))}
         {armies.length === 0 ? <p>{text("Brak armii w tym systemie.", "No armies in this system.")}</p> : null}
+      </section>
+      <section className="campaignPlanetOperations">
+        <div className="campaignPanelHeading">
+          <div>
+            <p className="eyebrow">{text("Rozwój planety", "Planet development")}</p>
+            <h3>{text("Baza, rezerwy i kolejki", "Base, reserves and queues")}</h3>
+          </div>
+          {base ? <strong>L{base.level}</strong> : null}
+        </div>
+        {!player || player.control !== "Human" ? <p className="campaignEconomyHint">{text(
+          "Operacje planetarne są dostępne wyłącznie dla dowódcy prowadzonego przez gracza.",
+          "Planet operations are available only for a human commander.",
+        )}</p> : null}
+        {player?.control === "Human" && !canManagePlanet ? <p className="campaignEconomyHint">{text(
+          "Przejmij wszystkie sektory oraz sektor dowodzenia tej planety, aby uruchomić jej gospodarkę.",
+          "Control every sector and this planet's command sector to unlock its economy.",
+        )}</p> : null}
+        {player?.control === "Human" && canManagePlanet && !economy.economyOpen ? <p className="campaignEconomyHint">{text(
+          "Rozlicz dochód na początku tury, aby wydawać kredyty i wydawać rozkazy gospodarcze.",
+          "Resolve income at the start of the turn to spend credits and issue economy orders.",
+        )}</p> : null}
+        {player?.control === "Human" && canManagePlanet ? <>
+          <article className="campaignPlanetOperationRow">
+            <div>
+              <strong>{base ? text(`Baza poziomu ${base.level}`, `Level ${base.level} base`) : text("Brak bazy", "No base")}</strong>
+              <small>{construction ? text(
+                `${construction.kind === "BuildBase" ? "Budowa" : "Ulepszenie"} do L${construction.targetLevel} · ukończenie: tura ${construction.completesOnTurn}`,
+                `${construction.kind === "BuildBase" ? "Construction" : "Upgrade"} to L${construction.targetLevel} · completes turn ${construction.completesOnTurn}`,
+              ) : base?.level === 3 ? text("Maksymalny poziom bazy.", "Maximum base level.") : text("Gotowa do kolejnego rozkazu.", "Ready for another order.")}</small>
+            </div>
+            {!base ? <button
+              className="secondaryButton"
+              disabled={!operationsOpen || Boolean(construction) || player.credits < BASE_CONSTRUCTION_COST[1]}
+              onClick={() => confirmCampaignAction(text("Wydać 20 CR na budowę bazy?", "Spend 20 CR to build this base?")) && onAction(
+                (state) => queueBaseConstruction(state, player.id, planetId),
+                text(`Zlecono budowę bazy na ${definition.name}.`, `Base construction ordered on ${definition.name}.`),
+              )}
+            >{text("Buduj · 20", "Build · 20")}</button> : null}
+            {base && base.level < 3 ? <button
+              className="secondaryButton"
+              disabled={!operationsOpen || Boolean(construction) || player.credits < (upgradeCost ?? 0)}
+              onClick={() => confirmCampaignAction(text(`Wydać ${upgradeCost} CR na ulepszenie bazy?`, `Spend ${upgradeCost} CR to upgrade this base?`)) && onAction(
+                (state) => queueBaseUpgrade(state, player.id, base.id),
+                text(`Zlecono ulepszenie bazy na ${definition.name}.`, `Base upgrade ordered on ${definition.name}.`),
+              )}
+            >{text(`Ulepsz · ${upgradeCost}`, `Upgrade · ${upgradeCost}`)}</button> : null}
+          </article>
+          {base ? <div className="campaignPlanetRecruitment">
+            <label className="campaignEconomySelect">
+              {text("Rekrutuj do rezerw", "Recruit to reserves")}
+              <select
+                value={recruitTemplate?.templateId ?? ""}
+                onChange={(event) => setRecruitTemplateId(event.target.value || undefined)}
+              >
+                {economy.recruitmentOptions.map((option) => <option
+                  key={option.templateId}
+                  value={option.templateId}
+                  disabled={!option.heroAvailable}
+                >{option.name} · {option.cost} CR · L{option.requiredBaseLevel}{option.isHero ? " · Hero" : ""}{!option.heroAvailable ? ` · ${text("niedostępny", "unavailable")}` : ""}</option>)}
+              </select>
+            </label>
+            {recruitTemplate ? <p className="campaignEconomyHint">{text(
+              `Wymaga bazy L${recruitTemplate.requiredBaseLevel}. Rezerwy pozostają na ${definition.name} do czasu rozmieszczenia w panelu armii.`,
+              `Requires a level ${recruitTemplate.requiredBaseLevel} base. Reserves remain at ${definition.name} until deployed from the army panel.`,
+            )}</p> : null}
+            <button
+              className="secondaryButton"
+              disabled={!operationsOpen || !canRecruit || !recruitTemplate}
+              onClick={() => recruitTemplate && confirmCampaignAction(text(`Wydać ${recruitTemplate.cost} CR na rekrutację?`, `Spend ${recruitTemplate.cost} CR on recruitment?`)) && onAction(
+                (state) => queueCampaignRecruitment(state, player.id, base.id, recruitTemplate.templateId),
+                text(`Dodano ${recruitTemplate.name} do kolejki rekrutacji na ${definition.name}.`, `${recruitTemplate.name} added to the recruitment queue on ${definition.name}.`),
+              )}
+            >{text("Dodaj do kolejki", "Add to queue")}</button>
+          </div> : null}
+          <div className="campaignPlanetQueues">
+            <h4>{text("Kolejki tej planety", "This planet's queues")}</h4>
+            {!construction && recruitmentQueue.length === 0 ? <p className="campaignEconomyHint">{text("Brak aktywnych zleceń.", "No active orders.")}</p> : null}
+            {construction ? <p className="campaignQueueRow">{construction.kind === "BuildBase" ? text("Budowa bazy", "Base construction") : text("Ulepszenie bazy", "Base upgrade")} · {construction.cost} CR · {text("tura", "turn")} {construction.completesOnTurn}</p> : null}
+            {recruitmentQueue.map((order) => <p className="campaignQueueRow" key={order.id}>{unitName(order.templateId)} ×{order.quantity} · {order.cost} CR · {text("tura", "turn")} {order.completesOnTurn}</p>)}
+          </div>
+        </> : null}
       </section>
     </aside>
   );

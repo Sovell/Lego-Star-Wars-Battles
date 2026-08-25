@@ -3,6 +3,10 @@ import {
   christophsisLastLandingScenario,
   mandaloreHuntInSundariScenario,
 } from "../core/scenario/scenarios";
+import {
+  buildScenarioPresetArmies,
+  getScenarioArmyPreset,
+} from "../core/scenario/scenario-army-presets";
 import { runBalanceBatch } from "./balance-report";
 import { runHeadlessSimulation } from "./headless-simulation";
 
@@ -53,4 +57,20 @@ describe("headless mission simulation", () => {
     expect(result.terminationReason).toBe("round-limit");
     expect(result.roundsPlayed).toBe(1);
   });
+
+  it("drives the Crystal City droid column with its authored roster", () => {
+    const roster = getScenarioArmyPreset(christophsisLastLandingScenario.id);
+    if (!roster) throw new Error("Crystal City scenario roster is missing.");
+
+    const result = runHeadlessSimulation({
+      scenario: christophsisLastLandingScenario,
+      armies: buildScenarioPresetArmies(roster, "pl"),
+      seed: 3277,
+    });
+
+    expect(result.counters.botStopReasons["no-legal-action"]).toBe(0);
+    expect(result.counters.botActions).toBeGreaterThan(0);
+    expect(result.counters.activationsResolved).toBeGreaterThan(0);
+  }, 15_000);
+
 });

@@ -47,6 +47,42 @@ describe("defender bot", () => {
     expect(decision?.reason).toContain("celu");
   });
 
+  it("advances to intercept an enemy firing on the generator", () => {
+    let battle = readyDefenderBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 2 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 4, y: 2 } });
+    battle = {
+      ...battle,
+      board: {
+        ...battle.board,
+        objects: [createBattlefieldObject("Generator", { x: 3, y: 2 })],
+      },
+    };
+
+    const decision = chooseDefenderBotAction(
+      battle,
+      protectGeneratorScenario,
+      defenderArmyId,
+    );
+
+    expect(decision?.action.type).toBe("AdvanceUnit");
+    expect(decision?.reason).toContain("celu");
+  });
+
+  it("moves toward the closest enemy instead of waiting forever without an objective", () => {
+    let battle = readyDefenderBattle();
+    battle = patchUnit(battle, "rep_unit_1", { position: { x: 0, y: 2 } });
+    battle = patchUnit(battle, "sep_unit_1", { position: { x: 6, y: 2 } });
+
+    const decision = chooseDefenderBotAction(
+      battle,
+      survivalTestScenario,
+      defenderArmyId,
+    );
+
+    expect(decision?.action.type).toBe("AdvanceUnit");
+  });
+
   it("never scores the protected object as an attack candidate", () => {
     let battle = readyDefenderBattle();
     battle = patchUnit(battle, "rep_unit_1", { position: { x: 2, y: 2 } });

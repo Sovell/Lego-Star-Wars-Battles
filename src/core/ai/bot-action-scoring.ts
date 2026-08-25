@@ -7,12 +7,13 @@ import { getPathCost } from "../rules/pathfinding";
 import { getUnitMovementBonus } from "../rules/movement";
 import { findUnit, getTemplate } from "../rules/state";
 import { getDefenseBonus, getHazardSuppression } from "../rules/terrain";
+import type { BotDoctrine } from "./bot-doctrine";
 import type { BotStrategyContext } from "./bot-strategy-context";
 
 export type BotActionScoringContext = Pick<
   BotStrategyContext,
   "battle" | "doctrine" | "movementTarget" | "objectiveObjectId" |
-  "protectedObjectivePosition"
+  "protectedObjectivePosition" | "territoryTargets"
 > & { decisionSeed?: string };
 
 export type ScoredBotAction<TAction extends LegalUnitAction = LegalUnitAction> = {
@@ -199,10 +200,16 @@ function scoreAbility(
 
 function scoreMovement(
   action: Extract<BattleAction, { type: "MoveUnit" | "AdvanceUnit" }>,
-  { battle, doctrine, movementTarget }: BotActionScoringContext,
+  { battle, doctrine, movementTarget, territoryTargets }: BotActionScoringContext,
 ): number {
   const unit = findUnit(battle, action.unitId);
-  if (!unit?.position || !movementTarget) return Number.NEGATIVE_INFINITY;
+  const territoryFallback = scoreTerritoryMovementFallback(
+    action.targetPosition,
+    battle,
+    doctrine,
+    territoryTargets,
+  );
+  if (!unit?.position || !movementTarget) return territoryFallback;
   const movementBudget = getTemplate(unit).movement + getUnitMovementBonus(battle, unit);
   const pathOptions = {
     unitId: unit.id,
@@ -222,10 +229,10 @@ function scoreMovement(
     pathOptions,
   );
   if (currentDistance === undefined || targetDistance === undefined) {
-    return Number.NEGATIVE_INFINITY;
+    return territoryFallback;
   }
   const progress = currentDistance - targetDistance;
-  if (progress <= 0) return Number.NEGATIVE_INFINITY;
+  if (progress <= 0) return territoryFallback;
 
   return (
     doctrine.movementBaseScore +
@@ -320,6 +327,29 @@ function getTileHazardPenalty(battle: Battle, position: GridPosition): number {
   return getHazardSuppression(
     battle.board.tiles.find((tile) => tile.x === position.x && tile.y === position.y),
   );
+}
+
+/**
+ * A territory match must never turn into an Overwatch deadlock just because
+ * the preferred long-range tile is temporarily blocked. Claiming a new tile
+ * is always strategically useful and lets the next activation find a route
+ * again after the formation has opened up.
+ */
+function scoreTerritoryMovementFallback(
+  position: GridPosition,
+  battle: Battle,
+  doctrine: BotDoctrine,
+  territoryTargets: GridPosition[] | undefined,
+): number {
+  if (!territoryTargets?.some((target) =>
+    target.x === position.x && target.y === position.y
+  )) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return doctrine.movementBaseScore * 0.8 +
+    getTileDefenseBonus(battle, position) * doctrine.terrainDefenseWeight +
+    getTileAttackBonus(battle, position) * doctrine.terrainDefenseWeight -
+    getTileHazardPenalty(battle, position) * doctrine.suppressionWeight;
 }
 
 function actionKey(action: LegalUnitAction): string {

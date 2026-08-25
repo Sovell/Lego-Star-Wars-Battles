@@ -1,4 +1,4 @@
-import { getCampaignPlanetController } from "../../core/campaign";
+import { getCampaignIncomeBreakdown, getCampaignPlanetController } from "../../core/campaign";
 import type { CampaignPlanetController, CampaignState } from "../../core/campaign";
 import {
   galacticPlanets,
@@ -63,6 +63,23 @@ export function getCampaignOverview(state: CampaignState) {
     totalSectors: state.planets.reduce((sum, { sectors }) => sum + sectors.length, 0),
     totalIncome,
     activeArmies: state.armies.length,
+  };
+}
+
+/** Summary shown to the currently selected commander, never a galaxy-wide total. */
+export function getCampaignPlayerOverview(state: CampaignState, playerId: string) {
+  const controlledSectors = state.planets
+    .flatMap(({ sectors }) => sectors)
+    .filter(({ controllerPlayerId }) => controllerPlayerId === playerId).length;
+  const controlledPlanets = state.planets.filter(({ sectors }) =>
+    sectors.length > 0 && sectors.every(({ controllerPlayerId }) => controllerPlayerId === playerId)
+  ).length;
+  const income = getCampaignIncomeBreakdown(state, playerId);
+  return {
+    controlledPlanets,
+    controlledSectors,
+    armyCount: state.armies.filter(({ ownerPlayerId }) => ownerPlayerId === playerId).length,
+    income: income.total,
   };
 }
 

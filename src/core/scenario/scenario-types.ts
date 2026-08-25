@@ -8,7 +8,7 @@ export type ScenarioVictoryCondition =
   | { type: "SurviveRounds"; rounds: number }
   | { type: "Scripted"; roundLimit: number }
   | { type: "ProtectObject"; rounds: number; objectType: "Generator" }
-  | { type: "ControlTerritory"; rounds: number }
+  | { type: "ControlTerritory"; rounds: number; winnerArmySlot?: number }
   | {
       type: "DestroyObjects";
       objectType: "Generator";

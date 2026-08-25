@@ -13,6 +13,7 @@ import {
   rescueR2D2Scenario,
   survivalTestScenario,
 } from "./scenarios";
+import { christophsisZeroJunctionScenario } from "./campaign-prologue-missions";
 
 describe("scenario engine", () => {
   it("ignores battle events unrelated to the scenario condition", () => {
@@ -318,6 +319,30 @@ describe("scenario engine", () => {
     expect(result.mission.status).toBe("Active");
     expect(result.mission.roundTarget).toBe(12);
     expect(result.mission.roundsCompleted).toBe(6);
+  });
+
+  it("awards Crystal City victory to the Republic when it leads on territory", () => {
+    const battle = createBattle();
+    battle.armies[0].units[0].position = { x: 1, y: 1 };
+    battle.armies[0].units[1].position = { x: 1, y: 2 };
+    battle.armies[0].units[2].position = { x: 1, y: 3 };
+    battle.armies[1].units.forEach((unit) => { unit.position = null; });
+    const mission = {
+      ...createMissionState(christophsisZeroJunctionScenario, battle.armies),
+      roundsCompleted: 9,
+    };
+
+    const result = applyScenarioEvents(
+      mission,
+      christophsisZeroJunctionScenario,
+      [{ type: "TurnEnded", turn: 11 }],
+      battle,
+    );
+
+    expect(result.mission.status).toBe("Victory");
+    expect(result.events).toEqual([
+      expect.objectContaining({ type: "MissionCompleted", status: "Victory" }),
+    ]);
   });
 
   it("tracks multiple foundry targets and wins immediately after the last one is destroyed", () => {

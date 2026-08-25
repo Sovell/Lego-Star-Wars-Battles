@@ -60,6 +60,37 @@ describe("campaign economy model", () => {
 
     expect(preview).toMatchObject({ pointCost: 10, pointLimit: 5, canDeploy: false });
   });
+
+  it("enables forming a new army from reserves stationed at a friendly base", () => {
+    const state = {
+      ...processCampaignEconomy(fullyControlFelucia(createCampaign())).state,
+      bases: [{
+        id: "base:player-1:felucia",
+        ownerPlayerId: "player-1",
+        factionId: "Republic" as const,
+        planetId: "felucia",
+        sectorId: "felucia-command",
+        level: 1 as const,
+      }],
+      reserves: [{
+        id: "reserve-1",
+        templateId: "clone_trooper_squad",
+        ownerPlayerId: "player-1",
+        factionId: "Republic" as const,
+        planetId: "felucia",
+        sourceOrderId: "test-order",
+      }],
+    };
+    const preview = getCampaignReserveDeploymentPreview(
+      state,
+      "player-1",
+      "felucia",
+      ["reserve-1"],
+      [],
+    );
+
+    expect(preview).toMatchObject({ pointCost: 10, pointLimit: 150, canDeploy: true });
+  });
 });
 
 function createCampaign(): CampaignState {
