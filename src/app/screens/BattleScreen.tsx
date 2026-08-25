@@ -222,6 +222,7 @@ export function BattleScreen({
   const [dockMode, setDockMode] = useState<BattleDockMode>(selectedOrder);
   const [intelTab, setIntelTab] = useState<BattleDrawerTab>("logs");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unitPanelOpen, setUnitPanelOpen] = useState(true);
   const [notifications, setNotifications] = useState<BattleNotification[]>([]);
   const notificationId = useRef(0);
   const [battlefieldVisualEvent, setBattlefieldVisualEvent] = useState<BattlefieldVisualEvent>();
@@ -249,11 +250,13 @@ export function BattleScreen({
   const selectedLegalOrderAction = legalOrderActions.find(
     (action) => action.order === selectedOrder,
   );
+  const advancePending = Boolean(
+    selectedUnit?.activeEffects?.includes("advance_pending"),
+  );
   const orderRequiresImmediateAction =
     selectedOrder === "Rally" ||
     selectedOrder === "Overwatch" ||
-    (selectedOrder === "Advance" &&
-      Boolean(selectedUnit?.activeEffects?.includes("advance_pending")));
+    (selectedOrder === "Advance" && advancePending);
   const selectedTerrainPreset =
     terrainPresets.find((terrain) => terrain.terrainType === selectedTerrain) ?? terrainPresets[0];
   const availableWeapons = selectedTemplate?.weapons ?? [];
@@ -879,6 +882,18 @@ export function BattleScreen({
     onGamePhaseChange("Playing");
   }
 
+  function handleFinishAdvance() {
+    const finishAction = legalOrderActions.find((action) => action.order === "Advance");
+    if (!finishAction) {
+      onAddLog(text("Nie można teraz zakończyć Natarcia.", "Advance cannot be finished right now."));
+      return;
+    }
+
+    const result = executeMissionAction(finishAction);
+    onActiveArmyChange(result.battle.activeActivation?.armyId);
+    onAddLog(result.log);
+  }
+
   function handleDockOrderSelect(order: OrderType) {
     onOrderChange(order);
     setDockMode(order);
@@ -892,7 +907,9 @@ export function BattleScreen({
   }
 
   const dockControlsDisabled = !selectedUnitId || !activeArmyId;
-  const dockContextLabel = dockMode === "Ability"
+  const dockContextLabel = advancePending
+    ? text("Natarcie · atak", "Advance · attack")
+    : dockMode === "Ability"
     ? text("Zdolność aktywna", "Active ability")
     : localizeOrder(language, dockMode);
   const dockContextStatus = !battle.activeActivation
@@ -901,6 +918,14 @@ export function BattleScreen({
       : text("Brak aktywacji — zakończ turę", "No activations — end the turn")
     : !selectedUnit
       ? text("Wybierz aktywną jednostkę", "Select the active unit")
+      : advancePending
+        ? availableWeapons.length === 0
+          ? text("Brak broni — zakończ Natarcie bez ataku", "No weapon — finish Advance without attacking")
+          : legalAttackActions.length === 0
+            ? text("Brak legalnego celu — zakończ Natarcie bez ataku", "No legal target — finish Advance without attacking")
+            : targetIsLegal
+              ? text("Cel legalny — dokończ Natarcie atakiem", "Legal target — finish Advance with an attack")
+              : text("Wybierz cel ataku albo zakończ Natarcie", "Choose an attack target or finish Advance")
       : dockMode === "Ability"
         ? activeAbilities.length === 0
           ? text("Brak aktywnych zdolności", "No active abilities")
@@ -1067,6 +1092,17 @@ export function BattleScreen({
           )}
         </SetupToolRail>
       ) : undefined}
+      unitPanel={!preparationActive ? (
+        <BattleUnitInspector
+          battle={battle}
+          debugMode={false}
+          selectedArmy={selectedArmy}
+          selectedUnit={selectedUnit}
+          onUnitPatch={onUnitPatch}
+        />
+      ) : undefined}
+      unitPanelOpen={unitPanelOpen}
+      onUnitPanelOpenChange={setUnitPanelOpen}
       inspector={(
         <BattleInspector
           phase={gamePhase}
@@ -1076,15 +1112,6 @@ export function BattleScreen({
               ? "separatists"
               : "neutral"}
         >
-          {!preparationActive ? (
-            <BattleUnitInspector
-              battle={battle}
-              debugMode={false}
-              selectedArmy={selectedArmy}
-              selectedUnit={selectedUnit}
-              onUnitPatch={onUnitPatch}
-            />
-          ) : null}
           <MissionPanel
             activationCounts={preparationActive ? undefined : activationCounts}
             armies={battle.armies}
@@ -1216,22 +1243,22 @@ export function BattleScreen({
               ...orders.map((order) => ({
                 id: order,
                 label: localizeOrder(language, order),
-                selected: dockMode === order,
-                disabled: dockControlsDisabled,
+                selected: advancePending ? order === "Advance" : dockMode === order,
+                disabled: dockControlsDisabled || (advancePending && order !== "Advance"),
                 tone: order === "Attack" ? "danger" as const : "default" as const,
                 onSelect: () => handleDockOrderSelect(order),
               })),
               {
                 id: "Ability",
                 label: text("Zdolność", "Ability"),
-                selected: dockMode === "Ability",
-                disabled: dockControlsDisabled,
+                selected: !advancePending && dockMode === "Ability",
+                disabled: dockControlsDisabled || advancePending,
                 onSelect: handleDockAbilitySelect,
               },
             ]}
             contextLabel={dockContextLabel}
             contextStatus={dockContextStatus}
-            context={dockMode === "Attack" ? (
+            context={dockMode === "Attack" || advancePending ? (
               <>
                 <label className="battleDockField">
                   {text("Broń", "Weapon")}
@@ -1277,6 +1304,16 @@ export function BattleScreen({
                 >
                   {text("Atakuj", "Attack")}
                 </button>
+                {advancePending ? (
+                  <button
+                    type="button"
+                    className="battleDockAction"
+                    data-tone="secondary"
+                    onClick={handleFinishAdvance}
+                  >
+                    {text("Zakończ bez ataku", "Finish without attack")}
+                  </button>
+                ) : null}
               </>
             ) : dockMode === "Ability" ? (
               activeAbilities.length > 0 ? (

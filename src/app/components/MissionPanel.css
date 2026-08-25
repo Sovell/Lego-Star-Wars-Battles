@@ -808,30 +808,31 @@ button.missionArmyOption:hover {
   padding-top: 7px;
 }
 
-.missionIntelDetails > summary {
+.missionIntelToggle {
+  background: transparent;
+  border: 0;
   color: var(--ui-color-text-muted);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 900;
-  list-style: none;
+  min-height: var(--ui-control-height-sm);
+  padding: 0;
+  text-align: left;
   text-transform: uppercase;
+  width: 100%;
 }
 
-.missionIntelDetails > summary::-webkit-details-marker {
-  display: none;
-}
-
-.missionIntelDetails > summary::before {
+.missionIntelToggle::before {
   color: var(--ui-color-republic);
   content: "▸";
   margin-right: 6px;
 }
 
-.missionIntelDetails[open] > summary::before {
+.missionIntelDetails[data-open="true"] .missionIntelToggle::before {
   content: "▾";
 }
 
-.missionIntelDetails > summary:focus-visible {
+.missionIntelToggle:focus-visible {
   box-shadow: var(--ui-focus-ring);
   outline: none;
 }

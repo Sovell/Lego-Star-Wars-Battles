@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   MissionState,
   ScenarioDefinition,
@@ -84,6 +85,7 @@ export function MissionPanel({
   onStart: () => void;
 }) {
   const { language, text } = useI18n();
+  const [missionIntelOpen, setMissionIntelOpen] = useState(false);
   const requiredRounds = mission.roundTarget ?? (
     "rounds" in scenario.victoryCondition
       ? scenario.victoryCondition.rounds
@@ -179,9 +181,18 @@ export function MissionPanel({
             ))}
           </div>
         ) : null}
-        <details className="missionIntelDetails">
-          <summary>{text("Szczegóły misji i stron", "Mission and sides details")}</summary>
-          <div className="missionIntelDetailsBody">
+        <section className="missionIntelDetails" data-open={missionIntelOpen}>
+          <button
+            type="button"
+            className="missionIntelToggle"
+            aria-controls="mission-intel-details"
+            aria-expanded={missionIntelOpen}
+            onClick={() => setMissionIntelOpen((open) => !open)}
+          >
+            {text("Szczegóły misji i stron", "Mission and sides details")}
+          </button>
+          {missionIntelOpen ? (
+            <div className="missionIntelDetailsBody" id="mission-intel-details">
             <MissionDirectorStatus mission={mission} scenario={scenario} />
             <div className="missionCombatants">
               <span>{text("Obrońca", "Defender")}: <strong>{defender ? localizeFaction(language, defender.faction) : text("Brak", "None")}</strong></span>
@@ -207,8 +218,9 @@ export function MissionPanel({
             <button className="secondaryButton" onClick={onRestart}>
               {text("Zakończ i przejdź do kreatora", "End and return to builder")}
             </button>
-          </div>
-        </details>
+            </div>
+          ) : null}
+        </section>
       </section>
     );
   }

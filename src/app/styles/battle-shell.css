@@ -1,6 +1,6 @@
 :root {
   --battle-tool-width: 228px;
-  --battle-unit-panel-width: 248px;
+  --battle-unit-panel-width: 288px;
   --battle-inspector-width: 316px;
   --battle-action-height: 116px;
 }
@@ -786,7 +786,7 @@
 @media (max-width: 1600px) {
   :root {
     --battle-tool-width: 210px;
-    --battle-unit-panel-width: 220px;
+    --battle-unit-panel-width: 260px;
     --battle-inspector-width: 290px;
   }
 
@@ -802,7 +802,7 @@
 @media (max-width: 1400px) {
   :root {
     --battle-tool-width: 190px;
-    --battle-unit-panel-width: 190px;
+    --battle-unit-panel-width: 236px;
     --battle-inspector-width: 260px;
   }
 
